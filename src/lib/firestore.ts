@@ -29,7 +29,7 @@ export function mensagemErroLeitura(erro: Pick<FirestoreError, 'code'>): string 
 
 /**
  * Coleção (ou consulta) em tempo real. `montar` recebe o Firestore e devolve a consulta;
- * null = ainda não dá para consultar (ex.: parâmetro da rota ausente). `chave` refaz a assinatura.
+ * null = nada a consultar (lista vazia, sem carregar). `chave` refaz a assinatura.
  */
 export function useConsulta<T = DocumentData>(
   chave: string | null,
@@ -37,7 +37,10 @@ export function useConsulta<T = DocumentData>(
 ): Leitura<ComId<T>[]> {
   const [estado, setEstado] = useState<Leitura<ComId<T>[]>>({ dados: [], carregando: true, erro: null })
   useEffect(() => {
-    if (chave === null) return
+    if (chave === null) {
+      setEstado({ dados: [], carregando: false, erro: null })
+      return
+    }
     setEstado((atual) => ({ ...atual, carregando: true, erro: null }))
     return onSnapshot(
       montar(obterDb()),
@@ -59,11 +62,14 @@ export function useColecao<T = DocumentData>(caminho: string | null): Leitura<Co
   return useConsulta<T>(caminho, (db) => query(collection(db, caminho!)))
 }
 
-/** Documento em tempo real; `dados` null quando não existe. */
+/** Documento em tempo real; `dados` null quando não existe ou quando `caminho` é null. */
 export function useDocumento<T = DocumentData>(caminho: string | null): Leitura<ComId<T> | null> {
   const [estado, setEstado] = useState<Leitura<ComId<T> | null>>({ dados: null, carregando: true, erro: null })
   useEffect(() => {
-    if (caminho === null) return
+    if (caminho === null) {
+      setEstado({ dados: null, carregando: false, erro: null })
+      return
+    }
     setEstado({ dados: null, carregando: true, erro: null })
     return onSnapshot(
       doc(obterDb(), caminho),
