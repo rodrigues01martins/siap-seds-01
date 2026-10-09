@@ -557,7 +557,7 @@
             "pontos": 1
           }
         ],
-        "categoriasMutuamenteExclusivas": [["A", "B"]]
+        "categoriasMutuamenteExclusivas": [{ "categorias": ["A", "B"] }]
       },
       "C2.2": {
         "titulo": "Tempo de Experiência em Atividades Aderentes",

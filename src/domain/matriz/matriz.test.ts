@@ -80,7 +80,7 @@ describe('matriz_2026.json — Dimensão 2', () => {
       ['C', 1],
       ['D', 1],
     ])
-    expect(c21.categoriasMutuamenteExclusivas).toEqual([['A', 'B']])
+    expect(c21.categoriasMutuamenteExclusivas).toEqual([{ categorias: ['A', 'B'] }])
   })
 
   it('C2.3: subcritérios 2.3.1 (2), 2.3.2 (1), 2.3.3 (1); 2.3.1 = A (1) + B (1)', () => {
@@ -90,6 +90,25 @@ describe('matriz_2026.json — Dimensão 2', () => {
     expect(sub['2.3.1'].B.maximo).toBe(1)
     expect(sub['2.3.2'].maximo).toBe(1)
     expect(sub['2.3.3'].maximo).toBe(1)
+  })
+})
+
+describe('compatibilidade com o Firestore (matrizes/2026)', () => {
+  /** O Firestore não aceita array dentro de array; o seed falharia. */
+  function caminhosComArrayAninhado(valor: unknown, caminho = '$'): string[] {
+    if (Array.isArray(valor)) {
+      return valor.flatMap((item, i) =>
+        Array.isArray(item) ? [`${caminho}[${i}]`] : caminhosComArrayAninhado(item, `${caminho}[${i}]`),
+      )
+    }
+    if (valor && typeof valor === 'object') {
+      return Object.entries(valor).flatMap(([k, v]) => caminhosComArrayAninhado(v, `${caminho}.${k}`))
+    }
+    return []
+  }
+
+  it('não contém arrays aninhados', () => {
+    expect(caminhosComArrayAninhado(MATRIZ_2026)).toEqual([])
   })
 })
 

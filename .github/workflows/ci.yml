@@ -5,8 +5,12 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   verificar:
+    name: verificar
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,3 +21,66 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
+
+  regras:
+    name: regras do Firestore (emulador)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      # O emulador do Firestore roda na JVM (firebase-tools exige Java 21+).
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/firebase/emulators
+          key: emuladores-firebase-${{ hashFiles('package-lock.json') }}
+      - run: npm ci
+      - run: npm run test:regras
+
+  publicar-regras:
+    name: publicar regras e índices (prod)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [verificar, regras]
+    runs-on: ubuntu-latest
+    concurrency:
+      group: publicar-regras-prod
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Preparar credencial de prod
+        id: credencial
+        env:
+          CONTA_DE_SERVICO: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PROD }}
+        run: |
+          if [ -z "$CONTA_DE_SERVICO" ]; then
+            echo "::warning title=Regras não publicadas::Secret FIREBASE_SERVICE_ACCOUNT_PROD ausente. Cadastre-o (veja o README) para publicar as regras em prod."
+            echo "publicar=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          arquivo="$RUNNER_TEMP/conta-de-servico.json"
+          printf '%s' "$CONTA_DE_SERVICO" > "$arquivo"
+          esperado=$(node -e "console.log(JSON.parse(require('fs').readFileSync('.firebaserc','utf8')).projects.prod)")
+          recebido=$(node -e "console.log(JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')).project_id)" "$arquivo")
+          if [ "$esperado" != "$recebido" ]; then
+            echo "::error title=Projeto divergente::.firebaserc aponta prod para '$esperado', mas o secret é do projeto '$recebido'."
+            exit 1
+          fi
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$arquivo" >> "$GITHUB_ENV"
+          echo "publicar=true" >> "$GITHUB_OUTPUT"
+      - name: Publicar firestore.rules e firestore.indexes.json
+        if: steps.credencial.outputs.publicar == 'true'
+        run: npx firebase deploy --only firestore:rules,firestore:indexes --project prod --non-interactive
+      - name: Remover credencial
+        if: always()
+        run: rm -f "$RUNNER_TEMP/conta-de-servico.json"

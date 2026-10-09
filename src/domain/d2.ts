@@ -97,7 +97,7 @@ function validarExperiencias(experiencias: Experiencia[], matriz: Matriz): void 
 
     for (const c of e.categorias) if (!conhecidas.has(c)) throw erro(`categoria desconhecida ${c}`)
     // Anexo IV, item 3.2.1, III: uma mesma experiência não pode ser enquadrada simultaneamente em A e B.
-    for (const grupo of categoriasMutuamenteExclusivas) {
+    for (const { categorias: grupo } of categoriasMutuamenteExclusivas) {
       const presentes = grupo.filter((c) => e.categorias.includes(c as CategoriaExperiencia))
       if (presentes.length > 1) {
         throw erro(`não pode ser enquadrada simultaneamente nas categorias ${presentes.join(' e ')}`)

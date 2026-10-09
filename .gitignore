@@ -6,3 +6,12 @@ dist
 !.env.example
 .vercel
 coverage
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
+# Chaves de conta de serviço: nunca versionar
+*conta-de-servico*.json
+*service-account*.json
+*firebase-adminsdk*.json
