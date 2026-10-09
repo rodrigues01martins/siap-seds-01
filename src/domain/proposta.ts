@@ -1,8 +1,8 @@
 // Consolidação da proposta (C4): D1 + D2 + NF + status, só com as funções de src/domain.
 
-import { calcularD1, type NiveisD1, type StatusD1, type TotalPA } from './d1'
-import { calcularD2, type Experiencia, type ResultadoD2 } from './d2'
-import { MATRIZ_2026, type Matriz } from './matriz'
+import { calcularD1, type NiveisD1, type StatusD1, type TotalPA } from './d1.js'
+import { calcularD2, type Experiencia, type ResultadoD2 } from './d2.js'
+import { MATRIZ_2026, type Matriz } from './matriz/index.js'
 
 export interface TotaisProposta {
   totaisPorPA: TotalPA[]

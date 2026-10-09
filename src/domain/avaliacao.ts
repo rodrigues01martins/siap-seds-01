@@ -1,6 +1,6 @@
 // Regras do registro de nível de um subcritério da D1 (C2), lidas da matriz.
 
-import { MATRIZ_2026, type Matriz, type PlanoDeAcao } from './matriz'
+import { MATRIZ_2026, type Matriz, type PlanoDeAcao } from './matriz/index.js'
 
 /** Mínimo de caracteres da justificativa quando o chamamento não define outro. */
 export const JUSTIFICATIVA_MINIMA_PADRAO = 20

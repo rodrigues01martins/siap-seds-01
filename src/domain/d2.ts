@@ -1,10 +1,10 @@
 // Dimensão 2 — Experiência Técnica e Operacional da OSC (D2 = C2.1 + C2.2 + C2.3 + C2.4).
 // Cada critério devolve os pontos e a memória de cálculo que justifica o resultado.
 
-import { pontuarPorFaixa } from './faixas'
-import { formatarNumero, formatarReais } from './formatacao'
-import { mesclarIntervalos, mesesCompletos, paraDia, picoSimultaneo, type ItemTemporal } from './intervalos'
-import { MATRIZ_2026, type CriterioComFaixas, type Matriz } from './matriz'
+import { pontuarPorFaixa } from './faixas.js'
+import { formatarNumero, formatarReais } from './formatacao.js'
+import { mesclarIntervalos, mesesCompletos, paraDia, picoSimultaneo, type ItemTemporal } from './intervalos.js'
+import { MATRIZ_2026, type CriterioComFaixas, type Matriz } from './matriz/index.js'
 
 export type CategoriaExperiencia = 'A' | 'B' | 'C' | 'D'
 

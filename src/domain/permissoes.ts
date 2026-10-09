@@ -1,6 +1,6 @@
 // Matriz de permissões de escrita e leitura sensível (espelha a seção do CLAUDE.md).
 
-import type { Perfil } from './perfis'
+import type { Perfil } from './perfis.js'
 
 export const PERMISSOES = {
   /** C1 — chamamentos, OSCs e propostas */
