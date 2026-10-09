@@ -23,7 +23,7 @@ jobs:
       - run: npm test
 
   regras:
-    name: regras do Firestore (emulador)
+    name: regras do Firestore e /api (emuladores)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -42,6 +42,7 @@ jobs:
           key: emuladores-firebase-${{ hashFiles('package-lock.json') }}
       - run: npm ci
       - run: npm run test:regras
+      - run: npm run test:api
 
   publicar-regras:
     name: publicar regras e índices (prod)
