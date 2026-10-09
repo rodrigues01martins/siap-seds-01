@@ -4,7 +4,7 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app'
 import { connectAuthEmulator, getAuth, type Auth } from 'firebase/auth'
 import { connectFirestoreEmulator, getFirestore, type Firestore } from 'firebase/firestore'
-import { lerConfigFirebase } from './configFirebase'
+import { lerConfigFirebase, usarEmuladores } from './configFirebase'
 
 interface InstanciasFirebase {
   app: FirebaseApp
@@ -20,7 +20,7 @@ export function iniciarFirebase(): InstanciasFirebase {
   const app = initializeApp(lerConfigFirebase(import.meta.env))
   const auth = getAuth(app)
   const db = getFirestore(app)
-  if (import.meta.env.VITE_USAR_EMULADORES === 'true') {
+  if (usarEmuladores(import.meta.env)) {
     connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true })
     connectFirestoreEmulator(db, '127.0.0.1', 8080)
   }

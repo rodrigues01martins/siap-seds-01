@@ -9,6 +9,7 @@ import { FieldValue, getFirestore } from 'firebase-admin/firestore'
 import { validarMatriz } from '../src/domain/matriz'
 import type { Matriz } from '../src/domain/matriz/tipos'
 import { executar, iniciarAdmin } from './lib/admin'
+import { registroDeScript } from './lib/auditoria'
 
 const ARQUIVO = 'src/domain/matriz/matriz_2026.json'
 
@@ -35,14 +36,16 @@ executar(async () => {
     const atual = await transacao.get(ref)
     if (atual.exists && !values.forcar) return 'ja-existe' as const
     transacao.set(ref, { ...matriz, origem: { arquivo: ARQUIVO, sha256 }, publicadaEm: FieldValue.serverTimestamp() })
-    transacao.create(db.collection('auditoria').doc(), {
-      acao: 'matriz.publicada',
-      alvo: ref.path,
-      detalhes: { sha256, sobrescreveu: atual.exists },
-      origem: 'scripts/seed-matriz.ts',
-      executor,
-      em: FieldValue.serverTimestamp(),
-    })
+    transacao.create(
+      db.collection('auditoria').doc(),
+      registroDeScript({
+        acao: 'matriz.publicada',
+        caminho: ref.path,
+        detalhes: { sha256, sobrescreveu: atual.exists },
+        origem: 'scripts/seed-matriz.ts',
+        executor,
+      }),
+    )
     return atual.exists ? ('sobrescrita' as const) : ('criada' as const)
   })
 

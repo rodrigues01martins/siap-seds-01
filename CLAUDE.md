@@ -63,3 +63,5 @@ o critério (RF-27), o presidente registra a decisão da Comissão com justifica
 npm run dev | npm run build | npm test | npm run typecheck
 npm run test:regras | npm run test:api (emuladores, Java 21+) | npm run emuladores
 npm run seed:matriz -- --projeto dev|prod | npm run set-role -- --projeto dev|prod --email X --perfil Y
+npm run backup -- --projeto dev|prod [--chamamento ID] | npm run restaurar -- --projeto dev --arquivo F | npm run ensaio -- --projeto dev
+Dia da sessão: docs/ROTEIRO-SESSAO.md · Produção: docs/CHECKLIST-PRODUCAO.md

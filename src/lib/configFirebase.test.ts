@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ErroConfiguracao, lerConfigFirebase } from './configFirebase'
+import { ErroConfiguracao, lerConfigFirebase, usarEmuladores } from './configFirebase'
 
 const COMPLETO = {
   VITE_FIREBASE_API_KEY: 'chave',
@@ -40,5 +40,17 @@ describe('lerConfigFirebase', () => {
     expect(() => lerConfigFirebase({ ...COMPLETO, VITE_FIREBASE_APP_ID: '' })).toThrow(
       expect.objectContaining({ message: expect.not.stringContaining('chave') }),
     )
+  })
+})
+
+describe('usarEmuladores', () => {
+  it('só no servidor de desenvolvimento do Vite e com VITE_USAR_EMULADORES=true', () => {
+    expect(usarEmuladores({ DEV: true, VITE_USAR_EMULADORES: 'true' })).toBe(true)
+    expect(usarEmuladores({ DEV: true, VITE_USAR_EMULADORES: 'false' })).toBe(false)
+    expect(usarEmuladores({ DEV: true })).toBe(false)
+  })
+
+  it('nunca no build (produção e preview), mesmo com a variável ligada por engano', () => {
+    expect(usarEmuladores({ DEV: false, PROD: true, VITE_USAR_EMULADORES: 'true' })).toBe(false)
   })
 })

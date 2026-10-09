@@ -1,0 +1,68 @@
+name: Backup do Firestore (prod)
+
+# Execução manual: GitHub → Actions → "Backup do Firestore (prod)" → Run workflow.
+# Roda scripts/backup-firestore.ts no projeto prod (siap-seds-01) com o firebase-admin (sem plano Blaze)
+# e guarda o arquivo como artifact. O repositório é PÚBLICO: o artifact sai sempre cifrado
+# (AES-256-GCM) com a senha do secret BACKUP_SENHA; sem esse secret o workflow falha antes de ler o banco.
+on:
+  workflow_dispatch:
+    inputs:
+      chamamento:
+        description: 'ID do chamamento (vazio = todos os chamamentos)'
+        type: string
+        required: false
+      momento:
+        description: 'Quando é este backup'
+        type: choice
+        options: [antes-da-sessao, depois-da-sessao, avulso]
+        default: avulso
+      dias:
+        description: 'Dias de retenção do artifact (1 a 90)'
+        type: number
+        default: 90
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup-prod
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    name: backup (${{ inputs.momento }})
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Gerar backup cifrado
+        # Entradas por variáveis de ambiente (nunca interpoladas no script) para evitar injeção de comandos.
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_ADMIN_PROD }}
+          BACKUP_SENHA: ${{ secrets.BACKUP_SENHA }}
+          CHAMAMENTO: ${{ inputs.chamamento }}
+        run: |
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT" ]; then
+            echo "::error title=Secret ausente::Cadastre FIREBASE_SERVICE_ACCOUNT_ADMIN_PROD (veja o README, seção 4)."
+            exit 1
+          fi
+          if [ -z "$BACKUP_SENHA" ]; then
+            echo "::error title=Secret ausente::Cadastre BACKUP_SENHA (mín. 16 caracteres). O repositório é público: o backup só sai cifrado."
+            exit 1
+          fi
+          argumentos=(--projeto prod --confirmar --cifrar --saida backups)
+          if [ -n "$CHAMAMENTO" ]; then argumentos+=(--chamamento "$CHAMAMENTO"); fi
+          npm run backup -- "${argumentos[@]}"
+          # Nunca publica arquivo sem cifra.
+          if ls backups/*.json 1>/dev/null 2>&1; then echo "::error::Arquivo sem cifra encontrado."; exit 1; fi
+      - name: Guardar como artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backup-prod-${{ inputs.momento }}-${{ github.run_number }}
+          path: backups/*.cifrado
+          if-no-files-found: error
+          retention-days: ${{ inputs.dias }}

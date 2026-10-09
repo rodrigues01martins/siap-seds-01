@@ -19,6 +19,12 @@ Matriz de Avaliação (Anexo IV). Regras de arquitetura e convenções: veja [`C
 | `npm run emuladores` | Emuladores de Auth e Firestore para desenvolvimento local |
 | `npm run seed:matriz -- --projeto dev` | Grava a matriz em `matrizes/2026` |
 | `npm run set-role -- --projeto dev --email ... --perfil ...` | Define o perfil de um usuário |
+| `npm run backup -- --projeto dev\|prod [--chamamento ID]` | Backup em JSON datado (seção 7) |
+| `npm run restaurar -- --projeto dev --arquivo ...` | Restaura um backup **só no dev** (seção 7) |
+| `npm run ensaio -- --projeto dev [--recriar\|--remover]` | Dados fictícios para ensaiar a sessão (seção 7) |
+
+Dia da sessão: [`docs/ROTEIRO-SESSAO.md`](docs/ROTEIRO-SESSAO.md). Antes de usar em produção:
+[`docs/CHECKLIST-PRODUCAO.md`](docs/CHECKLIST-PRODUCAO.md).
 
 ---
 
@@ -358,7 +364,7 @@ Os dados são lidos uma vez no momento de gerar, e o documento é montado por c�
 1. No Firebase Authentication (projeto dev ou prod), crie um usuário, por exemplo `telao@seds.go.gov.br`.
 2. Em `/perfis`, dê a ele o perfil **membro**. Ele não muda o foco, mas **pode registrar níveis da D1** se alguém
    abrir a tela de avaliação com esse login: use-o só no computador do telão e com senha guardada pela Comissão.
-   Alternativa sem nenhuma escrita: perfil **controle** (lê tudo, não grava nada; também lê a auditoria).
+   Alternativa sem nenhuma escrita: perfil **controle** (lê tudo, não grava nada; também lê a auditoria). **Recomendado em produção** (Etapa 7).
 3. No computador da sala, entre com esse usuário e abra o link do telão.
 Qualquer perfil logado consegue abrir a projeção; nenhum vê controles de escrita nela.
 
@@ -381,3 +387,56 @@ npm run dev                   # terminal 2, com VITE_USAR_EMULADORES=true no .en
 O `.env.local` (copie de `.env.example`) usa os dados do projeto dev. Com os emuladores, os scripts
 gravam neles, e não na nuvem, se você definir antes:
 `FIRESTORE_EMULATOR_HOST=127.0.0.1:8080` e `FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099`.
+
+Em `npm run dev`, a variável `VITE_USAR_EMULADORES=true` liga os emuladores. No build (produção e preview da
+Vercel) ela é ignorada, e a `/api` se recusa a usar emuladores quando roda na Vercel.
+
+## 7. Produção: backup, restauração e ensaio (Etapa 7)
+
+### Backup (sem plano Blaze)
+`scripts/backup-firestore.ts` lê com o Admin SDK, documento a documento (o export gerenciado do Firestore exige o
+plano Blaze). O arquivo `backups/backup-<projeto>-<chamamento|todos>-<data e hora UTC>.json` traz:
+- a árvore completa de cada chamamento (propostas, avaliações, experiências, memória da D2, diligências,
+  sessões, desempates), as OSCs das propostas, a matriz e os registros de auditoria desses documentos;
+- Timestamps preservados (`{"__tipo": "timestamp", ...}`), contagem por coleção e **SHA-256** do conteúdo.
+
+**Em prod, pelo GitHub Actions** (recomendado): *Actions → Backup do Firestore (prod) → Run workflow* (chamamento
+vazio = todos; momento antes ou depois da sessão). Usa o secret `FIREBASE_SERVICE_ACCOUNT_ADMIN_PROD` (seção 4.1)
+e exige o secret **`BACKUP_SENHA`** (16 ou mais caracteres): **o repositório é público**, e o arquivo vira
+artifact **cifrado** (AES-256-GCM, chave derivada da senha por scrypt). Sem a senha, ninguém o abre, nem quem baixar o
+artifact. O artifact fica até 90 dias: baixe-o e guarde-o na rede da SEDS.
+
+**Pelo terminal:** `npm run backup -- --projeto prod --confirmar` (com `FIREBASE_SERVICE_ACCOUNT`; `--chamamento ID`
+para um só). Com `BACKUP_SENHA` definida (ou `--cifrar`), o arquivo sai cifrado (`.json.cifrado`). A pasta
+`backups/` está no `.gitignore`. O backup só **lê**: consome leituras da cota gratuita do Firestore (uma por
+documento, mais as listagens de subcoleções).
+
+### Restauração (só no dev)
+```bash
+# baixe e descompacte o artifact; a senha vem da variável, nunca do comando
+export BACKUP_SENHA='...'                     # PowerShell: $env:BACKUP_SENHA = '...'
+export FIREBASE_SERVICE_ACCOUNT="$(cat ~/chaves/siap-dev.json)"
+npm run restaurar -- --projeto dev --arquivo backup-....json.cifrado                 # simulação: confere e mostra
+npm run restaurar -- --projeto dev --arquivo backup-....json.cifrado --confirmar     # grava
+npm run restaurar -- --projeto dev --arquivo ... --confirmar --substituir            # apaga o chamamento do dev antes
+```
+O script recusa `--projeto prod`, confere o formato e o SHA-256 e não sobrescreve um chamamento existente sem
+`--substituir`. A restauração entra na auditoria do dev (`backup.restaurado`). Restaurar prod no dev copia dados
+reais: apague-os ao terminar o teste.
+
+### Ensaio (dados fictícios no dev)
+`npm run ensaio -- --projeto dev` grava o chamamento `ensaio-2026` (*ENSAIO-001/2026*), 2 lotes, 3 OSCs com CNPJ
+alfanumérico fictício (`ENSAIO…`) e 6 propostas no formato que a `/api` grava (totais e memória da D2 calculados por
+`src/domain`), com uma sessão encerrada:
+
+| Lote | Proposta | Situação |
+|---|---|---|
+| L1 | `ensaio-l1-alfa` (Instituto Alfa) | **pendente**: faltam 6.2, 6.3 e 6.4; ao completar com nível 4, passa ao 1º lugar |
+| L1 | `ensaio-l1-beta` (Associação Beta) | **apta**, **empatada** com Gama (mesma NF) |
+| L1 | `ensaio-l1-gama` (Centro Gama) | **apta**, **empatada** com Beta |
+| L2 | `ensaio-l2-alfa` | **inapta** (D1 = 56 < 67,2) |
+| L2 | `ensaio-l2-beta` | **desclassificada** (nível 0 em 1.1) |
+| L2 | `ensaio-l2-gama` | **não admitida** (requisito 28.1.IV) |
+
+`--recriar` apaga e grava de novo; `--remover` só apaga (o chamamento e as OSCs com `ensaio: true`). O script
+recusa `--projeto prod`.

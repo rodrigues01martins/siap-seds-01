@@ -9,6 +9,7 @@ import { getAuth } from 'firebase-admin/auth'
 import { FieldValue, getFirestore } from 'firebase-admin/firestore'
 import { PERFIS, ehPerfil, extrairPerfil } from '../src/domain/perfis'
 import { executar, iniciarAdmin } from './lib/admin'
+import { registroDeScript } from './lib/auditoria'
 
 executar(async () => {
   const { values } = parseArgs({
@@ -53,14 +54,16 @@ executar(async () => {
     { email, perfil: novo, atualizadoEm: FieldValue.serverTimestamp() },
     { merge: true },
   )
-  lote.create(db.collection('auditoria').doc(), {
-    acao: 'usuario.perfil',
-    alvo: `usuarios/${usuario.uid}`,
-    detalhes: { email, anterior, novo },
-    origem: 'scripts/set-role.ts',
-    executor,
-    em: FieldValue.serverTimestamp(),
-  })
+  lote.create(
+    db.collection('auditoria').doc(),
+    registroDeScript({
+      acao: 'usuario.perfil',
+      caminho: `usuarios/${usuario.uid}`,
+      detalhes: { email, anterior, novo },
+      origem: 'scripts/set-role.ts',
+      executor,
+    }),
+  )
   try {
     await lote.commit()
   } catch (erro) {

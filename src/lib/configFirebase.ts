@@ -36,3 +36,11 @@ export function lerConfigFirebase(env: Record<string, unknown>): ConfigFirebase 
   if (faltando.length > 0) throw new ErroConfiguracao(faltando)
   return config as ConfigFirebase
 }
+
+/**
+ * Emuladores só no servidor de desenvolvimento do Vite (npm run dev). No build — produção e preview
+ * da Vercel — VITE_USAR_EMULADORES é ignorada, mesmo se ligada por engano.
+ */
+export function usarEmuladores(env: Record<string, unknown>): boolean {
+  return env.DEV === true && env.VITE_USAR_EMULADORES === 'true'
+}

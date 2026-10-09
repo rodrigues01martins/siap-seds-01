@@ -29,6 +29,12 @@ describe('configuracaoAdmin (B1)', () => {
     expect(() => configuracaoAdmin({ FIREBASE_AUTH_EMULATOR_HOST: 'b:2' })).toThrow(/FIRESTORE_EMULATOR_HOST/)
   })
 
+  it('na Vercel recusa o modo emulador (tokens do emulador não têm assinatura)', () => {
+    const emuladores = { FIRESTORE_EMULATOR_HOST: 'a:1', FIREBASE_AUTH_EMULATOR_HOST: 'b:2' }
+    expect(() => configuracaoAdmin({ ...emuladores, VERCEL: '1' })).toThrow(/emuladores.*Vercel/)
+    expect(() => configuracaoAdmin({ ...emuladores, VERCEL_ENV: 'production' })).toThrow(/emuladores.*Vercel/)
+  })
+
   it('fora do emulador usa FIREBASE_SERVICE_ACCOUNT', () => {
     expect(configuracaoAdmin({ FIREBASE_SERVICE_ACCOUNT: CREDENCIAL })).toMatchObject({
       modo: 'credencial',

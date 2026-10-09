@@ -18,6 +18,10 @@ export function configuracaoAdmin(env: Record<string, string | undefined>): Conf
     // Só um dos dois misturaria emulador com produção: recusa.
     if (!auth) throw new Error('Defina também FIREBASE_AUTH_EMULATOR_HOST para usar os emuladores.')
     if (!firestore) throw new Error('Defina também FIRESTORE_EMULATOR_HOST para usar os emuladores.')
+    // O emulador de Auth aceita tokens sem assinatura: nunca na Vercel (produção ou preview).
+    if (env.VERCEL || env.VERCEL_ENV) {
+      throw new Error('Variáveis dos emuladores definidas na Vercel: remova-as (os emuladores são só para testes locais).')
+    }
     return { modo: 'emulador', projectId: env.GCLOUD_PROJECT || 'demo-siap-seds' }
   }
   const credencial = lerCredencial(env.FIREBASE_SERVICE_ACCOUNT)
