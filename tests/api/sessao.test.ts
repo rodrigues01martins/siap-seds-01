@@ -197,18 +197,27 @@ describe('/api/sessao — presentes, declarações e foco', () => {
     expect((await ler(caminhoSessao(id)))?.declaracoes).toEqual(declaracoes)
   })
 
-  it('foco: proposta da pauta e subcritério da matriz; null limpa', async () => {
+  it.each([
+    ['admissibilidade', { tipo: 'admissibilidade', propostaId: PROP }],
+    ['subcritério', { tipo: 'subcriterio', propostaId: PROP, subcriterio: '2.1' }],
+    ['D2', { tipo: 'd2', propostaId: PROP }],
+    ['resumo', { tipo: 'resumo', propostaId: PROP }],
+  ])('foco do tipo %s (Etapa 5); null limpa; auditado', async (_tipo, foco) => {
     const id = await abrir()
-    const foco = { propostaId: PROP, subcriterio: '2.1' }
     expect((await chamar(rota, 'PATCH', alterar(id, { acao: 'foco', foco }), relator.token)).status).toBe(200)
     expect((await ler(caminhoSessao(id)))?.foco).toEqual(foco)
-    expect((await chamar(rota, 'PATCH', alterar(id, { acao: 'foco', foco: null }), relator.token)).status).toBe(200)
+    expect((await auditoriaDe(caminhoSessao(id))).at(-1)).toMatchObject({ acao: 'editar', depois: { foco } })
+    expect((await chamar(rota, 'PATCH', alterar(id, { acao: 'foco', foco: null }), presidente.token)).status).toBe(200)
     expect((await ler(caminhoSessao(id)))?.foco).toBeNull()
   })
 
   it.each([
-    ['proposta fora da pauta', { propostaId: 'p9', subcriterio: '2.1' }, 'foco.propostaId', 'Proposta fora da pauta da sessão.'],
-    ['subcritério inexistente', { propostaId: PROP, subcriterio: '9.9' }, 'foco.subcriterio', 'Subcritério inexistente na matriz.'],
+    ['proposta fora da pauta', { tipo: 'resumo', propostaId: 'p9' }, 'foco.propostaId', 'Proposta fora da pauta da sessão.'],
+    ['subcritério inexistente', { tipo: 'subcriterio', propostaId: PROP, subcriterio: '9.9' }, 'foco.subcriterio', 'Subcritério inexistente na matriz.'],
+    ['subcritério ausente no tipo subcritério', { tipo: 'subcriterio', propostaId: PROP }, 'foco.subcriterio', 'Informe o subcritério.'],
+    ['subcritério em outro tipo', { tipo: 'resumo', propostaId: PROP, subcriterio: '2.1' }, 'foco.subcriterio', 'Subcritério só se aplica ao foco do tipo subcritério.'],
+    ['tipo desconhecido', { tipo: 'classificacao', propostaId: PROP }, 'foco.tipo', 'Tipo de foco inválido. Use admissibilidade, subcriterio, d2 ou resumo.'],
+    ['formato antigo, sem tipo', { propostaId: PROP, subcriterio: '2.1' }, 'foco.tipo', 'Tipo de foco inválido. Use admissibilidade, subcriterio, d2 ou resumo.'],
   ])('foco com %s → 400', async (_caso, foco, campo, mensagem) => {
     const id = await abrir()
     const r = await chamar(rota, 'PATCH', alterar(id, { acao: 'foco', foco }), relator.token)
@@ -228,7 +237,7 @@ describe('/api/sessao — presentes, declarações e foco', () => {
 describe('/api/sessao — encerrar', () => {
   it('presidente encerra: status, encerradaPor/Em e foco limpo, auditado', async () => {
     const id = await abrir()
-    await chamar(rota, 'PATCH', alterar(id, { acao: 'foco', foco: { propostaId: PROP, subcriterio: '1.1' } }), relator.token)
+    await chamar(rota, 'PATCH', alterar(id, { acao: 'foco', foco: { tipo: 'subcriterio', propostaId: PROP, subcriterio: '1.1' } }), relator.token)
     const r = await chamar(rota, 'PATCH', alterar(id, { acao: 'encerrar' }), presidente.token)
     expect(r.status).toBe(200)
     const sessao = await ler(caminhoSessao(id))

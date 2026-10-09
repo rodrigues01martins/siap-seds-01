@@ -54,7 +54,8 @@ export interface Sessao {
   pauta: string[]
   presentes: PresenteSessao[]
   declaracoes: DeclaracaoSessao[]
-  foco: { propostaId: string; subcriterio: string } | null
+  /** O que o telão mostra; dados anteriores à Etapa 5 não têm `tipo` (= subcritério). */
+  foco: { tipo?: 'admissibilidade' | 'subcriterio' | 'd2' | 'resumo'; propostaId: string; subcriterio?: string } | null
   abertaPor?: { uid: string; email: string | null }
 }
 

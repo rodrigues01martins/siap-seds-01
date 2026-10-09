@@ -26,10 +26,25 @@ const declaracoes = z
   .array(esquemaDeclaracao)
   .refine(semRepeticao((d: { uid: string }) => d.uid), 'Há mais de uma declaração para o mesmo membro.')
 
-export const esquemaFoco = z.strictObject({
-  propostaId: idDocumento,
-  subcriterio: z.string().trim().min(1, 'Informe o subcritério.'),
-})
+/** O que o telão mostra (Etapa 5). */
+export const TIPOS_FOCO = ['admissibilidade', 'subcriterio', 'd2', 'resumo'] as const
+export type TipoFoco = (typeof TIPOS_FOCO)[number]
+
+export const esquemaFoco = z
+  .strictObject({
+    tipo: z.enum(TIPOS_FOCO, { error: 'Tipo de foco inválido. Use admissibilidade, subcriterio, d2 ou resumo.' }),
+    propostaId: idDocumento,
+    subcriterio: z.string().trim().min(1, 'Informe o subcritério.').optional(),
+  })
+  .superRefine((foco, ctx) => {
+    if (foco.tipo === 'subcriterio' && !foco.subcriterio) {
+      ctx.addIssue({ code: 'custom', path: ['subcriterio'], message: 'Informe o subcritério.' })
+    }
+    if (foco.tipo !== 'subcriterio' && foco.subcriterio !== undefined) {
+      ctx.addIssue({ code: 'custom', path: ['subcriterio'], message: 'Subcritério só se aplica ao foco do tipo subcritério.' })
+    }
+  })
+export type Foco = z.output<typeof esquemaFoco>
 
 export const esquemaAbrirSessao = z.strictObject({
   chamamentoId: idDocumento,

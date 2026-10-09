@@ -340,6 +340,28 @@ Os dados são lidos uma vez no momento de gerar, e o documento é montado por c�
   últimos 30 dias; até 2.000 registros por consulta); "Ver antes/depois" mostra os campos alterados. A partir desta
   etapa o registro de auditoria guarda também o **e-mail** de quem escreveu; registros anteriores mostram o uid.
 
+### Modo projeção — telão da sala (Etapa 5)
+
+- Rota **`/projecao/:ch/:sessaoId`** (o link "Abrir telão" aparece na tela da D1 e na tela da sessão).
+  Somente leitura, sem menu e sem botões de escrita; fonte grande, alto contraste e botão **Tela cheia**.
+- Acompanha em tempo real (`onSnapshot`) o **foco da sessão** e mostra, conforme o tipo:
+  `admissibilidade` (checklist 28.1 e páginas por PA com excessos), `subcriterio` (escala com o nível
+  registrado destacado, decisão, justificativa, páginas), `d2` (pontos por critério e memória resumida) ou
+  `resumo` (PA1…PA6, D1, D2, NF e status). Sem foco: tela de espera com o nome do chamamento.
+- Foco = `{ tipo: 'admissibilidade' | 'subcriterio' | 'd2' | 'resumo', propostaId, subcriterio? }`, alterado
+  por **presidente e relator** (`PATCH /api/sessao`, `acao: 'foco'`) e, ao salvar um nível, pela própria avaliação.
+- Na tela da D1, presidente e relator controlam o telão: **Projetar** (subcritério, admissibilidade, D2,
+  resumo) e atalhos **Alt+→** / **Alt+←** (próximo/anterior subcritério) e **Alt+R** (resumo). O indicador
+  "No telão" mostra o que está sendo projetado.
+
+**Login do telão.** O computador ligado ao projetor usa um usuário próprio, só para isso:
+1. No Firebase Authentication (projeto dev ou prod), crie um usuário, por exemplo `telao@seds.go.gov.br`.
+2. Em `/perfis`, dê a ele o perfil **membro**. Ele não muda o foco, mas **pode registrar níveis da D1** se alguém
+   abrir a tela de avaliação com esse login: use-o só no computador do telão e com senha guardada pela Comissão.
+   Alternativa sem nenhuma escrita: perfil **controle** (lê tudo, não grava nada; também lê a auditoria).
+3. No computador da sala, entre com esse usuário e abra o link do telão.
+Qualquer perfil logado consegue abrir a projeção; nenhum vê controles de escrita nela.
+
 ### Testar a `/api` localmente
 
 ```bash
