@@ -257,10 +257,24 @@ A fonte única no código é `src/domain/permissoes.ts` (um teste garante que el
 | `/chamamentos/:ch/sessoes/nova` | presidente | abertura: data, presentes, declarações, pauta |
 | `/chamamentos/:ch/sessoes/:s` | Comissão (escrita: presidente e relator) | foco, presentes e declarações, encerrar |
 
+### Admissibilidade (Anexo III, item 28)
+
+| Endpoint | Método | Corpo (JSON) | Perfil |
+|---|---|---|---|
+| `/api/admissibilidade` | `PUT` | `{ chamamentoId, propostaId, requisitos: { '28.1.I': true, ... }, irregularidadesFormais?: ['28.5.II'], observacaoIrregularidades?, planos: [{ codigo, ausente, paginaInicial, paginaFinal }], resultado: 'admitida' \| 'nao_admitida', motivacao? }` | presidente, relator |
+
+- Textos do 28.1 (10 requisitos), 28.2 a 28.5 ficam em `matriz_2026.json` (`admissibilidade`).
+- Página de corte de cada PA = página inicial + limite do PA (Anexo III, 7.1) − 1; a tela alerta quando excede.
+- O 28.1.VII (6 PAs) é apurado pela tabela; **PA ausente → desclassificada** (28.2). Admitida exige todos os
+  requisitos; não admitida exige motivação. Irregularidade meramente formal não desclassifica (28.4).
+- Grava `propostas/{p}.admissibilidade` (com `situacao`, `motivos`, `registradaPor`, `registradaEm`), auditado.
+  Proposta **não admitida ou desclassificada não segue para avaliação**: C2 e C3 → **409**.
+
 ### Telas (Etapa 4b)
 
 | Rota | Escrita | O que faz |
 |---|---|---|
+| `/chamamentos/:ch/propostas/:p/admissibilidade` | presidente, relator | checklist 28.1, páginas por PA com página de corte e alerta, irregularidades formais (28.5), resultado e motivação |
 | `/chamamentos/:ch/propostas/:p/d1` | presidente, relator, membro (com sessão aberta e a proposta na pauta) | navegação PA1…PA6, painel do subcritério (escala com descritores, elementos como apoio, decisão, voto divergente, justificativa com contador, páginas com aviso de corte), alerta de nível 0 em 1.1/1.2 e rodapé com a prévia (src/domain) e o status oficial |
 | `/chamamentos/:ch/propostas/:p/d2` | presidente, relator | experiências e documentos, desconsiderar por critério (3.8.5) e linha do tempo A/B |
 | `/chamamentos/:ch/propostas/:p/d2/memoria` | — | memória de cálculo da D2 (`resultadoD2/atual`) |
