@@ -19,6 +19,12 @@ export const PERMISSOES = {
   sessaoConduzir: ['presidente', 'relator'],
   /** Admissibilidade (Anexo III, item 28) */
   admissibilidade: ['presidente', 'relator'],
+  /** Registrar a decisão de desempate da Comissão (RF-27) */
+  desempate: ['presidente'],
+  /** Reabrir proposta homologada (RF-18) */
+  reabrir: ['presidente'],
+  /** Diligências (RF-28) */
+  diligencias: ['presidente', 'relator'],
   /** Leitura da trilha de auditoria (também nas firestore.rules) */
   lerAuditoria: ['admin', 'presidente', 'controle'],
 } as const satisfies Record<string, readonly Perfil[]>

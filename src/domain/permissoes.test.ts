@@ -12,6 +12,9 @@ describe('matriz de permissões (espelho da seção do CLAUDE.md)', () => {
       sessaoAbrirEncerrar: ['presidente'],
       sessaoConduzir: ['presidente', 'relator'],
       admissibilidade: ['presidente', 'relator'],
+      desempate: ['presidente'],
+      reabrir: ['presidente'],
+      diligencias: ['presidente', 'relator'],
       lerAuditoria: ['admin', 'presidente', 'controle'],
     })
   })

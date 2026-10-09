@@ -63,3 +63,8 @@ export function camposDoErro(erro: z.ZodError): Record<string, string> {
   }
   return campos
 }
+
+/** Data de hoje (AAAA-MM-DD) no fuso de Goiânia, para prazos. */
+export function hojeEmGoias(agora: Date = new Date()): string {
+  return agora.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
+}

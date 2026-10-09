@@ -52,7 +52,7 @@ function Copiar({ texto }: { texto: string }) {
   )
 }
 
-export function CabecalhoProposta({ dados, ch, aba }: { dados: DadosProposta; ch: string; aba: 'admissibilidade' | 'd1' | 'd2' | 'memoria' }) {
+export function CabecalhoProposta({ dados, ch, aba }: { dados: DadosProposta; ch: string; aba: 'admissibilidade' | 'd1' | 'd2' | 'memoria' | 'diligencias' }) {
   const { chamamento, proposta, osc, sessaoAberta } = dados
   const lote = chamamento.lotes.find((l) => l.codigo === proposta.loteCodigo)
   const base = `/chamamentos/${ch}/propostas/${proposta.id}`
@@ -61,6 +61,7 @@ export function CabecalhoProposta({ dados, ch, aba }: { dados: DadosProposta; ch
     { id: 'd1', rotulo: 'Dimensão 1', para: `${base}/d1` },
     { id: 'd2', rotulo: 'Dimensão 2', para: `${base}/d2` },
     { id: 'memoria', rotulo: 'Memória da D2', para: `${base}/d2/memoria` },
+    { id: 'diligencias', rotulo: 'Diligências', para: `${base}/diligencias` },
   ]
   return (
     <header className="sticky top-0 z-10 -mx-6 -mt-6 mb-4 border-b border-slate-200 bg-white/95 px-6 py-3 backdrop-blur">

@@ -161,3 +161,19 @@ export function semCarimbos<T extends Record<string, unknown> | undefined>(dados
   const { criadoEm: _c, atualizadoEm: _a, ...resto } = (dados ?? {}) as Record<string, unknown>
   return resto
 }
+
+/** Proposta do lote L1 com totais já calculados (apta e completa por padrão), para a classificação. */
+export async function semearPropostaComTotais(
+  id: string,
+  nf: number,
+  dados: { status?: string; bloqueada?: boolean } = {},
+): Promise<void> {
+  await obterAdmin()
+    .db.doc(`chamamentos/${CH}/propostas/${id}`)
+    .set({
+      loteCodigo: 'L1',
+      oscCnpj: '11222333000181',
+      bloqueada: dados.bloqueada ?? false,
+      totais: { d1: nf - 5, d2: 5, nf, status: dados.status ?? 'apta', completa: true, pendentes: [], totaisPorPA: [], motivos: [] },
+    })
+}
