@@ -20,7 +20,7 @@ executar(async () => {
       confirmar: { type: 'boolean', default: false },
     },
   })
-  const { app } = iniciarAdmin(values.projeto, values.confirmar)
+  const { app, executor } = iniciarAdmin(values.projeto, values.confirmar)
 
   const conteudo = readFileSync(new URL(`../${ARQUIVO}`, import.meta.url), 'utf8')
   const matriz = validarMatriz(JSON.parse(conteudo) as Matriz)
@@ -40,6 +40,7 @@ executar(async () => {
       alvo: ref.path,
       detalhes: { sha256, sobrescreveu: atual.exists },
       origem: 'scripts/seed-matriz.ts',
+      executor,
       em: FieldValue.serverTimestamp(),
     })
     return atual.exists ? ('sobrescrita' as const) : ('criada' as const)

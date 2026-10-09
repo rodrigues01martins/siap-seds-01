@@ -28,7 +28,7 @@ executar(async () => {
   }
   const novo = values.remover ? null : (values.perfil as (typeof PERFIS)[number])
 
-  const { app } = iniciarAdmin(values.projeto, values.confirmar)
+  const { app, executor } = iniciarAdmin(values.projeto, values.confirmar)
   const auth = getAuth(app)
 
   const usuario = await auth.getUserByEmail(email).catch((erro: { code?: string }) => {
@@ -58,6 +58,7 @@ executar(async () => {
     alvo: `usuarios/${usuario.uid}`,
     detalhes: { email, anterior, novo },
     origem: 'scripts/set-role.ts',
+    executor,
     em: FieldValue.serverTimestamp(),
   })
   try {

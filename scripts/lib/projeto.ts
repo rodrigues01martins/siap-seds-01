@@ -51,3 +51,9 @@ export function conferirCredencial(credencial: Credencial, projectId: string): v
     )
   }
 }
+
+/** Quem executou o script, para a auditoria: usuário do GitHub (Actions) ou do sistema operacional. */
+export function identificarExecutor(env: Record<string, string | undefined>, usuarioSistema: string): string {
+  if (env.GITHUB_ACTIONS === 'true') return `github:${env.GITHUB_ACTOR || 'desconhecido'}`
+  return `local:${usuarioSistema}`
+}
