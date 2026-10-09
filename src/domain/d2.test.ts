@@ -5,6 +5,7 @@ import {
   calcularC23,
   calcularC24,
   calcularD2,
+  problemasDaExperiencia,
   type Experiencia,
 } from './d2'
 
@@ -453,5 +454,41 @@ describe('calcularD2 — consolidação e validação', () => {
         experiencias: [exp({ id: 'inv', inicio: '2021-01-01', fim: '2020-01-01' })],
       }),
     ).toThrow(/inv/)
+  })
+})
+
+describe('problemasDaExperiencia — as mesmas regras do cálculo, por campo (para a /api)', () => {
+  it('experiência válida → sem problemas', () => {
+    expect(problemasDaExperiencia(exp({ categorias: ['A', 'D'], vagas: 10 }))).toEqual({})
+  })
+
+  it('A e B na mesma experiência (Anexo IV, 3.2.1, III)', () => {
+    expect(problemasDaExperiencia(exp({ categorias: ['A', 'B'] }))).toEqual({
+      categorias: 'Não pode ser enquadrada simultaneamente nas categorias A e B (Anexo IV, 3.2.1, III).',
+    })
+  })
+
+  it('categoria desconhecida', () => {
+    expect(problemasDaExperiencia(exp({ categorias: ['E' as never] }))).toEqual({ categorias: 'Categoria desconhecida: E.' })
+  })
+
+  it('fim anterior ao início; datas inexistentes', () => {
+    expect(problemasDaExperiencia(exp({ inicio: '2021-01-01', fim: '2020-12-31' }))).toEqual({
+      fim: 'O fim não pode ser anterior ao início.',
+    })
+    expect(problemasDaExperiencia(exp({ inicio: '2021-02-30' }))).toHaveProperty('inicio')
+    expect(problemasDaExperiencia(exp({ fim: '2021-13-01' }))).toHaveProperty('fim')
+  })
+
+  it('fim igual ao início é aceito; em execução (fim nulo) também', () => {
+    expect(problemasDaExperiencia(exp({ inicio: '2021-01-01', fim: '2021-01-01' }))).toEqual({})
+    expect(problemasDaExperiencia(exp({ fim: null }))).toEqual({})
+  })
+
+  it('campos de porte precisam ser inteiros não negativos', () => {
+    expect(problemasDaExperiencia(exp({ vagas: -1, trabalhadores: 2.5, valorAnualCentavos: 100 }))).toEqual({
+      vagas: 'Deve ser um número inteiro não negativo.',
+      trabalhadores: 'Deve ser um número inteiro não negativo.',
+    })
   })
 })

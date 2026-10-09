@@ -2,6 +2,7 @@
 
 import { z } from 'zod'
 import { cnpjValido, normalizarCnpj } from '../../src/domain/cnpj.js'
+import { paraDia } from '../../src/domain/intervalos.js'
 import { ErroApi, MENSAGENS } from './erros.js'
 
 z.config(z.locales.ptBR())
@@ -15,6 +16,21 @@ export const cnpj = z
   .string({ error: 'Informe o CNPJ.' })
   .refine(cnpjValido, 'CNPJ inválido.')
   .transform(normalizarCnpj)
+
+/** Data AAAA-MM-DD existente no calendário. */
+export const dataIso = z.string({ error: 'Informe a data (AAAA-MM-DD).' }).refine((valor) => {
+  try {
+    paraDia(valor)
+    return true
+  } catch {
+    return false
+  }
+}, 'Data inválida (use AAAA-MM-DD).')
+
+/** Converte problemas de regra de negócio (por campo) em 400. */
+export function exigirSemProblemas(problemas: Record<string, string>): void {
+  if (Object.keys(problemas).length > 0) throw new ErroApi(400, MENSAGENS.dadosInvalidos, problemas)
+}
 
 /** Exige ao menos um campo além das chaves de identificação (para edições). */
 export function algumCampoAlem(chaves: string[]) {

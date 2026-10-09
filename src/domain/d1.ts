@@ -1,7 +1,7 @@
 // Dimensão 1 — Capacidade Técnica e Operacional (PS = NA; D1 = PA1 + … + PA6).
 
-import { formatarNumero } from './formatacao'
-import { MATRIZ_2026, type Matriz } from './matriz'
+import { formatarNumero } from './formatacao.js'
+import { MATRIZ_2026, type Matriz } from './matriz/index.js'
 
 /** Nível atribuído por código de subcritério; ausente ou nulo = ainda não avaliado. */
 export type NiveisD1 = Record<string, number | null | undefined>

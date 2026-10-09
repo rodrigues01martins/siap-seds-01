@@ -1,4 +1,4 @@
-import type { Faixa } from './matriz/tipos'
+import type { Faixa } from './matriz/tipos.js'
 
 /** Retorna a primeira faixa cujo limite `ate` (inclusivo) comporta o valor; `ate` nulo = sem limite. */
 export function pontuarPorFaixa(valor: number, faixas: Faixa[]): Faixa {

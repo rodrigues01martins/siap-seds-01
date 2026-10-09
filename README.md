@@ -161,14 +161,46 @@ passa por uma função `/api`, que:
    `{ caminho, acao, antes, depois, uid, perfil, dataHora }`;
 5. recusa qualquer escrita em proposta homologada (`bloqueada = true`) ou em suas subcoleções → **409**.
 
-### Endpoints da Etapa 3a
+### Endpoints da Etapa 3a (cadastros e perfis)
 
 | Endpoint | Métodos | Corpo (JSON) | Perfil |
 |---|---|---|---|
-| `/api/chamamentos` | `POST` criar, `PATCH` editar | `{ numero, titulo, lotes: [{ codigo, descricao }] }` (`PATCH` com `id`) | admin |
+| `/api/chamamentos` | `POST` criar, `PATCH` editar | `{ numero, titulo, dataLimitePropostas, justificativaMinima?, lotes: [{ codigo, descricao }] }` (`PATCH` com `id`) | admin |
 | `/api/oscs` | `POST` criar, `PATCH` editar | `{ cnpj, razaoSocial, nomeFantasia? }` — CNPJ numérico ou alfanumérico | admin |
 | `/api/propostas` | `POST` criar, `PATCH` editar | `{ chamamentoId, loteCodigo, oscCnpj, observacao? }` (`PATCH` com `propostaId`) | admin |
 | `/api/perfis` | `POST` dar/trocar, `DELETE` remover | `{ email, perfil }` / `{ email }` | admin |
+
+- `dataLimitePropostas` (`AAAA-MM-DD`): referência da D2 (Anexo IV, 3.3.1, IV). Depois que alguma proposta do
+  chamamento já tem totais calculados, não pode mais mudar → **409**.
+- `justificativaMinima` (inteiro de 0 a 2.000, opcional): mínimo de caracteres da justificativa do nível (padrão 20).
+
+### Endpoints da Etapa 3b (avaliação)
+
+| Endpoint | Métodos | Corpo (JSON) | Perfil |
+|---|---|---|---|
+| `/api/avaliacao` | `PUT` registrar/alterar nível | `{ chamamentoId, propostaId, codigo, nivel, justificativa, paginas?, decisao, votoDivergente?, sessaoId }` | presidente, relator, membro |
+| `/api/experiencia` | `POST` criar, `PATCH` editar, `DELETE` excluir | `{ chamamentoId, propostaId, descricao?, categorias, internacao?, inicio, fim?, vagas?, unidades?, trabalhadores?, valorAnualCentavos?, execucaoSatisfatoria?, documentos?: [{ tipo, descricao, referencia? }] }` (`PATCH`/`DELETE` com `id`) | presidente, relator |
+| `/api/homologar` | `POST` | `{ chamamentoId, propostaId }` | presidente |
+
+- **C2 — nível** (`.../propostas/{p}/avaliacoes/{codigo}`): `codigo` precisa existir na matriz; `nivel` inteiro
+  de 0 a 4; `paginas` não podem passar da página de corte do PA (Anexo III, 7.1); `decisao` é
+  `unanimidade` ou `maioria`, e `votoDivergente` só vale com `maioria`. Registrar de novo o mesmo subcritério
+  edita (a auditoria guarda antes e depois).
+- **C3 — experiências** (`.../propostas/{p}/experiencias/{id}`): categorias A–D, sem A e B juntas
+  (Anexo IV, 3.2.1, III); `fim ≥ inicio` (`fim` nulo = em execução); campos de porte inteiros não negativos
+  (`valorAnualCentavos` em centavos). O `PATCH` valida o documento final (o que já existe + a alteração).
+- **C4 — recálculo**: na **mesma transação** de C2 e C3, o servidor relê níveis e experiências e chama
+  `consolidarProposta` (`src/domain/proposta.ts`). Grava `propostas/{p}.totais`
+  `{ totaisPorPA, d1, d2, nf, status, completa, pendentes, motivos }` e a memória de cálculo da D2 em
+  `.../resultadoD2/atual`. `status`: `pendente` (faltam subcritérios), `apta`, `inapta` (D1 < 67,2) ou
+  `desclassificada` (nível 0 em 1.1 ou 1.2). As regras ficam só em `src/domain`; um teste confere que o
+  gravado é idêntico ao resultado do domínio.
+- **C5 — homologação**: só sem status `pendente` (→ **409**). Grava `bloqueada = true`, `homologadaPor`
+  `{ uid, email }` e `homologadaEm`, com auditoria. Depois disso, C2 e C3 nessa proposta → **409**.
+
+As funções da Vercel rodam como ESM no Node, sem bundler: imports relativos em `api/` e `src/domain/` usam
+a extensão `.js` (`'./d1.js'`, `'./matriz/index.js'`) e o JSON usa `with { type: 'json' }`. O teste
+`api/_lib/esm.test.ts` falha se alguém esquecer.
 
 No app, use `chamarApi` de `src/lib/api.ts`: ele anexa o ID token e devolve `ErroApi` com `status`, mensagem
 e `campos` em português.

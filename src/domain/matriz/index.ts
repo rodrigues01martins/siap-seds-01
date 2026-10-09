@@ -1,7 +1,7 @@
-import dados from './matriz_2026.json'
-import type { Faixa, Matriz } from './tipos'
+import dados from './matriz_2026.json' with { type: 'json' }
+import type { Faixa, Matriz } from './tipos.js'
 
-export type * from './tipos'
+export type * from './tipos.js'
 
 function validarFaixas(rotulo: string, faixas: Faixa[], erros: string[]) {
   const ultima = faixas.at(-1)

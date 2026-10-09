@@ -3,8 +3,8 @@
 // O sistema NÃO desempata: propostas com a mesma NF dividem a posição e são sinalizadas;
 // a Comissão decide o empate formalmente em outra instância.
 
-import type { ResultadoD1 } from './d1'
-import type { ResultadoD2 } from './d2'
+import type { ResultadoD1 } from './d1.js'
+import type { ResultadoD2 } from './d2.js'
 
 export interface PropostaAvaliada {
   id: string
