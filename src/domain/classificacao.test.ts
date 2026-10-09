@@ -89,12 +89,18 @@ describe('classificar — ordem e exclusões', () => {
     expect(r.desclassificadas).toEqual(['descl'])
   })
 
-  it('empates em NF são sinalizados (desempate conforme o Edital, Anexo IV item 1.4)', () => {
-    const r = classificar([proposta('a', niveis(3)), proposta('b', niveis(3)), proposta('c', niveis(4))])
-    expect(r.ranking.map((p) => [p.id, p.empatada])).toEqual([
-      ['c', false],
-      ['a', true],
-      ['b', true],
+  it('empate em NF: mesma posição e sinalização; o sistema não desempata (a Comissão decide em outra instância)', () => {
+    const r = classificar([
+      proposta('a', niveis(3)),
+      proposta('b', niveis(3)),
+      proposta('c', niveis(4)),
+      proposta('d', niveis(3, { '6.4': 2 })),
+    ])
+    expect(r.ranking.map((p) => [p.posicao, p.id, p.nf, p.empatada])).toEqual([
+      [1, 'c', 112, false],
+      [2, 'a', 84, true],
+      [2, 'b', 84, true],
+      [4, 'd', 83, false],
     ])
   })
 })

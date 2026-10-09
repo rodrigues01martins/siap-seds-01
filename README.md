@@ -1,7 +1,7 @@
 # SIAP SEDS/GO 2026 — Avaliação de Planos de Ação
 
 App web para a Comissão de Seleção avaliar os Cadernos de Proposta Técnica (Anexo III) conforme a
-Matriz de Avaliação (Anexo IV). Regras de arquitetura e convenções: veja [`claude.md`](claude.md).
+Matriz de Avaliação (Anexo IV). Regras de arquitetura e convenções: veja [`CLAUDE.md`](CLAUDE.md).
 
 - **Front-end:** React 18 + TypeScript + Vite + Tailwind, hospedado na Vercel
 - **Back-end:** Firebase Auth + Firestore (leitura no cliente; escrita só pela `/api`, a partir da Etapa 3)
