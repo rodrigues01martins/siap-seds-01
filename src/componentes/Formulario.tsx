@@ -32,6 +32,8 @@ interface PropsFormulario<E extends z.ZodType<FieldValues>> {
   /** Volta aos valores iniciais depois de enviar com sucesso. */
   limparAoConcluir?: boolean
   desabilitado?: boolean
+  /** Mostra os campos desabilitados e sem o botão de enviar. */
+  somenteLeitura?: boolean
 }
 
 const identidade = <T,>(valor: T) => valor
@@ -67,6 +69,7 @@ export function Formulario<E extends z.ZodType<FieldValues>>({
   campoDoFormulario = identidade,
   limparAoConcluir = false,
   desabilitado = false,
+  somenteLeitura = false,
 }: PropsFormulario<E>) {
   const mapear = (campos: Campos, corpo: unknown): Campos =>
     Object.fromEntries(
@@ -113,17 +116,21 @@ export function Formulario<E extends z.ZodType<FieldValues>>({
         noValidate
         className="space-y-4"
       >
-        {children}
+        <fieldset disabled={somenteLeitura} className="space-y-4">
+          {children}
+        </fieldset>
         {erroRaiz && <p className="text-sm text-red-700">{erroRaiz}</p>}
         <AlertaErro erro={erroServidor} />
-        <button
-          type="submit"
-          disabled={desabilitado || formState.isSubmitting}
-          aria-busy={formState.isSubmitting}
-          className="rounded-md bg-sky-700 px-4 py-2 font-medium text-white hover:bg-sky-800 disabled:opacity-50"
-        >
-          {rotuloEnviar}
-        </button>
+        {!somenteLeitura && (
+          <button
+            type="submit"
+            disabled={desabilitado || formState.isSubmitting}
+            aria-busy={formState.isSubmitting}
+            className="rounded-md bg-sky-700 px-4 py-2 font-medium text-white hover:bg-sky-800 disabled:opacity-50"
+          >
+            {rotuloEnviar}
+          </button>
+        )}
       </form>
     </FormProvider>
   )

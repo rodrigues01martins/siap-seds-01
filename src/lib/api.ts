@@ -13,7 +13,7 @@ export class ErroApi extends Error {
   }
 }
 
-export type MetodoApi = 'GET' | 'POST' | 'PATCH' | 'DELETE'
+export type MetodoApi = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 
 export interface DependenciasApi {
   obterToken: () => Promise<string | null>

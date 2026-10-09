@@ -57,6 +57,11 @@ export function validarMatriz(matriz: Matriz): Matriz {
 
   if (matriz.notaFinalMaxima !== d1.maximo + d2.maximo) erros.push('Nota final máxima difere de D1 + D2')
 
+  const { admissibilidade: adm } = matriz
+  if (!adm.requisitosEssenciais.some((r) => r.codigo === adm.requisitoPlanos)) {
+    erros.push(`Admissibilidade: requisito dos PAs ${adm.requisitoPlanos} não está entre os requisitos essenciais`)
+  }
+
   if (erros.length > 0) throw new Error(`Matriz inválida:\n- ${erros.join('\n- ')}`)
   return matriz
 }

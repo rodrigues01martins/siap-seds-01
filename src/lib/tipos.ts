@@ -29,10 +29,11 @@ export interface Proposta {
   loteCodigo: string
   oscCnpj: string
   protocolo?: string
-  numeroSei?: string
+  numeroSEI?: string
   observacao?: string
   bloqueada?: boolean
   totais?: { status?: StatusD1; d1?: number; d2?: number; nf?: number }
+  admissibilidade?: { situacao?: 'admitida' | 'nao_admitida' | 'desclassificada' }
 }
 
 export interface PresenteSessao {
@@ -55,6 +56,15 @@ export interface Sessao {
   declaracoes: DeclaracaoSessao[]
   foco: { propostaId: string; subcriterio: string } | null
   abertaPor?: { uid: string; email: string | null }
+}
+
+export interface Avaliacao {
+  nivel: number
+  justificativa: string
+  paginas: number[]
+  decisao: 'unanimidade' | 'maioria'
+  votoDivergente?: string
+  sessaoId: string
 }
 
 export interface UsuarioCadastro {

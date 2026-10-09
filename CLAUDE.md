@@ -21,6 +21,11 @@ Eliminatórias: D1 < 67,2 → inapta; nível 0 em 1.1 ou 1.2 → desclassificada
 4. Proposta com campo bloqueada=true não aceita escrita (homologada).
 5. Segredos nunca usam prefixo VITE_. FIREBASE_SERVICE_ACCOUNT só existe no servidor.
 
+## Decisões
+- Os PDFs dos Cadernos NÃO são carregados no app. A consulta é feita no SEI; o app guarda apenas o
+  nº SEI (campo numeroSEI) e as páginas citadas. Nada de react-pdf, Firebase Storage ou pdfRef.
+- Páginas citadas na avaliação da D1 usam a numeração interna do PA (1 até o limite do PA na matriz).
+
 ## Perfis
 admin, presidente, relator, membro, controle
 

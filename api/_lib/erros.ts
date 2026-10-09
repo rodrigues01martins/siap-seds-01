@@ -25,6 +25,7 @@ export const MENSAGENS = {
   chamamentoNaoEncontrado: 'Chamamento não encontrado.',
   sessaoNaoEncontrada: 'Sessão não encontrada.',
   sessaoEncerrada: 'Sessão encerrada: alteração não permitida.',
+  naoAdmitida: 'Proposta não admitida (Anexo III, item 28): não segue para avaliação.',
   semSessaoAberta: 'Avaliação só pode ser registrada em sessão aberta da Comissão.',
   interno: 'Erro interno no servidor. Tente novamente.',
 } as const

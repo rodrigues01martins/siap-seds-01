@@ -2,8 +2,8 @@
 // usando apenas src/domain (consolidarProposta = calcularD1 + calcularD2).
 
 import type { Transaction } from 'firebase-admin/firestore'
-import type { Experiencia } from '../../src/domain/d2.js'
 import { consolidarProposta, type TotaisProposta } from '../../src/domain/proposta.js'
+import { paraExperiencia } from '../../src/esquemas/experiencia.js'
 import { obterAdmin } from './admin.js'
 import { ErroApi, MENSAGENS } from './erros.js'
 import type { Operacao } from './gravar.js'
@@ -13,23 +13,6 @@ export interface Mudanca {
   colecao: 'avaliacoes' | 'experiencias'
   id: string
   dados: Record<string, unknown> | null
-}
-
-/** Normaliza o documento do Firestore para o tipo do domínio. */
-export function paraExperiencia(id: string, d: Record<string, unknown>): Experiencia {
-  return {
-    id,
-    descricao: d.descricao as string | undefined,
-    categorias: (d.categorias ?? []) as Experiencia['categorias'],
-    internacao: (d.internacao as boolean | undefined) ?? false,
-    inicio: d.inicio as string,
-    fim: (d.fim as string | null | undefined) ?? null,
-    vagas: (d.vagas as number | null | undefined) ?? null,
-    unidades: (d.unidades as number | null | undefined) ?? null,
-    trabalhadores: (d.trabalhadores as number | null | undefined) ?? null,
-    valorAnualCentavos: (d.valorAnualCentavos as number | null | undefined) ?? null,
-    execucaoSatisfatoria: (d.execucaoSatisfatoria as boolean | undefined) ?? false,
-  }
 }
 
 /**
@@ -85,7 +68,10 @@ export async function recalcular(
   }
 }
 
-/** Lê a proposta (404 se não existe) e recusa se homologada (409), antes de qualquer validação. */
+/**
+ * Lê a proposta (404 se não existe) e recusa, antes de qualquer validação, se homologada ou se a
+ * admissibilidade a deixou fora da avaliação (não admitida ou desclassificada) — 409.
+ */
 export async function exigirPropostaEditavel(
   transacao: Transaction,
   chamamentoId: string,
@@ -94,4 +80,6 @@ export async function exigirPropostaEditavel(
   const proposta = await transacao.get(obterAdmin().db.doc(`chamamentos/${chamamentoId}/propostas/${propostaId}`))
   if (!proposta.exists) throw new ErroApi(404, MENSAGENS.propostaNaoEncontrada)
   if (proposta.get('bloqueada') === true) throw new ErroApi(409, MENSAGENS.homologada)
+  const admissao = proposta.get('admissibilidade.situacao') as string | undefined
+  if (admissao === 'nao_admitida' || admissao === 'desclassificada') throw new ErroApi(409, MENSAGENS.naoAdmitida)
 }

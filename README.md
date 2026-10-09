@@ -167,7 +167,10 @@ passa por uma função `/api`, que:
 |---|---|---|---|
 | `/api/chamamentos` | `POST` criar, `PATCH` editar | `{ numero, titulo, processoSei, dataLimitePropostas, indiceCorrecao?, dataBaseCorrecao?, justificativaMinima?, lotes: [{ codigo, descricao }] }` (`PATCH` com `id`) | admin |
 | `/api/oscs` | `POST` criar, `PATCH` editar | `{ cnpj, razaoSocial, nomeFantasia? }` — CNPJ numérico ou alfanumérico | admin |
-| `/api/propostas` | `POST` criar, `PATCH` editar | `{ chamamentoId, loteCodigo, oscCnpj, protocolo, numeroSei, observacao? }` (`PATCH` com `propostaId`) | admin |
+| `/api/propostas` | `POST` criar, `PATCH` editar | `{ chamamentoId, loteCodigo, oscCnpj, protocolo, numeroSEI, observacao? }` (`PATCH` com `propostaId`) | admin |
+
+> Os PDFs dos Cadernos **não** são carregados no app: a consulta é feita no SEI. O app guarda só o nº SEI
+> (`numeroSEI`) e as páginas citadas.
 | `/api/perfis` | `POST` dar/trocar, `DELETE` remover | `{ email, perfil }` / `{ email }` | admin |
 
 - `dataLimitePropostas` (`AAAA-MM-DD`): referência da D2 (Anexo IV, 3.3.1, IV). Depois que alguma proposta do
@@ -193,16 +196,22 @@ passa por uma função `/api`, que:
 | Endpoint | Métodos | Corpo (JSON) | Perfil |
 |---|---|---|---|
 | `/api/avaliacao` | `PUT` registrar/alterar nível | `{ chamamentoId, propostaId, codigo, nivel, justificativa, paginas?, decisao, votoDivergente?, sessaoId }` | presidente, relator, membro |
-| `/api/experiencia` | `POST` criar, `PATCH` editar, `DELETE` excluir | `{ chamamentoId, propostaId, descricao?, categorias, internacao?, inicio, fim?, vagas?, unidades?, trabalhadores?, valorAnualCentavos?, execucaoSatisfatoria?, documentos?: [{ tipo, descricao, referencia? }] }` (`PATCH`/`DELETE` com `id`) | presidente, relator |
+| `/api/experiencia` | `POST` criar, `PATCH` editar, `DELETE` excluir | `{ chamamentoId, propostaId, descricao, categorias, modalidade, orgaoParceiro?, instrumento?, mrosc?, inicio, fim?, vagas?, unidades?, trabalhadores?, valorAnualCentavos?, documentos?: [{ tipo, numeroSEI, comprovaExecucaoSatisfatoria, aceito }], desconsideracoes?: [{ criterio, justificativa }] }` (`PATCH`/`DELETE` com `id`) | presidente, relator |
 | `/api/homologar` | `POST` | `{ chamamentoId, propostaId }` | presidente |
 
 - **C2 — nível** (`.../propostas/{p}/avaliacoes/{codigo}`): `codigo` precisa existir na matriz; `nivel` inteiro
-  de 0 a 4; `paginas` não podem passar da página de corte do PA (Anexo III, 7.1); `decisao` é
-  `unanimidade` ou `maioria`, e `votoDivergente` só vale com `maioria`. Registrar de novo o mesmo subcritério
-  edita (a auditoria guarda antes e depois).
+  de 0 a 4; `paginas` (numeração interna do PA) não podem passar da página de corte do PA (Anexo III, 7.1);
+  `decisao` é `unanimidade` ou `maioria`, e `votoDivergente` só vale com `maioria`. Registrar de novo o mesmo
+  subcritério edita (a auditoria guarda antes e depois). Exige sessão aberta com a proposta na pauta (**409**)
+  e, na mesma transação, define o subcritério como **foco da sessão**.
 - **C3 — experiências** (`.../propostas/{p}/experiencias/{id}`): categorias A–D, sem A e B juntas
-  (Anexo IV, 3.2.1, III); `fim ≥ inicio` (`fim` nulo = em execução); campos de porte inteiros não negativos
-  (`valorAnualCentavos` em centavos). O `PATCH` valida o documento final (o que já existe + a alteração).
+  (Anexo IV, 3.2.1, III); categoria D exige `mrosc` (Lei 13.019/2014); `fim ≥ inicio` (`fim` nulo = em
+  execução); campos de porte inteiros não negativos (`valorAnualCentavos` em centavos). O `PATCH` valida o
+  documento final (o que já existe + a alteração).
+  - Derivados pelo servidor (Etapa 4b): **internação** (2.3.1) = `modalidade: 'internacao'`; **execução
+    satisfatória** (C2.4) = algum documento `aceito` que `comprovaExecucaoSatisfatoria`.
+  - `desconsideracoes`: a Comissão desconsidera a experiência **em critérios específicos** (C2.1 a C2.4),
+    com justificativa obrigatória (Anexo IV, 3.8.5); a memória registra o motivo.
 - **C4 — recálculo**: na **mesma transação** de C2 e C3, o servidor relê níveis e experiências e chama
   `consolidarProposta` (`src/domain/proposta.ts`). Grava `propostas/{p}.totais`
   `{ totaisPorPA, d1, d2, nf, status, completa, pendentes, motivos }` e a memória de cálculo da D2 em
@@ -247,6 +256,31 @@ A fonte única no código é `src/domain/permissoes.ts` (um teste garante que el
 | `/perfis` | admin | dar, trocar e remover perfis (o admin não remove o próprio) |
 | `/chamamentos/:ch/sessoes/nova` | presidente | abertura: data, presentes, declarações, pauta |
 | `/chamamentos/:ch/sessoes/:s` | Comissão (escrita: presidente e relator) | foco, presentes e declarações, encerrar |
+
+### Admissibilidade (Anexo III, item 28)
+
+| Endpoint | Método | Corpo (JSON) | Perfil |
+|---|---|---|---|
+| `/api/admissibilidade` | `PUT` | `{ chamamentoId, propostaId, requisitos: { '28.1.I': true, ... }, irregularidadesFormais?: ['28.5.II'], observacaoIrregularidades?, planos: [{ codigo, ausente, paginaInicial, paginaFinal }], resultado: 'admitida' \| 'nao_admitida', motivacao? }` | presidente, relator |
+
+- Textos do 28.1 (10 requisitos), 28.2 a 28.5 ficam em `matriz_2026.json` (`admissibilidade`).
+- Página de corte de cada PA = página inicial + limite do PA (Anexo III, 7.1) − 1; a tela alerta quando excede.
+- O 28.1.VII (6 PAs) é apurado pela tabela; **PA ausente → desclassificada** (28.2). Admitida exige todos os
+  requisitos; não admitida exige motivação. Irregularidade meramente formal não desclassifica (28.4).
+- Grava `propostas/{p}.admissibilidade` (com `situacao`, `motivos`, `registradaPor`, `registradaEm`), auditado.
+  Proposta **não admitida ou desclassificada não segue para avaliação**: C2 e C3 → **409**.
+
+### Telas (Etapa 4b)
+
+| Rota | Escrita | O que faz |
+|---|---|---|
+| `/chamamentos/:ch/propostas/:p/admissibilidade` | presidente, relator | checklist 28.1, páginas por PA com página de corte e alerta, irregularidades formais (28.5), resultado e motivação |
+| `/chamamentos/:ch/propostas/:p/d1` | presidente, relator, membro (com sessão aberta e a proposta na pauta) | navegação PA1…PA6, painel do subcritério (escala com descritores, elementos como apoio, decisão, voto divergente, justificativa com contador, páginas com aviso de corte), alerta de nível 0 em 1.1/1.2 e rodapé com a prévia (src/domain) e o status oficial |
+| `/chamamentos/:ch/propostas/:p/d2` | presidente, relator | experiências e documentos, desconsiderar por critério (3.8.5) e linha do tempo A/B |
+| `/chamamentos/:ch/propostas/:p/d2/memoria` | — | memória de cálculo da D2 (`resultadoD2/atual`) |
+
+Quem não pode escrever vê a tela sem os botões; proposta homologada fica somente leitura. O perfil
+**controle** lê chamamentos, propostas e avaliações (firestore.rules), sem escrever.
 
 Leitura em tempo real (`onSnapshot`, `src/lib/firestore.ts`); escrita só por `chamarApi` (`src/lib/api.ts`).
 O componente `Formulario` valida com o mesmo esquema da `/api` e põe os erros 400 da `/api` nos mesmos campos.

@@ -97,7 +97,7 @@ describe('/api/homologar — homologação', () => {
     const nivel = await chamar(avaliacao, 'PUT', { ...ALVO, codigo: '1.1', nivel: 1, justificativa: 'Tentativa após homologação.', paginas: [], decisao: 'unanimidade', sessaoId: SESSAO }, relator.token)
     expect(nivel).toMatchObject({ status: 409, corpo: { erro: 'Proposta homologada: alteração não permitida.' } })
 
-    const exp = await chamar(experiencia, 'POST', { ...ALVO, descricao: 'Nova experiência', categorias: ['C'], inicio: '2020-01-01', fim: null }, relator.token)
+    const exp = await chamar(experiencia, 'POST', { ...ALVO, descricao: 'Nova experiência', categorias: ['C'], modalidade: 'outra', mrosc: false, inicio: '2020-01-01', fim: null }, relator.token)
     expect(exp.status).toBe(409)
 
     expect((await chamar(rota, 'POST', ALVO, presidente.token)).status).toBe(409)

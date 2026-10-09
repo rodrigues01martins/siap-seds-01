@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { JUSTIFICATIVA_MINIMA_PADRAO, planoDoSubcriterio, problemasDoRegistro, type RegistroAvaliacao } from './avaliacao'
+import { JUSTIFICATIVA_MINIMA_PADRAO, planoDoSubcriterio, problemasDoRegistro, type RegistroAvaliacao, ehEliminatorio, lerPaginas, paginasAcimaDoCorte } from './avaliacao'
 
 const valido = (dados: Partial<RegistroAvaliacao> = {}): RegistroAvaliacao => ({
   codigo: '3.1',
@@ -80,5 +80,25 @@ describe('problemasDoRegistro (C2)', () => {
       votoDivergente: 'Voto divergente só se aplica a decisão por maioria.',
     })
     expect(problemasDoRegistro(valido({ decisao: 'maioria', votoDivergente: 'Membro X: nível 2.' }))).toEqual({})
+  })
+})
+
+describe('Etapa 4b — apoio à tela da D1', () => {
+  it('paginasAcimaDoCorte: páginas acima do limite do PA do subcritério', () => {
+    expect(paginasAcimaDoCorte('3.1', [2, 8, 9, 12])).toEqual({ plano: 'PA3', limite: 8, acima: [9, 12] })
+    expect(paginasAcimaDoCorte('3.1', [1, 8])).toEqual({ plano: 'PA3', limite: 8, acima: [] })
+    expect(paginasAcimaDoCorte('9.9', [1])).toBeNull()
+  })
+
+  it('ehEliminatorio: 1.1 e 1.2 vêm da matriz', () => {
+    expect(ehEliminatorio('1.1')).toBe(true)
+    expect(ehEliminatorio('1.2')).toBe(true)
+    expect(ehEliminatorio('2.1')).toBe(false)
+  })
+
+  it('lerPaginas: números separados por vírgula ou espaço, sem repetir, em ordem', () => {
+    expect(lerPaginas('5, 2 7,2')).toEqual({ paginas: [2, 5, 7], invalidos: [] })
+    expect(lerPaginas('')).toEqual({ paginas: [], invalidos: [] })
+    expect(lerPaginas('3, a, 0, 4.5')).toEqual({ paginas: [3], invalidos: ['a', '0', '4.5'] })
   })
 })

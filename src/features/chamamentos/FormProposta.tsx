@@ -10,7 +10,7 @@ import { chamarApi } from '../../lib/api'
 import { useColecao, useDocumento } from '../../lib/firestore'
 import type { Chamamento, Osc, Proposta } from '../../lib/tipos'
 
-const VAZIO = { oscCnpj: '', loteCodigo: '', protocolo: '', numeroSei: '', observacao: '' }
+const VAZIO = { oscCnpj: '', loteCodigo: '', protocolo: '', numeroSEI: '', observacao: '' }
 
 export function FormProposta() {
   const { ch, p } = useParams()
@@ -60,7 +60,7 @@ export function FormProposta() {
           />
           <div className="grid gap-4 sm:grid-cols-2">
             <Campo nome="protocolo" rotulo="Protocolo" />
-            <Campo nome="numeroSei" rotulo="Nº do documento SEI" />
+            <Campo nome="numeroSEI" rotulo="Nº do documento SEI" />
           </div>
           <Campo nome="observacao" rotulo="Observação" tipo="textarea" />
         </Formulario>

@@ -12,8 +12,8 @@ describe('menu lateral por perfil', () => {
     expect(caminhos(perfil)).toEqual(['/'])
   })
 
-  it('controle e sem perfil: nenhuma tela nesta etapa', () => {
-    expect(caminhos('controle')).toEqual([])
+  it('controle: chamamentos, só leitura (Etapa 4b); sem perfil: nada', () => {
+    expect(caminhos('controle')).toEqual(['/'])
     expect(caminhos(null)).toEqual([])
   })
 

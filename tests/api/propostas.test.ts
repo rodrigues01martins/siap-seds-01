@@ -9,7 +9,7 @@ const VALIDA = {
   loteCodigo: 'L1',
   oscCnpj: '11.222.333/0001-81',
   protocolo: 'PROT-2026-0001',
-  numeroSei: '95574999',
+  numeroSEI: '95574999',
   observacao: 'Entregue em mídia física',
 }
 
@@ -55,11 +55,11 @@ describe('/api/propostas — referências', () => {
   })
 
   it('protocolo e nº SEI obrigatórios na criação (Etapa 4a) → 400', async () => {
-    const { protocolo: _p, numeroSei: _n, ...semEles } = VALIDA
+    const { protocolo: _p, numeroSEI: _n, ...semEles } = VALIDA
     const r = await chamar(rota, 'POST', semEles, admin.token)
     expect(r).toMatchObject({
       status: 400,
-      corpo: { campos: { protocolo: 'Informe o protocolo.', numeroSei: 'Informe o nº do documento SEI.' } },
+      corpo: { campos: { protocolo: 'Informe o protocolo.', numeroSEI: 'Informe o nº do documento SEI.' } },
     })
   })
 
@@ -77,7 +77,7 @@ describe('/api/propostas — criar e editar', () => {
       loteCodigo: 'L1',
       oscCnpj: CNPJ,
       protocolo: 'PROT-2026-0001',
-      numeroSei: '95574999',
+      numeroSEI: '95574999',
       bloqueada: false,
     })
     const [registro] = await auditoriaDe(caminho)
