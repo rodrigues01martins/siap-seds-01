@@ -52,11 +52,12 @@ function Copiar({ texto }: { texto: string }) {
   )
 }
 
-export function CabecalhoProposta({ dados, ch, aba }: { dados: DadosProposta; ch: string; aba: 'd1' | 'd2' | 'memoria' }) {
+export function CabecalhoProposta({ dados, ch, aba }: { dados: DadosProposta; ch: string; aba: 'admissibilidade' | 'd1' | 'd2' | 'memoria' }) {
   const { chamamento, proposta, osc, sessaoAberta } = dados
   const lote = chamamento.lotes.find((l) => l.codigo === proposta.loteCodigo)
   const base = `/chamamentos/${ch}/propostas/${proposta.id}`
   const abas = [
+    { id: 'admissibilidade', rotulo: 'Admissibilidade', para: `${base}/admissibilidade` },
     { id: 'd1', rotulo: 'Dimensão 1', para: `${base}/d1` },
     { id: 'd2', rotulo: 'Dimensão 2', para: `${base}/d2` },
     { id: 'memoria', rotulo: 'Memória da D2', para: `${base}/d2/memoria` },

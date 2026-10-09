@@ -33,6 +33,7 @@ export interface Proposta {
   observacao?: string
   bloqueada?: boolean
   totais?: { status?: StatusD1; d1?: number; d2?: number; nf?: number }
+  admissibilidade?: { situacao?: 'admitida' | 'nao_admitida' | 'desclassificada' }
 }
 
 export interface PresenteSessao {

@@ -3,6 +3,7 @@ import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import * as rota from '../../api/admissibilidade'
 import * as avaliacao from '../../api/avaliacao'
 import * as experiencia from '../../api/experiencia'
+import type { PaginasPlano } from '../../src/domain/admissibilidade'
 import {
   CAMINHO_PROPOSTA,
   CH,
@@ -29,7 +30,7 @@ function corpo(dados: Record<string, unknown> = {}) {
     propostaId: PROP,
     requisitos: Object.fromEntries(REQUISITOS.map((c) => [c, true])),
     irregularidadesFormais: [],
-    planos: LIMITES.map((limite, i) => {
+    planos: LIMITES.map((limite, i): PaginasPlano => {
       const plano = { codigo: `PA${i + 1}`, ausente: false, paginaInicial: pagina, paginaFinal: pagina + limite - 1 }
       pagina += limite
       return plano

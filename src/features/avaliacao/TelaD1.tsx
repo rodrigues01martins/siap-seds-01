@@ -25,6 +25,10 @@ export function motivoSomenteLeituraD1(
   podeRegistrar: boolean,
 ): string | null {
   if (dados.proposta.bloqueada) return 'Proposta homologada: somente leitura.'
+  const admissao = dados.proposta.admissibilidade?.situacao
+  if (admissao === 'nao_admitida' || admissao === 'desclassificada') {
+    return 'Proposta não admitida (Anexo III, item 28): não segue para avaliação.'
+  }
   if (!podeRegistrar) return 'Seu perfil consulta a avaliação, mas não registra níveis.'
   if (!dados.sessaoAberta) return 'Nenhuma sessão aberta: o presidente precisa abrir a sessão para registrar níveis.'
   if (!dados.sessaoAberta.pauta.includes(dados.proposta.id)) return 'Proposta fora da pauta da sessão aberta.'

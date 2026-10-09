@@ -78,6 +78,7 @@ const CORES_STATUS: Record<StatusPainel, string> = {
   apta: 'bg-emerald-100 text-emerald-800',
   inapta: 'bg-amber-100 text-amber-800',
   desclassificada: 'bg-red-100 text-red-800',
+  nao_admitida: 'bg-red-50 text-red-700',
   homologada: 'bg-sky-100 text-sky-800',
 }
 

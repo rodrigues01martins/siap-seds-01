@@ -68,7 +68,10 @@ export async function recalcular(
   }
 }
 
-/** Lê a proposta (404 se não existe) e recusa se homologada (409), antes de qualquer validação. */
+/**
+ * Lê a proposta (404 se não existe) e recusa, antes de qualquer validação, se homologada ou se a
+ * admissibilidade a deixou fora da avaliação (não admitida ou desclassificada) — 409.
+ */
 export async function exigirPropostaEditavel(
   transacao: Transaction,
   chamamentoId: string,
@@ -77,4 +80,6 @@ export async function exigirPropostaEditavel(
   const proposta = await transacao.get(obterAdmin().db.doc(`chamamentos/${chamamentoId}/propostas/${propostaId}`))
   if (!proposta.exists) throw new ErroApi(404, MENSAGENS.propostaNaoEncontrada)
   if (proposta.get('bloqueada') === true) throw new ErroApi(409, MENSAGENS.homologada)
+  const admissao = proposta.get('admissibilidade.situacao') as string | undefined
+  if (admissao === 'nao_admitida' || admissao === 'desclassificada') throw new ErroApi(409, MENSAGENS.naoAdmitida)
 }

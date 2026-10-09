@@ -647,5 +647,78 @@
         ]
       }
     }
+  },
+  "admissibilidade": {
+    "fonte": "Anexo III – Caderno de Proposta Técnica, item 28 (SEI 95574003)",
+    "requisitosEssenciais": [
+      {
+        "codigo": "28.1.I",
+        "descricao": "apresentação dentro do prazo estabelecido no Edital"
+      },
+      {
+        "codigo": "28.1.II",
+        "descricao": "apresentação em arquivo único"
+      },
+      {
+        "codigo": "28.1.III",
+        "descricao": "apresentação em formato PDF"
+      },
+      {
+        "codigo": "28.1.IV",
+        "descricao": "possibilidade de abertura e leitura integral do arquivo"
+      },
+      {
+        "codigo": "28.1.V",
+        "descricao": "identificação da Organização da Sociedade Civil"
+      },
+      {
+        "codigo": "28.1.VI",
+        "descricao": "identificação inequívoca do lote"
+      },
+      {
+        "codigo": "28.1.VII",
+        "descricao": "apresentação dos 6 (seis) Planos de Ação obrigatórios"
+      },
+      {
+        "codigo": "28.1.VIII",
+        "descricao": "assinatura pelo representante legal ou procurador regularmente constituído"
+      },
+      {
+        "codigo": "28.1.IX",
+        "descricao": "possibilidade de identificação dos conteúdos submetidos ao julgamento"
+      },
+      {
+        "codigo": "28.1.X",
+        "descricao": "observância das demais exigências expressamente qualificadas no Edital como essenciais"
+      }
+    ],
+    "requisitoPlanos": "28.1.VII",
+    "desclassificacao": "28.2 — A ausência integral do Caderno de Proposta Técnica ou de qualquer dos 6 (seis) Planos de Ação obrigatórios implicará desclassificação da proposta.",
+    "tratamentoPlanoIlegivel": "28.3 — O Plano de Ação apresentado que, por descumprimento de requisito essencial de apresentação, não permita sua regular identificação, leitura ou avaliação receberá o tratamento estabelecido no Edital.",
+    "irregularidadesFormais": {
+      "observacao": "28.4 — Irregularidades meramente formais que não comprometam a identificação, integridade, legibilidade, compreensão ou comparabilidade da proposta não implicarão, isoladamente, sua desclassificação.",
+      "tipos": [
+        {
+          "codigo": "28.5.I",
+          "descricao": "pequena variação pontual de fonte ou espaçamento"
+        },
+        {
+          "codigo": "28.5.II",
+          "descricao": "erro isolado na numeração de página"
+        },
+        {
+          "codigo": "28.5.III",
+          "descricao": "pequena inconsistência de formatação"
+        },
+        {
+          "codigo": "28.5.IV",
+          "descricao": "falha material no sumário que não prejudique a localização do conteúdo"
+        },
+        {
+          "codigo": "28.5.V",
+          "descricao": "ocorrência equivalente que não produza vantagem competitiva ou prejuízo à avaliação"
+        }
+      ]
+    }
   }
 }

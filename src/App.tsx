@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 import { Shell } from './componentes/Shell'
 import type { Perfil } from './domain/perfis'
 import { PERMISSOES } from './domain/permissoes'
+import { TelaAdmissibilidade } from './features/admissibilidade/TelaAdmissibilidade'
 import { Login } from './features/auth/Login'
 import { TelaD1 } from './features/avaliacao/TelaD1'
 import { RotaProtegida } from './features/auth/RotaProtegida'
@@ -44,6 +45,7 @@ export default function App() {
             <Route path="chamamentos/:ch/propostas/:p/editar" element={so(PERMISSOES.cadastros, <FormProposta />)} />
             <Route path="chamamentos/:ch/sessoes/nova" element={so(PERMISSOES.sessaoAbrirEncerrar, <NovaSessao />)} />
             <Route path="chamamentos/:ch/sessoes/:s" element={so(LEITURA, <ConduzirSessao />)} />
+            <Route path="chamamentos/:ch/propostas/:p/admissibilidade" element={so(LEITURA, <TelaAdmissibilidade />)} />
             <Route path="chamamentos/:ch/propostas/:p/d1" element={so(LEITURA, <TelaD1 />)} />
             <Route path="chamamentos/:ch/propostas/:p/d2" element={so(LEITURA, <TelaD2 />)} />
             <Route path="chamamentos/:ch/propostas/:p/d2/memoria" element={so(LEITURA, <TelaMemoriaD2 />)} />

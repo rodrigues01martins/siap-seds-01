@@ -42,10 +42,31 @@ export interface CriterioComFaixas {
   faixas: Faixa[]
 }
 
+export interface ItemCodificado {
+  codigo: string
+  descricao: string
+}
+
+/** Admissibilidade do Caderno — Anexo III, item 28 (SEI 95574003). */
+export interface RegrasAdmissibilidade {
+  fonte: string
+  /** 28.1 — requisitos essenciais para admissão. */
+  requisitosEssenciais: ItemCodificado[]
+  /** Requisito apurado pela tabela de páginas (apresentação dos 6 PAs). */
+  requisitoPlanos: string
+  /** 28.2 — ausência do Caderno ou de qualquer PA desclassifica. */
+  desclassificacao: string
+  /** 28.3 — PA ilegível recebe o tratamento do Edital. */
+  tratamentoPlanoIlegivel: string
+  /** 28.4 e 28.5 — irregularidades meramente formais. */
+  irregularidadesFormais: { observacao: string; tipos: ItemCodificado[] }
+}
+
 export interface Matriz {
   versao: string
   fonte: string
   notaFinalMaxima: number
+  admissibilidade: RegrasAdmissibilidade
   dimensao1: {
     titulo: string
     maximo: number
