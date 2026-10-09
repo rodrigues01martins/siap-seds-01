@@ -20,8 +20,10 @@
     "test:api": "firebase emulators:exec --only auth,firestore --project demo-siap-seds \"vitest run --config vitest.api.config.ts\""
   },
   "dependencies": {
+    "exceljs": "^4.4.0",
     "firebase": "^10.14.1",
     "firebase-admin": "^13.10.0",
+    "pdfmake": "^0.3.11",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.89.0",
@@ -36,6 +38,7 @@
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.7",
     "@types/node": "^22.20.5",
+    "@types/pdfmake": "^0.3.3",
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^4.7.0",

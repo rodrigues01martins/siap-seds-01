@@ -1,5 +1,6 @@
 // POST /api/homologar (C5): o presidente homologa a proposta. Perfil: presidente.
-// Só homologa proposta cujo status (totais gravados pelo servidor) não é "pendente".
+// Só homologa proposta cujo status (totais gravados pelo servidor) não é "pendente" e sem diligência
+// em aberto (RF-28).
 // Grava bloqueada = true, homologadaPor e homologadaEm, auditado; depois disso a trava de
 // gravar.ts devolve 409 para qualquer escrita na proposta e em suas subcoleções (C2, C3).
 
@@ -7,6 +8,7 @@ import { FieldValue } from 'firebase-admin/firestore'
 import { z } from 'zod'
 import { MATRIZ_2026 } from '../src/domain/matriz/index.js'
 import { PERMISSOES } from '../src/domain/permissoes.js'
+import { STATUS_DILIGENCIA_EM_ABERTO } from '../src/esquemas/resultado.js'
 import { obterAdmin } from './_lib/admin.js'
 import { ErroApi, MENSAGENS } from './_lib/erros.js'
 import { gravar } from './_lib/gravar.js'
@@ -35,6 +37,11 @@ export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
           `Proposta com avaliação pendente: conclua os ${TOTAL_SUBCRITERIOS} subcritérios antes de homologar.`,
         )
       }
+      // RF-28: diligência em aberto impede a homologação.
+      const diligencias = await transacao.get(
+        obterAdmin().db.collection(`${caminho}/diligencias`).where('status', 'in', [...STATUS_DILIGENCIA_EM_ABERTO]).limit(1),
+      )
+      if (!diligencias.empty) throw new ErroApi(409, MENSAGENS.diligenciaEmAberto)
       return [
         {
           caminho,

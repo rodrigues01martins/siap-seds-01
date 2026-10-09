@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { useWatch } from 'react-hook-form'
 import { useParams } from 'react-router'
 import { AlertaErro } from '../../componentes/AlertaErro'
-import { Botao, EstadoLeitura, Secao, Titulo, dataBr } from '../../componentes/basicos'
+import { Botao, EstadoLeitura, LinkBotao, Secao, Titulo, dataBr } from '../../componentes/basicos'
 import { CampoSelecao, Formulario } from '../../componentes/Formulario'
 import { Tabela } from '../../componentes/Tabela'
 import { MATRIZ_2026 } from '../../domain/matriz'
@@ -70,19 +70,21 @@ export function ConduzirSessao() {
     <>
       <Titulo
         acoes={
-          aberta &&
-          podeFazer(perfil, 'sessaoAbrirEncerrar') && (
-            <Botao
-              perigo
-              onClick={() => {
-                if (window.confirm('Encerrar a sessão? Depois disso não será possível registrar avaliações nela.')) {
-                  void executar(() => alterar({ acao: 'encerrar' }))
-                }
-              }}
-            >
-              Encerrar sessão
-            </Botao>
-          )
+          <>
+            <LinkBotao para={`/chamamentos/${ch}/sessoes/${s}/ata`}>Minuta de ata</LinkBotao>
+            {aberta && podeFazer(perfil, 'sessaoAbrirEncerrar') && (
+              <Botao
+                perigo
+                onClick={() => {
+                  if (window.confirm('Encerrar a sessão? Depois disso não será possível registrar avaliações nela.')) {
+                    void executar(() => alterar({ acao: 'encerrar' }))
+                  }
+                }}
+              >
+                Encerrar sessão
+              </Botao>
+            )}
+          </>
         }
       >
         Sessão de {dataBr(dados.data)} — {aberta ? 'aberta' : 'encerrada'}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { classificar, type PropostaAvaliada } from './classificacao'
-import { calcularD1, type NiveisD1, type ResultadoD1 } from './d1'
+import { classificar, classificarLote, type PropostaAvaliada } from './classificacao'
+import { calcularD1, type NiveisD1 } from './d1'
 import { calcularD2, type ResultadoD2 } from './d2'
 import { MATRIZ_2026 } from './matriz'
 
@@ -49,7 +49,7 @@ describe('classificar — status "pendente" nunca entra no ranking', () => {
 
   it('resultado incompleto rotulado como "apta" é tratado como pendente (defesa contra dado adulterado)', () => {
     const real = pendenteComNotaAlta('forjada')
-    const forjado: ResultadoD1 = { ...real.d1, status: 'apta' }
+    const forjado: PropostaAvaliada['d1'] = { ...real.d1, status: 'apta' }
     const r = classificar([{ ...real, d1: forjado }])
     expect(r.ranking).toEqual([])
     expect(r.pendentes).toEqual(['forjada'])
@@ -102,5 +102,89 @@ describe('classificar — ordem e exclusões', () => {
       [2, 'b', 84, true],
       [4, 'd', 83, false],
     ])
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Etapa 6a — classificação do lote a partir dos totais gravados + decisão de desempate da Comissão
+// ---------------------------------------------------------------------------
+
+const totais = (nf: number, dados: Partial<{ status: string; completa: boolean; pendentes: string[] }> = {}) => ({
+  d1: nf - 5,
+  d2: 5,
+  status: 'apta',
+  completa: true,
+  pendentes: [] as string[],
+  ...dados,
+})
+
+describe('classificarLote — usa classificar() sobre os totais gravados', () => {
+  it('aptas em ordem de NF; inaptas, desclassificadas, não admitidas e pendentes fora do ranking', () => {
+    const r = classificarLote([
+      { id: 'a', totais: totais(90) },
+      { id: 'b', totais: totais(95) },
+      { id: 'inapta', totais: totais(60, { status: 'inapta' }) },
+      { id: 'descl', totais: totais(100, { status: 'desclassificada' }) },
+      { id: 'semTotais' },
+      { id: 'incompleta', totais: totais(99, { status: 'pendente', completa: false, pendentes: ['6.4'] }) },
+      { id: 'naoAdmitida', admissao: 'nao_admitida' },
+      { id: 'pa-ausente', admissao: 'desclassificada', totais: totais(97) },
+    ])
+    expect(r.ranking.map((p) => [p.posicao, p.id])).toEqual([
+      [1, 'b'],
+      [2, 'a'],
+    ])
+    expect(r.inaptas).toEqual(['inapta'])
+    expect(r.desclassificadas.sort()).toEqual(['descl', 'pa-ausente'])
+    expect(r.naoAdmitidas).toEqual(['naoAdmitida'])
+    expect(r.pendentes.sort()).toEqual(['incompleta', 'semTotais'])
+    expect(r.definitiva).toBe(false)
+  })
+
+  it('empate sem decisão: mesma posição, sinalizado e classificação não definitiva', () => {
+    const r = classificarLote([
+      { id: 'a', totais: totais(90) },
+      { id: 'b', totais: totais(84) },
+      { id: 'c', totais: totais(84) },
+    ])
+    expect(r.ranking.map((p) => [p.posicao, p.id, p.empatada])).toEqual([
+      [1, 'a', false],
+      [2, 'b', true],
+      [2, 'c', true],
+    ])
+    expect(r.empates).toEqual([{ nf: 84, ids: ['b', 'c'], decidido: false }])
+    expect(r.definitiva).toBe(false)
+  })
+
+  it('decisão da Comissão para o mesmo grupo e a mesma NF: ordem registrada, sem empate pendente', () => {
+    const r = classificarLote(
+      [
+        { id: 'a', totais: totais(90) },
+        { id: 'b', totais: totais(84) },
+        { id: 'c', totais: totais(84) },
+      ],
+      [{ propostas: ['b', 'c'], nf: 84, ordem: ['c', 'b'] }],
+    )
+    expect(r.ranking.map((p) => [p.posicao, p.id, p.empatada, p.desempatadaPelaComissao])).toEqual([
+      [1, 'a', false, false],
+      [2, 'c', false, true],
+      [3, 'b', false, true],
+    ])
+    expect(r.empates).toEqual([{ nf: 84, ids: ['b', 'c'], decidido: true }])
+    expect(r.definitiva).toBe(true)
+  })
+
+  it('decisão que não corresponde mais ao grupo (outra proposta empatou ou a NF mudou) é ignorada', () => {
+    const tres = [
+      { id: 'b', totais: totais(84) },
+      { id: 'c', totais: totais(84) },
+      { id: 'd', totais: totais(84) },
+    ]
+    const r = classificarLote(tres, [{ propostas: ['b', 'c'], nf: 84, ordem: ['c', 'b'] }])
+    expect(r.ranking.every((p) => p.empatada && p.posicao === 1)).toBe(true)
+    expect(r.empates[0]!.decidido).toBe(false)
+
+    const outraNF = classificarLote(tres.slice(0, 2), [{ propostas: ['b', 'c'], nf: 80, ordem: ['c', 'b'] }])
+    expect(outraNF.empates[0]!.decidido).toBe(false)
   })
 })
