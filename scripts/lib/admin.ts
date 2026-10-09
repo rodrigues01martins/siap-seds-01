@@ -1,12 +1,15 @@
 // Inicialização do firebase-admin para os scripts (credencial em FIREBASE_SERVICE_ACCOUNT).
 
 import { readFileSync } from 'node:fs'
+import { userInfo } from 'node:os'
 import { cert, initializeApp, type App } from 'firebase-admin/app'
-import { conferirCredencial, lerCredencial, resolverProjeto } from './projeto'
+import { conferirCredencial, identificarExecutor, lerCredencial, resolverProjeto } from './projeto'
 
 export interface ContextoAdmin {
   app: App
   projectId: string
+  /** Quem executou (github:usuario ou local:usuario), registrado na auditoria. */
+  executor: string
 }
 
 /**
@@ -25,7 +28,8 @@ export function iniciarAdmin(alias: string | undefined, confirmado: boolean): Co
   const emuladores = [process.env.FIRESTORE_EMULATOR_HOST, process.env.FIREBASE_AUTH_EMULATOR_HOST].filter(Boolean)
   console.log(`Projeto alvo: ${projectId} (${alias})${emuladores.length ? ` — EMULADORES: ${emuladores.join(', ')}` : ''}`)
 
-  return { app: initializeApp({ credential: cert(credencial), projectId }), projectId }
+  const executor = identificarExecutor(process.env, userInfo().username)
+  return { app: initializeApp({ credential: cert(credencial), projectId }), projectId, executor }
 }
 
 /** Executa o script e encerra com código 1 e mensagem curta em caso de erro. */
