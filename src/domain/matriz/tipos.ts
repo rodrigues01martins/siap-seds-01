@@ -65,8 +65,11 @@ export interface Matriz {
         titulo: string
         maximo: number
         categorias: CategoriaD2[]
-        /** Anexo IV, item 3.2.1, III: a mesma experiência não pode ser enquadrada em A e B. */
-        categoriasMutuamenteExclusivas: string[][]
+        /**
+         * Anexo IV, item 3.2.1, III: a mesma experiência não pode ser enquadrada em A e B.
+         * Objeto em vez de array de arrays porque o Firestore não aceita arrays aninhados.
+         */
+        categoriasMutuamenteExclusivas: { categorias: string[] }[]
       }
       'C2.2': CriterioComFaixas & { categoriasConsideradas: string[] }
       'C2.3': {
