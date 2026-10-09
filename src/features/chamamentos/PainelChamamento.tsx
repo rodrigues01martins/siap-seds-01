@@ -93,8 +93,11 @@ export function PainelChamamento() {
                 titulo: 'Ações',
                 celula: (p) => (
                   <span className="flex flex-wrap gap-3">
-                    <Link to={`/chamamentos/${ch}/propostas/${p.id}/admissibilidade`} className="text-sky-800 underline">
-                      Admissibilidade
+                    <Link to={`/chamamentos/${ch}/propostas/${p.id}/d1`} className="text-sky-800 underline">
+                      D1
+                    </Link>
+                    <Link to={`/chamamentos/${ch}/propostas/${p.id}/d2`} className="text-sky-800 underline">
+                      D2
                     </Link>
                     {admin && !p.bloqueada && (
                       <Link to={`/chamamentos/${ch}/propostas/${p.id}/editar`} className="text-sky-800 underline">

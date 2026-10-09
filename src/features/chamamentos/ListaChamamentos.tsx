@@ -1,4 +1,4 @@
-// Início: lista de chamamentos (Comissão e admin). Controle não lê chamamentos (firestore.rules).
+// Início: lista de chamamentos.
 
 import { Link } from 'react-router'
 import { EstadoLeitura, LinkBotao, Titulo, dataBr } from '../../componentes/basicos'
@@ -7,18 +7,8 @@ import { useColecao } from '../../lib/firestore'
 import type { Chamamento } from '../../lib/tipos'
 import { useUsuario } from '../auth/useUsuario'
 
+/** Início: lista de chamamentos (Comissão, admin e controle — este só lê). */
 export function Inicio() {
-  const { usuario } = useUsuario()
-  if (usuario?.perfil === 'controle') {
-    return (
-      <>
-        <Titulo>Controle</Titulo>
-        <p className="text-slate-600">
-          O perfil controle consulta a trilha de auditoria. Essa tela chega numa próxima etapa.
-        </p>
-      </>
-    )
-  }
   return <ListaChamamentos />
 }
 

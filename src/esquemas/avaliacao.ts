@@ -12,20 +12,23 @@ const campos = {
   nivel: z.number({ error: 'Escolha o nível.' }).int('O nível deve ser um inteiro de 0 a 4.'),
   justificativa: z.string({ error: 'Informe a justificativa.' }).trim(),
   paginas: z.array(z.number()).default([]),
-  decisao: z.enum(DECISOES, { error: 'Use unanimidade ou maioria.' }),
+  decisao: z.enum(DECISOES, { error: 'Escolha a decisão (unanimidade ou maioria).' }),
   votoDivergente: z.string().trim().min(1, 'Descreva o voto divergente.').optional(),
-  sessaoId: idDocumento,
 }
 
-export const esquemaRegistroAvaliacao = z.strictObject({
+/** O que a Comissão decide sobre o subcritério (o painel da tela envia isto). */
+export const esquemaCamposRegistro = z.strictObject(campos)
+export type CamposRegistro = z.output<typeof esquemaCamposRegistro>
+
+export const esquemaRegistroAvaliacao = esquemaCamposRegistro.extend({
   chamamentoId: idDocumento,
   propostaId: idDocumento,
-  ...campos,
+  sessaoId: idDocumento,
 })
 
-/** Mesmo esquema + as regras do domínio (o mínimo da justificativa vem do chamamento). */
-export function esquemaRegistroComRegras(justificativaMinima?: number) {
-  return esquemaRegistroAvaliacao.superRefine((registro, ctx) => {
+/** Campos do registro + as regras do domínio (o mínimo da justificativa vem do chamamento). */
+export function esquemaCamposComRegras(justificativaMinima?: number) {
+  return esquemaCamposRegistro.superRefine((registro, ctx) => {
     for (const [campo, message] of Object.entries(problemasDoRegistro(registro, { justificativaMinima }))) {
       ctx.addIssue({ code: 'custom', path: [campo], message })
     }

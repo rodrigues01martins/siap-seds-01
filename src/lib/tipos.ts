@@ -57,6 +57,15 @@ export interface Sessao {
   abertaPor?: { uid: string; email: string | null }
 }
 
+export interface Avaliacao {
+  nivel: number
+  justificativa: string
+  paginas: number[]
+  decisao: 'unanimidade' | 'maioria'
+  votoDivergente?: string
+  sessaoId: string
+}
+
 export interface UsuarioCadastro {
   email: string
   perfil: Perfil | null

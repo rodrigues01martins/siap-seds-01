@@ -1,7 +1,7 @@
 // Experiências da D2 (C3): esquema da /api e do formulário da tela, e a conversão do documento
 // gravado para o tipo do domínio (Experiencia), usada pelo recálculo no servidor e pela prévia na tela.
 
-import { CRITERIOS_D2, type Experiencia } from '../domain/d2.js'
+import { CRITERIOS_D2, problemasDaExperiencia, type Experiencia } from '../domain/d2.js'
 import { algumCampoAlem, dataIso, idDocumento, opcional, semRepeticao, z } from './base.js'
 
 /** Modalidade de atendimento (Anexo IV, 3.7, V). Só "internação" conta no Subcritério 2.3.1. */
@@ -80,6 +80,13 @@ export const esquemaCamposExperiencia = z.strictObject({
 export type CamposExperiencia = z.output<typeof esquemaCamposExperiencia>
 
 export const esquemaCriarExperiencia = esquemaCamposExperiencia.extend(alvo)
+
+/** Campos + as regras do domínio (A+B, D com MROSC, fim ≥ início...): validação no navegador. */
+export const esquemaCamposExperienciaComRegras = esquemaCamposExperiencia.superRefine((dados, ctx) => {
+  for (const [campo, message] of Object.entries(problemasDaExperiencia(paraExperiencia('formulario', dados)))) {
+    ctx.addIssue({ code: 'custom', path: [campo], message })
+  }
+})
 
 export const esquemaEditarExperiencia = z
   .strictObject({ ...alvo, id: idDocumento, ...z.object(campos).partial().shape })
