@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { classificar, classificarLote, type PropostaAvaliada } from './classificacao'
-import { calcularD1, type NiveisD1, type ResultadoD1 } from './d1'
+import { calcularD1, type NiveisD1 } from './d1'
 import { calcularD2, type ResultadoD2 } from './d2'
 import { MATRIZ_2026 } from './matriz'
 
@@ -49,7 +49,7 @@ describe('classificar — status "pendente" nunca entra no ranking', () => {
 
   it('resultado incompleto rotulado como "apta" é tratado como pendente (defesa contra dado adulterado)', () => {
     const real = pendenteComNotaAlta('forjada')
-    const forjado: ResultadoD1 = { ...real.d1, status: 'apta' }
+    const forjado: PropostaAvaliada['d1'] = { ...real.d1, status: 'apta' }
     const r = classificar([{ ...real, d1: forjado }])
     expect(r.ranking).toEqual([])
     expect(r.pendentes).toEqual(['forjada'])
