@@ -1,0 +1,651 @@
+{
+  "versao": "2026",
+  "fonte": "Anexo nº 04/2026/SEDS/GECG-20244 — Matriz de Avaliação e Pontuação das Propostas (SEI 95574211, processo 202610319003258)",
+  "notaFinalMaxima": 132,
+  "dimensao1": {
+    "titulo": "Capacidade Técnica e Operacional",
+    "maximo": 112,
+    "corte": 67.2,
+    "subcriteriosEliminatorios": ["1.1", "1.2"],
+    "fonteLimitePaginas": "Anexo III – Caderno de Proposta Técnica, item 7.1 (SEI 95574003)",
+    "escala": [
+      {
+        "nivel": 0,
+        "descritor": "Conteúdo não apresentado, incompatível com o objeto ou em desacordo com as normas e diretrizes aplicáveis"
+      },
+      {
+        "nivel": 1,
+        "descritor": "Proposta genérica ou predominantemente declaratória, sem demonstração suficiente da forma de operacionalização"
+      },
+      {
+        "nivel": 2,
+        "descritor": "Proposta parcialmente adequada, contendo elementos pertinentes, porém com lacunas relevantes quanto à metodologia, fluxos, responsabilidades, articulação, acompanhamento ou exequibilidade"
+      },
+      {
+        "nivel": 3,
+        "descritor": "Proposta adequada, coerente e exequível, demonstrando ações, metodologia, responsabilidades, fluxos e mecanismos de acompanhamento suficientemente definidos"
+      },
+      {
+        "nivel": 4,
+        "descritor": "Proposta robusta e plenamente adequada, demonstrando integração consistente entre metodologia, ações, responsabilidades, fluxos, articulação institucional, riscos, resultados e mecanismos de acompanhamento e avaliação"
+      }
+    ],
+    "planos": [
+      {
+        "codigo": "PA1",
+        "titulo": "Atendimento Socioeducativo, Individualização do Atendimento e Garantia de Direitos",
+        "finalidade": "Avaliar a capacidade da OSC de apresentar metodologia coerente e operacionalizável para o atendimento individualizado dos adolescentes e jovens em cumprimento de medida socioeducativa de internação, articulando responsabilização, proteção integral, desenvolvimento pessoal e social, PIA, garantia de direitos e prevenção de violências.",
+        "limitePaginas": 12,
+        "maximo": 20,
+        "subcriterios": [
+          {
+            "codigo": "1.1",
+            "titulo": "Metodologia do atendimento socioeducativo",
+            "elementos": [
+              "Referenciais e metodologia de atendimento",
+              "acolhida",
+              "atendimentos individuais e coletivos",
+              "atuação interdisciplinar",
+              "organização da rotina socioeducativa",
+              "desenvolvimento de competências pessoais e sociais",
+              "individualização",
+              "articulação com o PIA",
+              "acompanhamento da evolução do adolescente"
+            ],
+            "pontos": 4
+          },
+          {
+            "codigo": "1.2",
+            "titulo": "Metodologia de elaboração, execução, acompanhamento e avaliação do PIA",
+            "elementos": [
+              "Fluxo de elaboração",
+              "avaliação interdisciplinar",
+              "definição de objetivos e metas",
+              "responsabilidades profissionais",
+              "participação do adolescente e família",
+              "acompanhamento",
+              "revisão e atualização",
+              "registros",
+              "articulação com relatórios técnicos e preparação para o desligamento"
+            ],
+            "pontos": 4
+          },
+          {
+            "codigo": "1.3",
+            "titulo": "Garantia de direitos, diversidade, equidade e não discriminação",
+            "elementos": [
+              "Dignidade",
+              "proteção integral",
+              "respeito à diversidade",
+              "não discriminação",
+              "liberdade de crença e não crença",
+              "acessibilidade",
+              "identificação de vulnerabilidades e necessidades específicas",
+              "enfrentamento de práticas discriminatórias"
+            ],
+            "pontos": 4
+          },
+          {
+            "codigo": "1.4",
+            "titulo": "Prevenção e manejo de conflitos, segurança protetiva e práticas restaurativas",
+            "elementos": [
+              "Prevenção de conflitos",
+              "identificação de fatores de risco",
+              "mediação",
+              "práticas restaurativas",
+              "métodos não violentos",
+              "atuação integrada das equipes",
+              "proteção da integridade física e psicológica",
+              "análise de incidentes e prevenção de recorrências"
+            ],
+            "pontos": 4
+          },
+          {
+            "codigo": "1.5",
+            "titulo": "Prevenção, identificação e encaminhamento de situações de violência e violação de direitos",
+            "elementos": [
+              "Prevenção",
+              "identificação",
+              "registro",
+              "proteção",
+              "comunicação",
+              "encaminhamento",
+              "proteção contra retaliação",
+              "preservação de informações",
+              "cooperação com órgãos competentes e acompanhamento das providências"
+            ],
+            "pontos": 4
+          }
+        ]
+      },
+      {
+        "codigo": "PA2",
+        "titulo": "Promoção Intersetorial de Direitos",
+        "finalidade": "Avaliar a capacidade da OSC de estruturar estratégias para assegurar o acesso dos adolescentes às políticas públicas e aos direitos sociais, em observância ao princípio da incompletude institucional e mediante articulação permanente com a rede de atendimento e o Sistema de Garantia de Direitos.",
+        "limitePaginas": 12,
+        "maximo": 20,
+        "subcriterios": [
+          {
+            "codigo": "2.1",
+            "titulo": "Educação, escolarização e permanência escolar",
+            "elementos": [
+              "Levantamento da trajetória escolar",
+              "matrícula e regularização",
+              "articulação com a rede de ensino",
+              "frequência",
+              "permanência",
+              "desempenho",
+              "prevenção da evasão",
+              "dificuldades de aprendizagem",
+              "necessidades educacionais específicas",
+              "incentivo à leitura",
+              "continuidade da escolarização após desligamento"
+            ],
+            "pontos": 4
+          },
+          {
+            "codigo": "2.2",
+            "titulo": "Atenção integral à saúde",
+            "elementos": [
+              "Avaliação inicial",
+              "articulação com SUS e PNAISARI",
+              "referência e contrarreferência",
+              "promoção da saúde",
+              "saúde mental",
+              "saúde bucal",
+              "medicamentos",
+              "álcool e outras drogas",
+              "deficiência",
+              "saúde sexual e reprodutiva",
+              "IST",
+              "especificidades de gênero",
+              "continuidade do cuidado"
+            ],
+            "pontos": 4
+          },
+          {
+            "codigo": "2.3",
+            "titulo": "Profissionalização, aprendizagem e preparação para os mundos do trabalho",
+            "elementos": [
+              "Identificação de interesses e aptidões",
+              "articulação com o PIA e projeto de vida",
+              "qualificação profissional",
+              "parcerias",
+              "aprendizagem profissional",
+              "orientação profissional",
+              "preparação para o trabalho e estratégias para o desligamento"
+            ],
+            "pontos": 4
+          },
+          {
+            "codigo": "2.4",
+            "titulo": "Cultura, esporte, lazer e assistência religiosa",
+            "elementos": [
+              "Programação diversificada",
+              "atividades culturais e esportivas",
+              "lazer",
+              "atividades internas e externas",
+              "acesso a equipamentos públicos",
+              "diversidade cultural",
+              "laicidade",
+              "liberdade de crença e de não crença"
+            ],
+            "pontos": 4
+          },
+          {
+            "codigo": "2.5",
+            "titulo": "Assistência social, cidadania, documentação e preparação para o desligamento",
+            "elementos": [
+              "Articulação com o SUAS",
+              "acesso a benefícios e serviços",
+              "documentação civil",
+              "proteção social",
+              "planejamento da saída",
+              "encaminhamentos territoriais",
+              "continuidade de educação, saúde, profissionalização e assistência",
+              "acompanhamento pós-medida, quando cabível"
+            ],
+            "pontos": 4
+          }
+        ]
+      },
+      {
+        "codigo": "PA3",
+        "titulo": "Participação, Autonomia e Fortalecimento dos Vínculos Familiares e Comunitários",
+        "finalidade": "Avaliar a capacidade da OSC de assegurar participação efetiva dos adolescentes no processo socioeducativo, promover sua autonomia progressiva e fortalecer a participação das famílias e os vínculos familiares e comunitários.",
+        "limitePaginas": 8,
+        "maximo": 16,
+        "subcriterios": [
+          {
+            "codigo": "3.1",
+            "titulo": "Participação do adolescente no processo socioeducativo e na dinâmica institucional",
+            "elementos": [
+              "Participação no PIA",
+              "definição de objetivos",
+              "espaços de diálogo",
+              "manifestação sobre atividades",
+              "planejamento e avaliação",
+              "sugestões",
+              "devolutivas e acessibilidade dos mecanismos de participação"
+            ],
+            "pontos": 4
+          },
+          {
+            "codigo": "3.2",
+            "titulo": "Escuta, autonomia, protagonismo e projeto de vida",
+            "elementos": [
+              "Escuta individual e coletiva",
+              "identificação de interesses e potencialidades",
+              "autonomia progressiva",
+              "tomada responsável de decisões",
+              "protagonismo",
+              "projeto de vida",
+              "preparação para a vida após a medida"
+            ],
+            "pontos": 4
+          },
+          {
+            "codigo": "3.3",
+            "titulo": "Participação, orientação e apoio às famílias",
+            "elementos": [
+              "Acolhida",
+              "orientação",
+              "participação no PIA",
+              "comunicação",
+              "atendimento familiar",
+              "apoio",
+              "encaminhamento para políticas públicas",
+              "atenção às vulnerabilidades e respeito às diferentes configurações familiares"
+            ],
+            "pontos": 4
+          },
+          {
+            "codigo": "3.4",
+            "titulo": "Preservação e fortalecimento dos vínculos familiares e comunitários",
+            "elementos": [
+              "Mapeamento de vínculos",
+              "visitas",
+              "comunicação",
+              "enfrentamento de barreiras territoriais e econômicas",
+              "retomada de vínculos",
+              "referências afetivas",
+              "articulação territorial e preparação para retorno à convivência familiar e comunitária"
+            ],
+            "pontos": 4
+          }
+        ]
+      },
+      {
+        "codigo": "PA4",
+        "titulo": "Gestão Operacional e Articulação Interinstitucional",
+        "finalidade": "Avaliar a capacidade da OSC de organizar os processos administrativos e operacionais necessários ao funcionamento contínuo da unidade, observando as responsabilidades atribuídas à OSC e as interfaces com a Administração Pública e demais instituições.",
+        "limitePaginas": 12,
+        "maximo": 24,
+        "subcriterios": [
+          {
+            "codigo": "4.1",
+            "titulo": "Modelo de governança, organização dos processos e definição de responsabilidades",
+            "elementos": [
+              "Governança",
+              "organograma",
+              "atribuições",
+              "coordenação",
+              "tomada de decisões",
+              "comunicação interna",
+              "reuniões de gestão",
+              "integração entre equipes",
+              "processos e controles"
+            ],
+            "pontos": 4
+          },
+          {
+            "codigo": "4.2",
+            "titulo": "Gestão da assistência material, suprimentos, patrimônio e logística operacional",
+            "elementos": [
+              "Planejamento",
+              "recebimento",
+              "armazenamento",
+              "estoque",
+              "reposição",
+              "distribuição de higiene, vestuário, colchões, enxovais e demais materiais",
+              "patrimônio",
+              "prevenção de perdas e desabastecimento"
+            ],
+            "pontos": 4
+          },
+          {
+            "codigo": "4.3",
+            "titulo": "Gestão e controle da qualidade dos serviços operacionais",
+            "elementos": [
+              "Padrões de qualidade",
+              "fiscalização",
+              "registros",
+              "conferência",
+              "aceite",
+              "tratamento de não conformidades",
+              "correções",
+              "serviços de alimentação, limpeza, transporte, manutenção e outros sob responsabilidade da OSC"
+            ],
+            "pontos": 4
+          },
+          {
+            "codigo": "4.4",
+            "titulo": "Articulação institucional, intersetorial e gestão das interfaces",
+            "elementos": [
+              "Articulação com SEDS, Sistema de Justiça, SGD e políticas públicas",
+              "responsáveis institucionais",
+              "fluxos de comunicação",
+              "encaminhamentos",
+              "reuniões",
+              "registro e acompanhamento das demandas"
+            ],
+            "pontos": 4
+          },
+          {
+            "codigo": "4.5",
+            "titulo": "Gestão administrativa, financeira, compras, controles e transparência",
+            "elementos": [
+              "Estrutura administrativa e financeira",
+              "segregação de funções",
+              "despesas",
+              "compras",
+              "pesquisa de preços",
+              "rastreabilidade",
+              "organização documental",
+              "controles",
+              "prestação de contas e transparência"
+            ],
+            "pontos": 4
+          },
+          {
+            "codigo": "4.6",
+            "titulo": "Gestão de riscos, contingências e continuidade operacional",
+            "elementos": [
+              "Identificação e classificação de riscos",
+              "prevenção",
+              "contingências",
+              "comunicação de incidentes",
+              "continuidade dos serviços essenciais",
+              "medidas corretivas",
+              "análise de causas e prevenção de recorrências"
+            ],
+            "pontos": 4
+          }
+        ]
+      },
+      {
+        "codigo": "PA5",
+        "titulo": "Gestão e Desenvolvimento de Pessoas",
+        "finalidade": "Avaliar a capacidade da OSC de planejar, constituir, organizar, desenvolver e manter a força de trabalho necessária à execução contínua e qualificada do programa socioeducativo.",
+        "limitePaginas": 10,
+        "maximo": 16,
+        "subcriterios": [
+          {
+            "codigo": "5.1",
+            "titulo": "Planejamento, composição e organização das equipes",
+            "elementos": [
+              "Composição",
+              "quantitativos",
+              "qualificação",
+              "perfis",
+              "organização das equipes",
+              "jornadas",
+              "turnos",
+              "escalas",
+              "cobertura do funcionamento",
+              "atribuições",
+              "interdisciplinaridade e acompanhamento do dimensionamento"
+            ],
+            "pontos": 4
+          },
+          {
+            "codigo": "5.2",
+            "titulo": "Recrutamento, seleção, integração e continuidade da força de trabalho",
+            "elementos": [
+              "Recrutamento",
+              "seleção",
+              "perfil profissional",
+              "admissão",
+              "integração",
+              "formação introdutória",
+              "cobertura de férias, licenças e afastamentos",
+              "reposição",
+              "gestão de vacâncias e rotatividade"
+            ],
+            "pontos": 4
+          },
+          {
+            "codigo": "5.3",
+            "titulo": "Formação inicial e continuada dos profissionais",
+            "elementos": [
+              "Formação inicial",
+              "programa anual",
+              "diagnóstico de necessidades",
+              "conteúdos",
+              "metodologia",
+              "carga horária",
+              "avaliação da aprendizagem",
+              "direitos humanos",
+              "ECA",
+              "SINASE",
+              "diversidade",
+              "prevenção à violência",
+              "práticas restaurativas",
+              "saúde mental e atualização normativa"
+            ],
+            "pontos": 4
+          },
+          {
+            "codigo": "5.4",
+            "titulo": "Supervisão técnica, desenvolvimento profissional e saúde do trabalhador",
+            "elementos": [
+              "Supervisão",
+              "reuniões técnicas",
+              "apoio às equipes",
+              "desenvolvimento profissional",
+              "saúde ocupacional e mental",
+              "prevenção do adoecimento",
+              "acompanhamento do absenteísmo",
+              "suporte após situações críticas e melhoria do ambiente laboral"
+            ],
+            "pontos": 4
+          }
+        ]
+      },
+      {
+        "codigo": "PA6",
+        "titulo": "Monitoramento, Avaliação e Gestão da Informação",
+        "finalidade": "Avaliar a capacidade da OSC de produzir informações confiáveis, acompanhar metas e resultados, avaliar processos, identificar desvios e utilizar evidências para melhoria contínua da execução.",
+        "limitePaginas": 8,
+        "maximo": 16,
+        "subcriterios": [
+          {
+            "codigo": "6.1",
+            "titulo": "Sistemática de monitoramento das ações, metas e resultados",
+            "elementos": [
+              "Metodologia",
+              "responsáveis",
+              "periodicidade",
+              "comparação entre previsto e realizado",
+              "relatórios",
+              "reuniões de análise",
+              "comunicação e disponibilização das informações"
+            ],
+            "pontos": 4
+          },
+          {
+            "codigo": "6.2",
+            "titulo": "Indicadores, metas e meios de verificação",
+            "elementos": [
+              "Indicador",
+              "definição",
+              "fórmula",
+              "unidade",
+              "linha de base",
+              "meta",
+              "fonte",
+              "meio de verificação",
+              "periodicidade",
+              "responsável e indicadores de processo, produto e resultado"
+            ],
+            "pontos": 4
+          },
+          {
+            "codigo": "6.3",
+            "titulo": "Gestão, qualidade, proteção e disponibilização dos dados",
+            "elementos": [
+              "Coleta",
+              "registros",
+              "atualização",
+              "validação",
+              "integridade",
+              "rastreabilidade",
+              "banco de dados",
+              "sistemas oficiais",
+              "relatórios e painéis",
+              "níveis de acesso",
+              "segurança e proteção de dados"
+            ],
+            "pontos": 4
+          },
+          {
+            "codigo": "6.4",
+            "titulo": "Avaliação, tratamento de desvios e melhoria contínua",
+            "elementos": [
+              "Autoavaliação",
+              "análise de metas",
+              "causas dos desvios",
+              "ações corretivas",
+              "responsáveis",
+              "prazos",
+              "avaliação de efetividade",
+              "percepção dos usuários e incorporação das recomendações da Administração"
+            ],
+            "pontos": 4
+          }
+        ]
+      }
+    ]
+  },
+  "dimensao2": {
+    "titulo": "Experiência Técnica e Operacional da OSC",
+    "maximo": 20,
+    "observacaoFaixas": "Cada faixa vale para valores menores ou iguais a 'ate' (inclusivo); 'ate' nulo significa sem limite superior. A primeira faixa que atender ao valor apurado define os pontos.",
+    "criterios": {
+      "C2.1": {
+        "titulo": "Diversidade e Aderência das Experiências Institucionais",
+        "maximo": 8,
+        "categorias": [
+          {
+            "codigo": "A",
+            "descricao": "Execução, gestão ou cogestão de programa de atendimento socioeducativo de internação e/ou semiliberdade",
+            "pontos": 4
+          },
+          {
+            "codigo": "B",
+            "descricao": "Execução, gestão ou cogestão de serviço de acolhimento institucional ou outro serviço de proteção especial de alta complexidade destinado a crianças e adolescentes, inclusive em situação de ameaça, violência ou grave risco",
+            "pontos": 2
+          },
+          {
+            "codigo": "C",
+            "descricao": "Execução de programas e/ou projetos de atenção a crianças e adolescentes nas áreas de educação, cultura, esporte e/ou lazer",
+            "pontos": 1
+          },
+          {
+            "codigo": "D",
+            "descricao": "Execução de parceria com a Administração Pública, em qualquer área de atuação, submetida ao regime jurídico da Lei Federal nº 13.019/2014 – MROSC",
+            "pontos": 1
+          }
+        ],
+        "categoriasMutuamenteExclusivas": [["A", "B"]]
+      },
+      "C2.2": {
+        "titulo": "Tempo de Experiência em Atividades Aderentes",
+        "maximo": 4,
+        "categoriasConsideradas": ["A", "B"],
+        "unidade": "meses completos",
+        "faixas": [
+          { "ate": 11, "pontos": 0, "descricao": "Inferior a 12 meses" },
+          { "ate": 23, "pontos": 1, "descricao": "De 12 a 23 meses" },
+          { "ate": 35, "pontos": 2, "descricao": "De 24 a 35 meses" },
+          { "ate": 47, "pontos": 3, "descricao": "De 36 a 47 meses" },
+          { "ate": null, "pontos": 4, "descricao": "Igual ou superior a 48 meses" }
+        ]
+      },
+      "C2.3": {
+        "titulo": "Porte e Escala Operacional Comprovados",
+        "maximo": 4,
+        "subcriterios": {
+          "2.3.1": {
+            "titulo": "Escala do atendimento socioeducativo em regime de internação",
+            "maximo": 2,
+            "categoriasConsideradas": ["A"],
+            "exigeInternacao": true,
+            "A": {
+              "titulo": "Capacidade simultânea de atendimento em unidades de internação",
+              "maximo": 1,
+              "unidade": "vagas",
+              "faixas": [
+                { "ate": 0, "pontos": 0, "descricao": "Ausência de experiência em internação" },
+                { "ate": 50, "pontos": 0.25, "descricao": "Até 50 vagas" },
+                { "ate": 80, "pontos": 0.5, "descricao": "De 51 a 80 vagas" },
+                { "ate": 120, "pontos": 0.75, "descricao": "De 81 a 120 vagas" },
+                { "ate": null, "pontos": 1, "descricao": "Acima de 120 vagas" }
+              ]
+            },
+            "B": {
+              "titulo": "Quantidade de unidades de internação gerenciadas simultaneamente",
+              "maximo": 1,
+              "unidade": "unidades",
+              "faixas": [
+                { "ate": 1, "pontos": 0, "descricao": "Ausência de experiência simultânea (1 unidade gerenciada)" },
+                { "ate": 2, "pontos": 0.5, "descricao": "2 unidades" },
+                { "ate": 3, "pontos": 0.75, "descricao": "3 unidades" },
+                { "ate": null, "pontos": 1, "descricao": "4 ou mais unidades" }
+              ]
+            }
+          },
+          "2.3.2": {
+            "titulo": "Escala de gestão de pessoal",
+            "maximo": 1,
+            "categoriasConsideradas": ["A", "B"],
+            "unidade": "trabalhadores",
+            "faixas": [
+              { "ate": 0, "pontos": 0, "descricao": "Ausência de comprovação" },
+              { "ate": 20, "pontos": 0.25, "descricao": "Até 20 trabalhadores" },
+              { "ate": 60, "pontos": 0.5, "descricao": "De 21 a 60 trabalhadores" },
+              { "ate": 90, "pontos": 0.75, "descricao": "De 61 a 90 trabalhadores" },
+              { "ate": null, "pontos": 1, "descricao": "Acima de 90 trabalhadores" }
+            ]
+          },
+          "2.3.3": {
+            "titulo": "Escala financeira de gestão",
+            "maximo": 1,
+            "categoriasConsideradas": ["A", "B"],
+            "unidade": "centavos",
+            "faixas": [
+              { "ate": 0, "pontos": 0, "descricao": "Ausência de comprovação" },
+              { "ate": 500000000, "pontos": 0.25, "descricao": "Até R$ 5.000.000,00" },
+              { "ate": 1000000000, "pontos": 0.5, "descricao": "Acima de R$ 5.000.000,00 até R$ 10.000.000,00" },
+              { "ate": 2000000000, "pontos": 0.75, "descricao": "Acima de R$ 10.000.000,00 até R$ 20.000.000,00" },
+              { "ate": null, "pontos": 1, "descricao": "Acima de R$ 20.000.000,00" }
+            ]
+          }
+        }
+      },
+      "C2.4": {
+        "titulo": "Histórico de Execução Satisfatória",
+        "maximo": 4,
+        "categoriasConsideradas": ["A", "B", "C"],
+        "unidade": "experiências distintas",
+        "faixas": [
+          { "ate": 0, "pontos": 0, "descricao": "Ausência de comprovação ou comprovação sem demonstrar execução satisfatória" },
+          { "ate": 1, "pontos": 1, "descricao": "1 experiência" },
+          { "ate": 2, "pontos": 2, "descricao": "2 experiências" },
+          { "ate": 3, "pontos": 3, "descricao": "3 experiências" },
+          { "ate": null, "pontos": 4, "descricao": "4 ou mais experiências" }
+        ]
+      }
+    }
+  }
+}
