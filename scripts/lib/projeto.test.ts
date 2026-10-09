@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { conferirCredencial, lerCredencial, resolverProjeto } from './projeto'
+import { conferirCredencial, identificarExecutor, lerCredencial, resolverProjeto } from './projeto'
 
 const FIREBASERC = { projects: { default: 'siap-dev', dev: 'siap-dev', prod: 'siap-prod' } }
 
@@ -64,5 +64,21 @@ describe('conferirCredencial', () => {
 
   it('recusa credencial de outro projeto (evita gravar em prod com chave de dev e vice-versa)', () => {
     expect(() => conferirCredencial(lerCredencial(credencial()), 'siap-prod')).toThrow(/siap-dev.*siap-prod/)
+  })
+})
+
+describe('identificarExecutor (quem rodou o script, para a auditoria)', () => {
+  it('no GitHub Actions usa o usuário que disparou o workflow', () => {
+    expect(identificarExecutor({ GITHUB_ACTIONS: 'true', GITHUB_ACTOR: 'rodrigues01martins' }, 'runner')).toBe(
+      'github:rodrigues01martins',
+    )
+  })
+
+  it('fora do Actions usa o usuário do sistema operacional', () => {
+    expect(identificarExecutor({}, 'juliano.mrodrigues')).toBe('local:juliano.mrodrigues')
+  })
+
+  it('no Actions sem GITHUB_ACTOR não inventa nome', () => {
+    expect(identificarExecutor({ GITHUB_ACTIONS: 'true' }, 'runner')).toBe('github:desconhecido')
   })
 })
