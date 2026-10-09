@@ -1,6 +1,7 @@
 // /api/sessao — sessão da Comissão em chamamentos/{ch}/sessoes/{id}.
 // POST abre (presidente). PATCH com "acao": presentes, declaracoes e foco (presidente e relator)
 // ou encerrar (presidente). Sessão encerrada não aceita alteração (409). Tudo auditado.
+// foco = { tipo: admissibilidade | subcriterio | d2 | resumo, propostaId, subcriterio? } (Etapa 5: telão).
 // A avaliação (C2) só é aceita com sessaoId de sessão aberta (api/avaliacao.ts).
 
 import { FieldValue, type Transaction } from 'firebase-admin/firestore'
@@ -146,7 +147,9 @@ export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
             if (!((sessao.get('pauta') ?? []) as string[]).includes(foco.propostaId)) {
               problemas['foco.propostaId'] = 'Proposta fora da pauta da sessão.'
             }
-            if (!planoDoSubcriterio(foco.subcriterio)) problemas['foco.subcriterio'] = 'Subcritério inexistente na matriz.'
+            if (foco.tipo === 'subcriterio' && !planoDoSubcriterio(foco.subcriterio!)) {
+              problemas['foco.subcriterio'] = 'Subcritério inexistente na matriz.'
+            }
             exigirSemProblemas(problemas)
           }
           dados = { foco }
