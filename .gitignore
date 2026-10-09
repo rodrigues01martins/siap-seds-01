@@ -6,3 +6,7 @@ dist
 !.env.example
 .vercel
 coverage
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log

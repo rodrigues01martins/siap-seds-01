@@ -15,5 +15,5 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["vite.config.ts", "api", "scripts"]
+  "include": ["vite.config.ts", "vitest.regras.config.ts", "api", "scripts", "tests"]
 }

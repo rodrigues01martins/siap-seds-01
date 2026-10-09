@@ -1,0 +1,7 @@
+{
+  "projects": {
+    "default": "siap-seds-dev",
+    "dev": "siap-seds-dev",
+    "prod": "siap-seds-prod"
+  }
+}
