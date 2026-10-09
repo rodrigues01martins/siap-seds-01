@@ -1,0 +1,103 @@
+// Apoio aos testes da /api contra os emuladores (npm run test:api).
+
+import type { Timestamp } from 'firebase-admin/firestore'
+import { obterAdmin } from '../../api/_lib/admin'
+import type { Perfil } from '../../src/domain/perfis'
+
+const PROJETO = process.env.GCLOUD_PROJECT ?? 'demo-siap-seds'
+const SENHA = 'senha-teste-123'
+
+export type Metodo = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
+export type Rota = Record<Metodo, (requisicao: Request) => Promise<Response>>
+
+export interface Usuario {
+  uid: string
+  email: string
+  token: string
+}
+
+export interface RegistroAuditoria {
+  caminho: string
+  acao: 'criar' | 'editar' | 'excluir'
+  antes: Record<string, unknown> | null
+  depois: Record<string, unknown> | null
+  uid: string
+  perfil: Perfil
+  dataHora: Timestamp
+}
+
+export async function limparFirestore(): Promise<void> {
+  const host = process.env.FIRESTORE_EMULATOR_HOST
+  await fetch(`http://${host}/emulator/v1/projects/${PROJETO}/databases/(default)/documents`, { method: 'DELETE' })
+}
+
+export async function limparAuth(): Promise<void> {
+  const host = process.env.FIREBASE_AUTH_EMULATOR_HOST
+  await fetch(`http://${host}/emulator/v1/projects/${PROJETO}/accounts`, { method: 'DELETE' })
+}
+
+/** Faz login no emulador de Auth e devolve o ID token (com os claims atuais). */
+export async function entrar(email: string): Promise<string> {
+  const host = process.env.FIREBASE_AUTH_EMULATOR_HOST
+  const resposta = await fetch(
+    `http://${host}/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=chave-falsa`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: SENHA, returnSecureToken: true }),
+    },
+  )
+  const corpo = (await resposta.json()) as { idToken?: string }
+  if (!corpo.idToken) throw new Error(`Falha no login de ${email} no emulador`)
+  return corpo.idToken
+}
+
+let sequencia = 0
+
+/** Cria um usuário no emulador, com ou sem perfil, já logado. */
+export async function criarUsuario(perfil: Perfil | null, claimsExtras: Record<string, unknown> = {}): Promise<Usuario> {
+  const { auth } = obterAdmin()
+  sequencia += 1
+  const email = `${perfil ?? 'sem-perfil'}-${sequencia}@teste.go.gov.br`
+  const usuario = await auth.createUser({ email, password: SENHA })
+  const claims = { ...claimsExtras, ...(perfil ? { perfil } : {}) }
+  if (Object.keys(claims).length > 0) await auth.setCustomUserClaims(usuario.uid, claims)
+  return { uid: usuario.uid, email, token: await entrar(email) }
+}
+
+export interface RespostaTeste {
+  status: number
+  corpo: { erro?: string; campos?: Record<string, string>; [chave: string]: unknown } | null
+  headers: Headers
+}
+
+/** Chama o handler da rota como a Vercel faria (Request → Response). */
+export async function chamar(
+  rota: Rota,
+  metodo: Metodo,
+  corpo?: unknown,
+  token?: string | null,
+  corpoBruto?: string,
+): Promise<RespostaTeste> {
+  const headers = new Headers({ 'Content-Type': 'application/json' })
+  if (token) headers.set('Authorization', `Bearer ${token}`)
+  const body = corpoBruto ?? (corpo === undefined ? undefined : JSON.stringify(corpo))
+  const resposta = await rota[metodo](new Request('http://localhost/api/teste', { method: metodo, headers, body }))
+  const texto = await resposta.text()
+  return { status: resposta.status, corpo: texto ? JSON.parse(texto) : null, headers: resposta.headers }
+}
+
+export async function ler(caminho: string): Promise<Record<string, unknown> | undefined> {
+  return (await obterAdmin().db.doc(caminho).get()).data()
+}
+
+export async function auditoriaDe(caminho: string): Promise<RegistroAuditoria[]> {
+  const consulta = await obterAdmin().db.collection('auditoria').where('caminho', '==', caminho).get()
+  return consulta.docs
+    .map((d) => d.data() as RegistroAuditoria)
+    .sort((a, b) => a.dataHora.toMillis() - b.dataHora.toMillis())
+}
+
+export async function totalAuditoria(): Promise<number> {
+  return (await obterAdmin().db.collection('auditoria').count().get()).data().count
+}

@@ -16,13 +16,16 @@
     "test:regras": "firebase emulators:exec --only firestore --project demo-siap-seds \"vitest run --config vitest.regras.config.ts\"",
     "emuladores": "firebase emulators:start --only auth,firestore --project dev",
     "seed:matriz": "tsx scripts/seed-matriz.ts",
-    "set-role": "tsx scripts/set-role.ts"
+    "set-role": "tsx scripts/set-role.ts",
+    "test:api": "firebase emulators:exec --only auth,firestore --project demo-siap-seds \"vitest run --config vitest.api.config.ts\""
   },
   "dependencies": {
     "firebase": "^10.14.1",
+    "firebase-admin": "^13.10.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router": "^7.18.4"
+    "react-router": "^7.18.4",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^3.0.4",
@@ -31,7 +34,6 @@
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^4.7.0",
-    "firebase-admin": "^13.10.0",
     "firebase-tools": "^15.33.0",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.23.15",
