@@ -30,6 +30,7 @@ const DOCUMENTOS = [
   'chamamentos/ch1',
   'chamamentos/ch1/propostas/p1',
   'chamamentos/ch1/propostas/p1/avaliacoes/a1',
+  'chamamentos/ch1/sessoes/s1',
   'oscs/osc1',
   'auditoria/ev1',
   'usuarios/uid-admin',
@@ -62,9 +63,11 @@ const LEITURA: Record<string, Ator[]> = {
   'chamamentos/ch1/propostas/p1/avaliacoes/a1': ['admin', 'presidente', 'relator', 'membro'],
   'oscs/osc1': ['admin', 'presidente', 'relator', 'membro'],
   'auditoria/ev1': ['admin', 'presidente', 'controle'],
-  'usuarios/uid-admin': ['admin'],
-  'usuarios/uid-membro': ['membro', 'admin'],
-  'usuarios/uid-sem-perfil': ['sem-perfil', 'admin'],
+  // Etapa 4a: presidente e relator leem usuarios para listar a Comissão na abertura da sessão.
+  'usuarios/uid-admin': ['admin', 'presidente', 'relator'],
+  'usuarios/uid-membro': ['membro', 'admin', 'presidente', 'relator'],
+  'usuarios/uid-sem-perfil': ['sem-perfil', 'admin', 'presidente', 'relator'],
+  'chamamentos/ch1/sessoes/s1': ['admin', 'presidente', 'relator', 'membro'],
   'colecao-nao-prevista/x': [],
 }
 
@@ -87,9 +90,12 @@ describe('leitura de coleção (list)', () => {
     await assertFails(getDocs(collection(bancoDe(ator), 'chamamentos')))
   })
 
-  it('admin lista usuarios; membro não', async () => {
-    await assertSucceeds(getDocs(collection(bancoDe('admin'), 'usuarios')))
+  it('admin, presidente e relator listam usuarios; membro e controle não', async () => {
+    for (const ator of ['admin', 'presidente', 'relator'] as const) {
+      await assertSucceeds(getDocs(collection(bancoDe(ator), 'usuarios')))
+    }
     await assertFails(getDocs(collection(bancoDe('membro'), 'usuarios')))
+    await assertFails(getDocs(collection(bancoDe('controle'), 'usuarios')))
   })
 
   it('controle lista auditoria; relator não', async () => {

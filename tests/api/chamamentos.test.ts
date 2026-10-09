@@ -6,6 +6,7 @@ import { auditoriaDe, chamar, criarUsuario, ler, limparAuth, limparFirestore, ty
 const VALIDO = {
   numero: '001/2026',
   titulo: 'Chamamento Público SEDS/GO 2026',
+  processoSei: '202610319003258',
   dataLimitePropostas: '2026-10-31',
   lotes: [
     { codigo: 'L1', descricao: 'Centro de Atendimento Socioeducativo de Goiânia' },
@@ -50,7 +51,7 @@ describe('/api/chamamentos — validação', () => {
     const r = await chamar(rota, 'POST', { numero: '', titulo: 'ab', lotes: [] }, admin.token)
     expect(r.status).toBe(400)
     expect(r.corpo?.erro).toBe('Dados inválidos.')
-    expect(Object.keys(r.corpo?.campos ?? {}).sort()).toEqual(['dataLimitePropostas', 'lotes', 'numero', 'titulo'])
+    expect(Object.keys(r.corpo?.campos ?? {}).sort()).toEqual(['dataLimitePropostas', 'lotes', 'numero', 'processoSei', 'titulo'])
   })
 
   it('lotes com código repetido → 400', async () => {
@@ -71,6 +72,27 @@ describe('/api/chamamentos — validação', () => {
     expect(r.corpo?.campos).toHaveProperty('justificativaMinima')
     const ok = await chamar(rota, 'POST', { ...VALIDO, justificativaMinima: 50 }, admin.token)
     expect(await ler(`chamamentos/${ok.corpo?.id as string}`)).toMatchObject({ justificativaMinima: 50 })
+  })
+
+  it('processo SEI, índice e data-base de correção (Etapa 4a)', async () => {
+    const r = await chamar(rota, 'POST', { ...VALIDO, processoSei: ' ', dataBaseCorrecao: '2026-13-01' }, admin.token)
+    expect(r.status).toBe(400)
+    expect(r.corpo?.campos).toMatchObject({
+      processoSei: 'Informe o número do processo SEI.',
+      dataBaseCorrecao: 'Data inválida (use AAAA-MM-DD).',
+    })
+    const ok = await chamar(rota, 'POST', { ...VALIDO, indiceCorrecao: 'IPCA', dataBaseCorrecao: '2026-01-01' }, admin.token)
+    expect(ok.status).toBe(201)
+    expect(await ler(`chamamentos/${ok.corpo?.id as string}`)).toMatchObject({
+      processoSei: '202610319003258',
+      indiceCorrecao: 'IPCA',
+      dataBaseCorrecao: '2026-01-01',
+    })
+  })
+
+  it('índice sem data-base (ou o contrário) → 400', async () => {
+    const r = await chamar(rota, 'POST', { ...VALIDO, indiceCorrecao: 'IPCA' }, admin.token)
+    expect(r).toMatchObject({ status: 400, corpo: { campos: { dataBaseCorrecao: 'Informe o índice e a data-base juntos.' } } })
   })
 
   it('campo não previsto → 400', async () => {

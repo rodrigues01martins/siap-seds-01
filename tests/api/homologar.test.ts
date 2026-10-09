@@ -8,6 +8,7 @@ import {
   CAMINHO_PROPOSTA,
   CH,
   PROP,
+  SESSAO,
   auditoriaDe,
   chamar,
   criarUsuario,
@@ -42,7 +43,7 @@ async function completarAvaliacao(): Promise<void> {
   const r = await chamar(
     avaliacao,
     'PUT',
-    { ...ALVO, codigo: '6.4', nivel: 3, justificativa: 'Avaliação concluída pela Comissão.', paginas: [], decisao: 'unanimidade', sessaoId: 's1' },
+    { ...ALVO, codigo: '6.4', nivel: 3, justificativa: 'Avaliação concluída pela Comissão.', paginas: [], decisao: 'unanimidade', sessaoId: SESSAO },
     relator.token,
   )
   expect(r.corpo?.totais).toMatchObject({ status: 'apta', completa: true })
@@ -64,7 +65,7 @@ describe('/api/homologar — acesso e validação', () => {
     const mensagem = 'Proposta com avaliação pendente: conclua os 28 subcritérios antes de homologar.'
     expect(await chamar(rota, 'POST', ALVO, presidente.token)).toMatchObject({ status: 409, corpo: { erro: mensagem } })
     await semearNiveis({ '1.1': 3 })
-    await chamar(avaliacao, 'PUT', { ...ALVO, codigo: '1.2', nivel: 3, justificativa: 'Justificativa suficiente para o teste.', paginas: [], decisao: 'unanimidade', sessaoId: 's1' }, relator.token)
+    await chamar(avaliacao, 'PUT', { ...ALVO, codigo: '1.2', nivel: 3, justificativa: 'Justificativa suficiente para o teste.', paginas: [], decisao: 'unanimidade', sessaoId: SESSAO }, relator.token)
     expect((await chamar(rota, 'POST', ALVO, presidente.token)).status).toBe(409)
   })
 })
@@ -93,7 +94,7 @@ describe('/api/homologar — homologação', () => {
     await completarAvaliacao()
     await chamar(rota, 'POST', ALVO, presidente.token)
 
-    const nivel = await chamar(avaliacao, 'PUT', { ...ALVO, codigo: '1.1', nivel: 1, justificativa: 'Tentativa após homologação.', paginas: [], decisao: 'unanimidade', sessaoId: 's2' }, relator.token)
+    const nivel = await chamar(avaliacao, 'PUT', { ...ALVO, codigo: '1.1', nivel: 1, justificativa: 'Tentativa após homologação.', paginas: [], decisao: 'unanimidade', sessaoId: SESSAO }, relator.token)
     expect(nivel).toMatchObject({ status: 409, corpo: { erro: 'Proposta homologada: alteração não permitida.' } })
 
     const exp = await chamar(experiencia, 'POST', { ...ALVO, descricao: 'Nova experiência', categorias: ['C'], inicio: '2020-01-01', fim: null }, relator.token)
@@ -105,7 +106,7 @@ describe('/api/homologar — homologação', () => {
   it('inapta e desclassificada também podem ser homologadas (só pendente não)', async () => {
     const { ['6.4']: _, ...demais } = Object.fromEntries(CODIGOS.map((c) => [c, 1]))
     await semearNiveis(demais)
-    await chamar(avaliacao, 'PUT', { ...ALVO, codigo: '6.4', nivel: 1, justificativa: 'Avaliação concluída pela Comissão.', paginas: [], decisao: 'unanimidade', sessaoId: 's1' }, relator.token)
+    await chamar(avaliacao, 'PUT', { ...ALVO, codigo: '6.4', nivel: 1, justificativa: 'Avaliação concluída pela Comissão.', paginas: [], decisao: 'unanimidade', sessaoId: SESSAO }, relator.token)
     expect(((await ler(CAMINHO_PROPOSTA))?.totais as { status: string }).status).toBe('inapta')
     expect((await chamar(rota, 'POST', ALVO, presidente.token)).status).toBe(200)
   })

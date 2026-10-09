@@ -33,6 +33,9 @@ Fonte no código: src/domain/permissoes.ts (teste garante que bate com esta tabe
 | C3 experiências da D2 | presidente, relator |
 | C5 homologar proposta | presidente |
 | C6 dar e remover perfis | admin |
+| Sessão: abrir e encerrar | presidente |
+| Sessão: presentes, declarações de impedimento e foco | presidente, relator |
+| Admissibilidade (Anexo III, item 28) | presidente, relator |
 | Leitura da auditoria | admin, presidente, controle |
 Empate de NF: o sistema só sinaliza (empatada) e não desempata; a Comissão decide em outra instância.
 

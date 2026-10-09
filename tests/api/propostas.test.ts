@@ -4,7 +4,14 @@ import * as rota from '../../api/propostas'
 import { auditoriaDe, chamar, criarUsuario, ler, limparAuth, limparFirestore, totalAuditoria, type Usuario } from './apoio'
 
 const CNPJ = '11222333000181'
-const VALIDA = { chamamentoId: 'ch1', loteCodigo: 'L1', oscCnpj: '11.222.333/0001-81', observacao: 'Protocolo 123' }
+const VALIDA = {
+  chamamentoId: 'ch1',
+  loteCodigo: 'L1',
+  oscCnpj: '11.222.333/0001-81',
+  protocolo: 'PROT-2026-0001',
+  numeroSei: '95574999',
+  observacao: 'Entregue em mídia física',
+}
 
 let admin: Usuario
 let membro: Usuario
@@ -47,6 +54,15 @@ describe('/api/propostas — referências', () => {
     expect(r).toMatchObject({ status: 400, corpo: { campos: { [campo]: mensagem } } })
   })
 
+  it('protocolo e nº SEI obrigatórios na criação (Etapa 4a) → 400', async () => {
+    const { protocolo: _p, numeroSei: _n, ...semEles } = VALIDA
+    const r = await chamar(rota, 'POST', semEles, admin.token)
+    expect(r).toMatchObject({
+      status: 400,
+      corpo: { campos: { protocolo: 'Informe o protocolo.', numeroSei: 'Informe o nº do documento SEI.' } },
+    })
+  })
+
   it('não aceita definir "bloqueada" por este endpoint → 400', async () => {
     const r = await chamar(rota, 'POST', { ...VALIDA, bloqueada: true }, admin.token)
     expect(r).toMatchObject({ status: 400, corpo: { campos: { bloqueada: 'Campo não permitido.' } } })
@@ -57,7 +73,13 @@ describe('/api/propostas — criar e editar', () => {
   it('criar → 201, nasce desbloqueada e auditada', async () => {
     const id = await criar()
     const caminho = `chamamentos/ch1/propostas/${id}`
-    expect(await ler(caminho)).toMatchObject({ loteCodigo: 'L1', oscCnpj: CNPJ, bloqueada: false })
+    expect(await ler(caminho)).toMatchObject({
+      loteCodigo: 'L1',
+      oscCnpj: CNPJ,
+      protocolo: 'PROT-2026-0001',
+      numeroSei: '95574999',
+      bloqueada: false,
+    })
     const [registro] = await auditoriaDe(caminho)
     expect(registro).toMatchObject({ acao: 'criar', antes: null, depois: { oscCnpj: CNPJ }, uid: admin.uid })
   })

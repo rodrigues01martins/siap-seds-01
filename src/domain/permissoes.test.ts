@@ -9,6 +9,9 @@ describe('matriz de permissões (espelho da seção do CLAUDE.md)', () => {
       experienciasD2: ['presidente', 'relator'],
       homologar: ['presidente'],
       perfis: ['admin'],
+      sessaoAbrirEncerrar: ['presidente'],
+      sessaoConduzir: ['presidente', 'relator'],
+      admissibilidade: ['presidente', 'relator'],
       lerAuditoria: ['admin', 'presidente', 'controle'],
     })
   })
