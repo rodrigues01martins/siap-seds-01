@@ -1,0 +1,52 @@
+rules_version = '2';
+
+// Regras do Firestore — SIAP SEDS/GO 2026.
+// O cliente NUNCA escreve: toda escrita passa pela /api (firebase-admin ignora estas regras).
+// Leitura conforme o custom claim "perfil" do ID token.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function logado() {
+      return request.auth != null;
+    }
+
+    function perfil() {
+      return request.auth.token.get('perfil', '');
+    }
+
+    function temPerfil(permitidos) {
+      return logado() && perfil() in permitidos;
+    }
+
+    // Matriz de avaliação: qualquer usuário autenticado.
+    match /matrizes/{matrizId} {
+      allow read: if logado();
+      allow write: if false;
+    }
+
+    // Chamamentos e tudo abaixo (propostas, avaliações...): Comissão.
+    match /chamamentos/{documento=**} {
+      allow read: if temPerfil(['admin', 'presidente', 'relator', 'membro']);
+      allow write: if false;
+    }
+
+    match /oscs/{oscId} {
+      allow read: if temPerfil(['admin', 'presidente', 'relator', 'membro']);
+      allow write: if false;
+    }
+
+    // Trilha de auditoria: gestão e controle.
+    match /auditoria/{eventoId} {
+      allow read: if temPerfil(['admin', 'presidente', 'controle']);
+      allow write: if false;
+    }
+
+    // Cadastro do usuário: o próprio ou admin.
+    match /usuarios/{uid} {
+      allow read: if logado() && (request.auth.uid == uid || perfil() == 'admin');
+      allow write: if false;
+    }
+
+    // Qualquer outro caminho: negado por padrão (nenhuma regra o libera).
+  }
+}
