@@ -58,16 +58,16 @@ afterAll(async () => {
 /** Quem pode ler cada caminho, conforme a especificação da Etapa 2. */
 const LEITURA: Record<string, Ator[]> = {
   'matrizes/2026': ['sem-perfil', 'perfil-invalido', ...PERFIS],
-  'chamamentos/ch1': ['admin', 'presidente', 'relator', 'membro'],
-  'chamamentos/ch1/propostas/p1': ['admin', 'presidente', 'relator', 'membro'],
-  'chamamentos/ch1/propostas/p1/avaliacoes/a1': ['admin', 'presidente', 'relator', 'membro'],
-  'oscs/osc1': ['admin', 'presidente', 'relator', 'membro'],
+  'chamamentos/ch1': ['admin', 'presidente', 'relator', 'membro', 'controle'],
+  'chamamentos/ch1/propostas/p1': ['admin', 'presidente', 'relator', 'membro', 'controle'],
+  'chamamentos/ch1/propostas/p1/avaliacoes/a1': ['admin', 'presidente', 'relator', 'membro', 'controle'],
+  'oscs/osc1': ['admin', 'presidente', 'relator', 'membro', 'controle'],
   'auditoria/ev1': ['admin', 'presidente', 'controle'],
   // Etapa 4a: presidente e relator leem usuarios para listar a Comissão na abertura da sessão.
   'usuarios/uid-admin': ['admin', 'presidente', 'relator'],
   'usuarios/uid-membro': ['membro', 'admin', 'presidente', 'relator'],
   'usuarios/uid-sem-perfil': ['sem-perfil', 'admin', 'presidente', 'relator'],
-  'chamamentos/ch1/sessoes/s1': ['admin', 'presidente', 'relator', 'membro'],
+  'chamamentos/ch1/sessoes/s1': ['admin', 'presidente', 'relator', 'membro', 'controle'],
   'colecao-nao-prevista/x': [],
 }
 
@@ -82,11 +82,12 @@ describe('leitura de documento (get)', () => {
 })
 
 describe('leitura de coleção (list)', () => {
-  it.each(['admin', 'presidente', 'relator', 'membro'] as const)('%s lista chamamentos', async (ator) => {
+  // Etapa 4b: controle lê a avaliação (somente leitura).
+  it.each(['admin', 'presidente', 'relator', 'membro', 'controle'] as const)('%s lista chamamentos', async (ator) => {
     await assertSucceeds(getDocs(collection(bancoDe(ator), 'chamamentos')))
   })
 
-  it.each(['controle', 'sem-perfil', 'anonimo'] as const)('%s não lista chamamentos', async (ator) => {
+  it.each(['sem-perfil', 'perfil-invalido', 'anonimo'] as const)('%s não lista chamamentos', async (ator) => {
     await assertFails(getDocs(collection(bancoDe(ator), 'chamamentos')))
   })
 

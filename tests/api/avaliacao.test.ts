@@ -18,6 +18,7 @@ import {
   semCarimbos,
   semearNiveis,
   semearProposta,
+  semearSessao,
   totalAuditoria,
   type Usuario,
 } from './apoio'
@@ -183,6 +184,27 @@ describe('/api/avaliacao — exige sessão aberta (Etapa 4a)', () => {
     await semearProposta({ sessao: 'encerrada' })
     const r = await chamar(rota, 'PUT', registro(), relator.token)
     expect(r).toMatchObject({ status: 409, corpo: { erro: mensagem } })
+    expect(await totalAuditoria()).toBe(0)
+  })
+})
+
+describe('/api/avaliacao — foco da sessão (Etapa 4b)', () => {
+  it('ao salvar, o subcritério vira o foco da sessão, na mesma gravação e auditado', async () => {
+    const r = await chamar(rota, 'PUT', registro({ codigo: '2.1' }), membro.token)
+    expect(r.status).toBe(200)
+    const caminhoSessao = `chamamentos/${CH}/sessoes/${SESSAO}`
+    expect((await ler(caminhoSessao))?.foco).toEqual({ propostaId: PROP, subcriterio: '2.1' })
+    expect((await auditoriaDe(caminhoSessao)).at(-1)).toMatchObject({
+      acao: 'editar',
+      depois: { foco: { propostaId: PROP, subcriterio: '2.1' } },
+      uid: membro.uid,
+    })
+  })
+
+  it('proposta fora da pauta da sessão → 409, sem gravar', async () => {
+    await semearSessao(SESSAO, { pauta: ['outra-proposta'] })
+    const r = await chamar(rota, 'PUT', registro(), relator.token)
+    expect(r).toMatchObject({ status: 409, corpo: { erro: 'Proposta fora da pauta da sessão.' } })
     expect(await totalAuditoria()).toBe(0)
   })
 })

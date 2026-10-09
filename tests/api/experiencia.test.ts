@@ -1,6 +1,6 @@
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import * as rota from '../../api/experiencia'
-import { calcularD2, type Experiencia } from '../../src/domain/d2'
+import { calcularD2, type Experiencia, type ResultadoD2 } from '../../src/domain/d2'
 import {
   CAMINHO_PROPOSTA,
   CH,
@@ -21,15 +21,20 @@ import {
 const EXPERIENCIA = {
   descricao: 'Gestão do CASE Goiânia',
   categorias: ['A', 'D'],
-  internacao: true,
+  modalidade: 'internacao',
+  orgaoParceiro: 'SEDS/GO',
+  instrumento: 'Termo de Colaboração nº 01/2019',
+  mrosc: true,
   inicio: '2019-01-01',
   fim: null,
   vagas: 90,
   unidades: 2,
   trabalhadores: 70,
   valorAnualCentavos: 1_200_000_000,
-  execucaoSatisfatoria: true,
-  documentos: [{ tipo: 'Termo de Colaboração', descricao: 'TC 01/2019', referencia: 'SEI 123456' }],
+  documentos: [
+    { tipo: 'Termo de Colaboração', numeroSEI: '000012345', comprovaExecucaoSatisfatoria: false, aceito: true },
+    { tipo: 'Atestado de capacidade técnica', numeroSEI: '000067890', comprovaExecucaoSatisfatoria: true, aceito: true },
+  ],
 }
 
 const corpo = (dados: Record<string, unknown> = {}) => ({ chamamentoId: CH, propostaId: PROP, ...EXPERIENCIA, ...dados })
@@ -119,12 +124,52 @@ describe('/api/experiencia — criar, editar, excluir, auditoria e recálculo (C
 
   it('totais.d2 e resultadoD2/atual idênticos ao calcularD2 de src/domain', async () => {
     const id = await criar()
-    const segunda = await criar({ descricao: 'Projeto esportivo', categorias: ['C'], internacao: false, inicio: '2020-01-01', fim: '2021-12-31', vagas: null, unidades: null, trabalhadores: null, valorAnualCentavos: null, documentos: [] })
+    const segunda = await criar({
+      descricao: 'Projeto esportivo',
+      categorias: ['C'],
+      modalidade: 'outra',
+      mrosc: false,
+      inicio: '2020-01-01',
+      fim: '2021-12-31',
+      vagas: null,
+      unidades: null,
+      trabalhadores: null,
+      valorAnualCentavos: null,
+      documentos: [],
+    })
 
-    const { documentos: _d, descricao, ...resto } = EXPERIENCIA
+    // Derivações do servidor: internação vem da modalidade; execução satisfatória, de documento aceito que a comprova.
     const experiencias: Experiencia[] = [
-      { id, descricao, ...resto } as Experiencia,
-      { id: segunda, descricao: 'Projeto esportivo', categorias: ['C'], internacao: false, inicio: '2020-01-01', fim: '2021-12-31', vagas: null, unidades: null, trabalhadores: null, valorAnualCentavos: null, execucaoSatisfatoria: true },
+      {
+        id,
+        descricao: EXPERIENCIA.descricao,
+        categorias: ['A', 'D'],
+        internacao: true,
+        mrosc: true,
+        inicio: '2019-01-01',
+        fim: null,
+        vagas: 90,
+        unidades: 2,
+        trabalhadores: 70,
+        valorAnualCentavos: 1_200_000_000,
+        execucaoSatisfatoria: true,
+        desconsideracoes: [],
+      },
+      {
+        id: segunda,
+        descricao: 'Projeto esportivo',
+        categorias: ['C'],
+        internacao: false,
+        mrosc: false,
+        inicio: '2020-01-01',
+        fim: '2021-12-31',
+        vagas: null,
+        unidades: null,
+        trabalhadores: null,
+        valorAnualCentavos: null,
+        execucaoSatisfatoria: false,
+        desconsideracoes: [],
+      },
     ]
     const esperado = calcularD2({ experiencias, dataLimite: DATA_LIMITE })
 
@@ -150,6 +195,80 @@ describe('/api/experiencia — criar, editar, excluir, auditoria e recálculo (C
     expect(await ler(`${CAMINHO_PROPOSTA}/experiencias/${id}`)).toBeUndefined()
     expect((await auditoriaDe(`${CAMINHO_PROPOSTA}/experiencias/${id}`)).at(-1)).toMatchObject({ acao: 'excluir', depois: null })
     expect((await ler(CAMINHO_PROPOSTA))?.totais).toMatchObject({ d2: 0 })
+  })
+})
+
+describe('/api/experiencia — campos da Etapa 4b', () => {
+  const d2 = async () => (await ler(`${CAMINHO_PROPOSTA}/resultadoD2/atual`)) as unknown as ResultadoD2
+
+  it('grava modalidade, órgão parceiro, instrumento, MROSC e documentos com nº SEI', async () => {
+    const id = await criar()
+    expect(await ler(`${CAMINHO_PROPOSTA}/experiencias/${id}`)).toMatchObject({
+      modalidade: 'internacao',
+      orgaoParceiro: 'SEDS/GO',
+      instrumento: 'Termo de Colaboração nº 01/2019',
+      mrosc: true,
+      documentos: EXPERIENCIA.documentos,
+      desconsideracoes: [],
+    })
+  })
+
+  it('internação (2.3.1) vem da modalidade: semiliberdade não pontua em 2.3.1', async () => {
+    await criar({ modalidade: 'semiliberdade' })
+    expect((await d2()).criterios['C2.3'].subcriterios['2.3.1'].pontos).toBe(0)
+  })
+
+  it('execução satisfatória (C2.4) só com documento ACEITO que a comprova', async () => {
+    const id = await criar({
+      documentos: [{ tipo: 'Atestado', numeroSEI: '1', comprovaExecucaoSatisfatoria: true, aceito: false }],
+    })
+    expect((await d2()).criterios['C2.4'].usadas).toEqual([])
+    await chamar(
+      rota,
+      'PATCH',
+      { chamamentoId: CH, propostaId: PROP, id, documentos: [{ tipo: 'Atestado', numeroSEI: '1', comprovaExecucaoSatisfatoria: true, aceito: true }] },
+      relator.token,
+    )
+    expect((await d2()).criterios['C2.4'].usadas).toEqual([id])
+  })
+
+  it('categoria D sem MROSC → 400', async () => {
+    const r = await chamar(rota, 'POST', corpo({ mrosc: false }), relator.token)
+    expect(r).toMatchObject({
+      status: 400,
+      corpo: { campos: { categorias: 'A categoria D exige parceria regida pelo MROSC (Lei Federal nº 13.019/2014).' } },
+    })
+  })
+
+  it('internação e execução satisfatória não são informadas diretamente (derivadas) → 400', async () => {
+    const r = await chamar(rota, 'POST', corpo({ internacao: true, execucaoSatisfatoria: true }), relator.token)
+    expect(r.corpo?.campos).toMatchObject({ internacao: 'Campo não permitido.', execucaoSatisfatoria: 'Campo não permitido.' })
+  })
+
+  it('desconsiderar em um critério (Anexo IV, 3.8.5): justificativa obrigatória; recalcula e audita', async () => {
+    const id = await criar()
+    const base = { chamamentoId: CH, propostaId: PROP, id }
+    const vazia = await chamar(rota, 'PATCH', { ...base, desconsideracoes: [{ criterio: 'C2.3', justificativa: '' }] }, relator.token)
+    expect(vazia).toMatchObject({
+      status: 400,
+      corpo: { campos: { 'desconsideracoes.0.justificativa': 'Informe a justificativa da desconsideração (Anexo IV, 3.8.5).' } },
+    })
+
+    const antes = (await d2()).criterios['C2.3'].pontos
+    const desconsideracoes = [{ criterio: 'C2.3', justificativa: 'Documento não identifica vagas nem unidades.' }]
+    expect((await chamar(rota, 'PATCH', { ...base, desconsideracoes }, relator.token)).status).toBe(200)
+    expect(antes).toBeGreaterThan(0)
+    expect((await d2()).criterios['C2.3'].pontos).toBe(0)
+    expect((await auditoriaDe(`${CAMINHO_PROPOSTA}/experiencias/${id}`)).at(-1)).toMatchObject({
+      acao: 'editar',
+      depois: { desconsideracoes },
+    })
+  })
+
+  it('modalidade fora da lista → 400', async () => {
+    const r = await chamar(rota, 'POST', corpo({ modalidade: 'hospitalar' }), relator.token)
+    expect(r.status).toBe(400)
+    expect(r.corpo?.campos).toHaveProperty('modalidade')
   })
 })
 

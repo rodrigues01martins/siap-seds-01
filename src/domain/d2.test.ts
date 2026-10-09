@@ -492,3 +492,85 @@ describe('problemasDaExperiencia — as mesmas regras do cálculo, por campo (pa
     })
   })
 })
+
+describe('Etapa 4b — desconsiderar experiência por critério (Anexo IV, 3.8.5)', () => {
+  const JUST = 'Documento não identifica o número de vagas.'
+
+  it('desconsiderada só no critério indicado: some de C2.3, continua em C2.1 e C2.2', () => {
+    const e = internacao({ id: 'case', vagas: 90, inicio: '2018-01-01', fim: null })
+    const marcada: Experiencia = { ...e, desconsideracoes: [{ criterio: 'C2.3', justificativa: JUST }] }
+    const normal = calcularD2({ experiencias: [e], dataLimite: DATA_LIMITE })
+    const r = calcularD2({ experiencias: [marcada], dataLimite: DATA_LIMITE })
+
+    expect(r.criterios['C2.1'].pontos).toBe(normal.criterios['C2.1'].pontos)
+    expect(r.criterios['C2.2'].pontos).toBe(normal.criterios['C2.2'].pontos)
+    expect(normal.criterios['C2.3'].pontos).toBeGreaterThan(0)
+    expect(r.criterios['C2.3'].pontos).toBe(0)
+    expect(r.criterios['C2.3'].subcriterios['2.3.1'].A.memoria).toContain(
+      `case: desconsiderada pela Comissão neste critério — ${JUST} (Anexo IV, 3.8.5)`,
+    )
+  })
+
+  it('vale para C2.1, C2.2 e C2.4 também', () => {
+    const e = exp({ id: 'x', categorias: ['A'], execucaoSatisfatoria: true, inicio: '2018-01-01', fim: '2022-12-31' })
+    const todas: Experiencia = {
+      ...e,
+      desconsideracoes: (['C2.1', 'C2.2', 'C2.4'] as const).map((criterio) => ({ criterio, justificativa: JUST })),
+    }
+    const r = calcularD2({ experiencias: [todas], dataLimite: DATA_LIMITE })
+    expect(r.criterios['C2.1'].pontos).toBe(0)
+    expect(r.criterios['C2.2'].pontos).toBe(0)
+    expect(r.criterios['C2.4'].pontos).toBe(0)
+  })
+
+  it('justificativa obrigatória e critério conhecido, sem repetir', () => {
+    const base = exp({ categorias: ['C'] })
+    expect(problemasDaExperiencia({ ...base, desconsideracoes: [{ criterio: 'C2.1', justificativa: ' ' }] })).toEqual({
+      desconsideracoes: 'Informe a justificativa da desconsideração (Anexo IV, 3.8.5).',
+    })
+    expect(
+      problemasDaExperiencia({ ...base, desconsideracoes: [{ criterio: 'C9' as 'C2.1', justificativa: JUST }] }),
+    ).toEqual({ desconsideracoes: 'Critério desconhecido: C9.' })
+    expect(
+      problemasDaExperiencia({
+        ...base,
+        desconsideracoes: [
+          { criterio: 'C2.1', justificativa: JUST },
+          { criterio: 'C2.1', justificativa: JUST },
+        ],
+      }),
+    ).toEqual({ desconsideracoes: 'Critério C2.1 informado mais de uma vez.' })
+  })
+})
+
+describe('Etapa 4b — experiências usadas em cada critério (memória da D2)', () => {
+  it('lista os ids que contribuíram para os pontos de cada critério', () => {
+    const a = internacao({ id: 'a', vagas: 40, trabalhadores: 30, valorAnualCentavos: 100_000_000, inicio: '2019-01-01', fim: null, execucaoSatisfatoria: true })
+    const c = exp({ id: 'c', categorias: ['C'], execucaoSatisfatoria: true })
+    const d = exp({ id: 'd', categorias: ['D'], mrosc: true })
+    const r = calcularD2({ experiencias: [a, c, d], dataLimite: DATA_LIMITE })
+    expect(r.criterios['C2.1'].usadas).toEqual(['a', 'c', 'd'])
+    expect(r.criterios['C2.2'].usadas).toEqual(['a'])
+    expect(r.criterios['C2.3'].subcriterios['2.3.1'].A.usadas).toEqual(['a'])
+    expect(r.criterios['C2.3'].usadas).toEqual(['a'])
+    expect(r.criterios['C2.4'].usadas).toEqual(['a', 'c'])
+  })
+
+  it('sem experiência elegível → lista vazia', () => {
+    const r = calcularD2({ experiencias: [], dataLimite: DATA_LIMITE })
+    for (const criterio of Object.values(r.criterios)) expect(criterio.usadas).toEqual([])
+  })
+})
+
+describe('Etapa 4b — categoria D exige MROSC (Anexo IV, 3.2, categoria D)', () => {
+  it('D com mrosc = false → problema em categorias', () => {
+    expect(problemasDaExperiencia(exp({ categorias: ['A', 'D'], mrosc: false }))).toEqual({
+      categorias: 'A categoria D exige parceria regida pelo MROSC (Lei Federal nº 13.019/2014).',
+    })
+  })
+
+  it('D com mrosc = true, ou sem a informação (dados anteriores), é aceita', () => {
+    expect(problemasDaExperiencia(exp({ categorias: ['D'], mrosc: true }))).toEqual({})
+    expect(problemasDaExperiencia(exp({ categorias: ['D'] }))).toEqual({})
+  })
+})
