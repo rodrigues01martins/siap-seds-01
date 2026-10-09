@@ -44,3 +44,22 @@ export function algumCampoAlem(chaves: string[]) {
 export function semRepeticao<T>(chave: (item: T) => unknown = (item) => item) {
   return (lista: T[]) => new Set(lista.map(chave)).size === lista.length
 }
+
+/** Raiz do objeto (ex.: "Informe ao menos um campo para alterar."). */
+export const CAMPO_RAIZ = '_'
+
+/**
+ * Erro do zod → { "caminho.do.campo": mensagem }, a primeira mensagem de cada campo.
+ * Mesmo formato do 400 da /api ({ erro, campos }), para o formulário tratar os dois igual.
+ */
+export function camposDoErro(erro: z.ZodError): Record<string, string> {
+  const campos: Record<string, string> = {}
+  for (const problema of erro.issues) {
+    if (problema.code === 'unrecognized_keys') {
+      for (const chave of problema.keys) campos[[...problema.path, chave].join('.')] ??= 'Campo não permitido.'
+      continue
+    }
+    campos[problema.path.length > 0 ? problema.path.join('.') : CAMPO_RAIZ] ??= problema.message
+  }
+  return campos
+}

@@ -23,3 +23,17 @@ export function cnpjValido(valor: string): boolean {
   const d2 = digitoVerificador([...valores.slice(0, 12), d1], PESOS_2)
   return valores[12] === d1 && valores[13] === d2
 }
+
+const SEPARADORES: Record<number, string> = { 2: '.', 5: '.', 8: '/', 12: '-' }
+
+/** Formata um CNPJ de 14 caracteres (XX.XXX.XXX/XXXX-XX); outro tamanho volta como veio. */
+export function formatarCnpj(valor: string): string {
+  const cnpj = normalizarCnpj(valor)
+  return cnpj.length === 14 ? mascararCnpj(cnpj) : valor
+}
+
+/** Máscara para digitação: mantém só letras e dígitos (até 14) e insere a pontuação. */
+export function mascararCnpj(valor: string): string {
+  const caracteres = valor.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 14)
+  return [...caracteres].map((c, i) => (i > 0 && SEPARADORES[i] ? SEPARADORES[i] + c : c)).join('')
+}

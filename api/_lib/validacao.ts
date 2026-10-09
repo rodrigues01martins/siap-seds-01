@@ -1,6 +1,6 @@
 // Validação dos dados de entrada com zod: erro → 400 { erro, campos } em português.
 
-import { z } from '../../src/esquemas/base.js'
+import { camposDoErro, type z } from '../../src/esquemas/base.js'
 import { ErroApi, MENSAGENS } from './erros.js'
 
 // Os esquemas básicos vivem em src/esquemas (compartilhados com os formulários do app).
@@ -9,18 +9,6 @@ export { algumCampoAlem, cnpj, dataIso, idDocumento, opcional } from '../../src/
 /** Converte problemas de regra de negócio (por campo) em 400. */
 export function exigirSemProblemas(problemas: Record<string, string>): void {
   if (Object.keys(problemas).length > 0) throw new ErroApi(400, MENSAGENS.dadosInvalidos, problemas)
-}
-
-function camposDoErro(erro: z.ZodError): Record<string, string> {
-  const campos: Record<string, string> = {}
-  for (const problema of erro.issues) {
-    if (problema.code === 'unrecognized_keys') {
-      for (const chave of problema.keys) campos[[...problema.path, chave].join('.')] ??= 'Campo não permitido.'
-      continue
-    }
-    campos[problema.path.length > 0 ? problema.path.join('.') : '_'] ??= problema.message
-  }
-  return campos
 }
 
 export async function lerCorpo<T extends z.ZodType>(requisicao: Request, esquema: T): Promise<z.output<T>> {
