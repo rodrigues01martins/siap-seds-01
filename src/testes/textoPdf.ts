@@ -6,7 +6,7 @@ export function textoDe(conteudo: Content | Content[] | undefined | null): strin
   if (conteudo === undefined || conteudo === null) return ''
   if (typeof conteudo === 'string' || typeof conteudo === 'number') return String(conteudo)
   if (Array.isArray(conteudo)) return conteudo.map((c) => textoDe(c as Content)).join('\n')
-  const no = conteudo as Record<string, unknown>
+  const no = conteudo as unknown as Record<string, unknown>
   const partes: string[] = []
   for (const chave of ['text', 'stack', 'columns', 'ul', 'ol']) {
     if (no[chave] !== undefined) partes.push(textoDe(no[chave] as Content))

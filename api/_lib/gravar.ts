@@ -1,5 +1,5 @@
 // Gravação única da /api: tudo em runTransaction, com um registro em auditoria/{id}
-// por operação, no mesmo commit. Bloqueia escrita em proposta homologada (bloqueada = true).
+// por operação (quem: uid, e-mail e perfil), no mesmo commit. Bloqueia escrita em proposta homologada (bloqueada = true).
 
 import { FieldValue, type Transaction } from 'firebase-admin/firestore'
 import { obterAdmin } from './admin.js'
@@ -80,6 +80,7 @@ export async function gravar(
         antes,
         depois,
         uid: autor.uid,
+        email: autor.email,
         perfil: autor.perfil,
         dataHora: agora,
       })

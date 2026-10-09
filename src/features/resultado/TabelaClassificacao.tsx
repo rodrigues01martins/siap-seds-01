@@ -1,28 +1,28 @@
-// Classificação do lote: ranking por NF (src/domain/classificacao.ts, sem duplicar regra), propostas fora
+// Classificação do lote: ranking por NF (src/domain/classificacao.ts, sem duplicar regra; motivos e aviso
+// vêm de src/relatorios/quadroResumo.ts, os mesmos do quadro-resumo), propostas fora
 // da classificação com o motivo, selo de não definitiva, desempate registrado pelo presidente (RF-27),
 // homologação com confirmação dupla (C5) e reabertura (RF-18).
 
 import { useState } from 'react'
 import { AlertaErro } from '../../componentes/AlertaErro'
 import { SeloStatus } from '../../componentes/basicos'
-import { classificarLote, type DecisaoDesempate, type SituacaoAdmissao } from '../../domain/classificacao'
 import { formatarNumero } from '../../domain/formatacao'
 import { MATRIZ_2026 } from '../../domain/matriz'
-import type { TotaisProposta } from '../../domain/proposta'
 import { ROTULO_STATUS, statusDaProposta } from '../../domain/statusProposta'
 import { esquemaDesempate, esquemaReabrir } from '../../esquemas/resultado'
+import {
+  ROTULO_FORA,
+  avisoNaoDefinitiva,
+  classificarPropostas,
+  motivoFora,
+  propostasFora,
+  type DecisaoComJustificativa,
+  type PropostaQuadro,
+} from '../../relatorios/quadroResumo'
 
-export interface LinhaClassificacao {
-  id: string
-  nomeOsc: string
-  totais?: TotaisProposta
-  bloqueada?: boolean
-  admissibilidade?: { situacao: SituacaoAdmissao; motivos: string[]; motivacao?: string }
-}
-
-export interface DecisaoRegistrada extends DecisaoDesempate {
-  justificativa: string
-}
+/** Proposta do lote como a classificação a lê (o mesmo formato do quadro-resumo). */
+export type LinhaClassificacao = PropostaQuadro
+export type DecisaoRegistrada = DecisaoComJustificativa
 
 interface Props {
   lote: { codigo: string; descricao: string }
@@ -39,24 +39,8 @@ interface Props {
 type Dialogo = { tipo: 'homologar' | 'reabrir'; id: string } | { tipo: 'desempate'; nf: number; ids: string[] } | null
 
 const PLANOS = MATRIZ_2026.dimensao1.planos
-const plural = (n: number, singular: string, pluralTexto: string) => `${n} ${n === 1 ? singular : pluralTexto}`
 const mesmoConjunto = (a: string[], b: string[]) => a.length === b.length && a.every((x) => b.includes(x))
 const classeAcao = 'rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-medium hover:bg-slate-50'
-
-/** Motivo de uma proposta fora da classificação, com o texto do domínio. */
-function motivoFora(p: LinhaClassificacao, situacao: 'pendente' | 'inapta' | 'desclassificada' | 'nao_admitida'): string {
-  if (situacao === 'pendente') {
-    if (!p.totais) return 'Avaliação não iniciada'
-    const n = p.totais.pendentes.length
-    return `${n === 1 ? 'Falta' : 'Faltam'} ${plural(n, 'subcritério', 'subcritérios')}`
-  }
-  if (situacao === 'nao_admitida' || (situacao === 'desclassificada' && p.admissibilidade?.situacao === 'desclassificada')) {
-    const motivos = [...(p.admissibilidade?.motivos ?? [])]
-    if (p.admissibilidade?.motivacao) motivos.push(p.admissibilidade.motivacao)
-    return motivos.join('; ') || 'Admissibilidade (Anexo III, item 28)'
-  }
-  return (p.totais?.motivos ?? []).join('; ')
-}
 
 function DialogoHomologar({ proposta, onConfirmar, onFechar }: { proposta: LinhaClassificacao; onConfirmar: () => Promise<void>; onFechar: () => void }) {
   const [conferido, setConferido] = useState(false)
@@ -230,12 +214,9 @@ export function TabelaClassificacao({
   const [dialogo, setDialogo] = useState<Dialogo>(null)
   const porId = new Map(propostas.map((p) => [p.id, p]))
   const nomes = new Map(propostas.map((p) => [p.id, p.nomeOsc]))
-  const r = classificarLote(
-    propostas.map((p) => ({ id: p.id, totais: p.totais ?? null, admissao: p.admissibilidade?.situacao })),
-    decisoes,
-  )
+  const r = classificarPropostas(propostas, decisoes)
   const decisaoDo = (nf: number, ids: string[]) => decisoes.find((d) => d.nf === nf && mesmoConjunto(d.propostas, ids))
-  const empatesAbertos = r.empates.filter((e) => !e.decidido).length
+  const aviso = avisoNaoDefinitiva(r)
 
   const acoes = (p: LinhaClassificacao) =>
     p.bloqueada ? (
@@ -254,26 +235,13 @@ export function TabelaClassificacao({
       )
     )
 
-  const fora: { p: LinhaClassificacao; situacao: 'pendente' | 'inapta' | 'desclassificada' | 'nao_admitida' }[] = [
-    ...r.pendentes.map((id) => ({ p: porId.get(id)!, situacao: 'pendente' as const })),
-    ...r.inaptas.map((id) => ({ p: porId.get(id)!, situacao: 'inapta' as const })),
-    ...r.desclassificadas.map((id) => ({ p: porId.get(id)!, situacao: 'desclassificada' as const })),
-    ...r.naoAdmitidas.map((id) => ({ p: porId.get(id)!, situacao: 'nao_admitida' as const })),
-  ]
-  const ROTULO_FORA = { pendente: 'Pendente', inapta: 'Inapta', desclassificada: 'Desclassificada', nao_admitida: 'Não admitida' }
+  const fora = propostasFora(r).map(({ id, situacao }) => ({ p: porId.get(id)!, situacao }))
 
   return (
     <div className="space-y-6">
-      {!r.definitiva && (
+      {aviso && (
         <p role="status" aria-label="Classificação não definitiva" className="rounded-md border-2 border-amber-500 bg-amber-50 p-3 text-sm font-medium text-amber-900">
-          Classificação não definitiva:{' '}
-          {[
-            r.pendentes.length > 0 && plural(r.pendentes.length, 'proposta pendente', 'propostas pendentes'),
-            empatesAbertos > 0 && plural(empatesAbertos, 'empate sem decisão', 'empates sem decisão'),
-          ]
-            .filter(Boolean)
-            .join('; ')}
-          .
+          {aviso}
         </p>
       )}
 
