@@ -19,10 +19,12 @@ export async function autenticar(requisicao: Request, permitidos: readonly Perfi
   const token = /^Bearer\s+(\S+)$/i.exec(cabecalho)?.[1]
   if (!token) throw new ErroApi(401, MENSAGENS.semLogin)
 
+  // Fora do try: falta de configuração do servidor é erro 500 (com log), não "sessão inválida".
+  const { auth } = obterAdmin()
   let decodificado
   try {
     // checkRevoked: perfil removido (sessões revogadas) deixa de valer imediatamente.
-    decodificado = await obterAdmin().auth.verifyIdToken(token, true)
+    decodificado = await auth.verifyIdToken(token, true)
   } catch {
     throw new ErroApi(401, MENSAGENS.sessaoInvalida)
   }
