@@ -25,6 +25,9 @@ Eliminatórias: D1 < 67,2 → inapta; nível 0 em 1.1 ou 1.2 → desclassificada
 - Os PDFs dos Cadernos NÃO são carregados no app. A consulta é feita no SEI; o app guarda apenas o
   nº SEI (campo numeroSEI) e as páginas citadas. Nada de react-pdf, Firebase Storage ou pdfRef.
 - Páginas citadas na avaliação da D1 usam a numeração interna do PA (1 até o limite do PA na matriz).
+- Relatórios (espelho, quadro-resumo, ata) e a exportação da auditoria são gerados no navegador (pdfmake,
+  exceljs), sem gravar nada. Rodapé com código de verificação = SHA-256 dos dados usados; "MINUTA" se houver
+  proposta não homologada no documento.
 
 ## Perfis
 admin, presidente, relator, membro, controle
@@ -41,8 +44,12 @@ Fonte no código: src/domain/permissoes.ts (teste garante que bate com esta tabe
 | Sessão: abrir e encerrar | presidente |
 | Sessão: presentes, declarações de impedimento e foco | presidente, relator |
 | Admissibilidade (Anexo III, item 28) | presidente, relator |
+| Registrar decisão de desempate (RF-27) | presidente |
+| Reabrir proposta homologada (RF-18) | presidente |
+| Diligências (RF-28) | presidente, relator |
 | Leitura da auditoria | admin, presidente, controle |
-Empate de NF: o sistema só sinaliza (empatada) e não desempata; a Comissão decide em outra instância.
+Empate de NF: o sistema só sinaliza (empatada) e não calcula desempate. Enquanto o Edital não parametrizar
+o critério (RF-27), o presidente registra a decisão da Comissão com justificativa (api/desempate.ts, auditado).
 
 ## Convenções
 - Código e nomes em português, sem acentos em identificadores (ex.: calcularD2, experiencias).

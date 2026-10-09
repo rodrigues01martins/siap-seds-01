@@ -240,6 +240,9 @@ e `campos` em português.
 | Sessão: abrir e encerrar | presidente |
 | Sessão: presentes, declarações de impedimento e foco | presidente, relator |
 | Admissibilidade (Anexo III, item 28) | presidente, relator |
+| Registrar decisão de desempate (RF-27) | presidente |
+| Reabrir proposta homologada (RF-18) | presidente |
+| Diligências (RF-28) | presidente, relator |
 | Leitura da auditoria | admin, presidente, controle |
 
 A fonte única no código é `src/domain/permissoes.ts` (um teste garante que ela bate com esta tabela).
@@ -284,6 +287,58 @@ Quem não pode escrever vê a tela sem os botões; proposta homologada fica some
 
 Leitura em tempo real (`onSnapshot`, `src/lib/firestore.ts`); escrita só por `chamarApi` (`src/lib/api.ts`).
 O componente `Formulario` valida com o mesmo esquema da `/api` e põe os erros 400 da `/api` nos mesmos campos.
+
+### Resultado: classificação, homologação, reabertura e diligências (Etapa 6a)
+
+| Endpoint | Método | Corpo (JSON) | Perfil |
+|---|---|---|---|
+| `/api/desempate` | `PUT` | `{ chamamentoId, loteCodigo, ordem: [propostaId, ...], justificativa }` | presidente |
+| `/api/reabrir` | `POST` | `{ chamamentoId, propostaId, motivo }` | presidente |
+| `/api/diligencias` | `POST` criar; `PATCH` com `acao` | `{ chamamentoId, propostaId, objeto, prazo }`; `{ ..., id, acao: 'responder', resposta }` ou `{ ..., id, acao: 'encerrar', conclusao }` | presidente, relator |
+
+- **Classificação** (`/chamamentos/:ch/lotes/:lote/classificacao`): `classificarLote` (src/domain/classificacao.ts)
+  aplica `classificar()` aos totais gravados. Ranking por NF entre aptas e completas, com PA1…PA6, D1, D2, NF e
+  status; inaptas, desclassificadas, não admitidas e pendentes ficam abaixo, sem posição, com o motivo do domínio.
+  Selo **"classificação não definitiva"** enquanto houver pendente ou empate sem decisão.
+- **Desempate (RF-27)**: o sistema não calcula desempate. O presidente registra a ordem decidida pela Comissão,
+  com justificativa (mín. 20 caracteres), em `chamamentos/{ch}/desempates/{id}`. A /api confere que as propostas
+  formam exatamente um empate atual do lote (senão **409**); se o grupo ou a NF mudar depois, a decisão deixa de
+  valer e o empate volta a aparecer.
+- **Homologação na tela**: botão do presidente com confirmação dupla (mostra NF e status e pede "conferi").
+  Proposta com **diligência em aberto** (aberta ou respondida) não é homologada (**409**).
+- **Reabertura (RF-18)**: só proposta homologada (senão **409**); motivo obrigatório (mín. 20); grava
+  `bloqueada = false`, `reabertoPor`, `reabertoEm`, `motivoReabertura` e limpa `homologadaPor/Em` (o histórico fica
+  na auditoria). É a única escrita aceita em proposta homologada.
+- **Diligências (RF-28)** (`/chamamentos/:ch/propostas/:p/diligencias`): aberta → respondida → encerrada; encerrada
+  não muda (**409**); prazo não pode ser anterior a hoje. Aviso fixo: *"Diligência não admite inclusão de conteúdo
+  técnico novo (Anexo III, 29.3)"*.
+
+### Relatórios e trilha de auditoria (Etapa 6b)
+
+Gerados **no navegador** (pdfmake e exceljs, carregados só ao clicar); nada é enviado a servidor e nada é gravado.
+Os dados são lidos uma vez no momento de gerar, e o documento é montado por código puro em `src/relatorios/`.
+
+| Documento | Onde | Formato |
+|---|---|---|
+| Espelho de avaliação da proposta | botão **Espelho (PDF)** no cabeçalho da proposta | PDF |
+| Quadro-resumo do lote (a mesma tabela da classificação) | tela de classificação do lote | PDF e XLSX |
+| Minuta de ata da sessão (texto editável antes de exportar) | **Minuta de ata** na tela da sessão (`/chamamentos/:ch/sessoes/:s/ata`) | PDF |
+| Trilha de auditoria | menu **Auditoria** (`/auditoria`) — admin, presidente, controle | tela e XLSX |
+
+- **Espelho**: identificação (OSC, CNPJ, lote, nº SEI, protocolo), admissibilidade, os **28 subcritérios** com nível,
+  decisão, voto divergente, justificativa e páginas citadas ("Não avaliado" quando falta), totais por PA, D1,
+  memória da D2, NF e status.
+- **Ata**: data, presentes, declarações de impedimento, propostas da pauta, decisões **por maioria** registradas na
+  sessão (com voto divergente), desempates e diligências das propostas da pauta. O relator ajusta o texto; a edição
+  não é gravada.
+- **Rodapé de todos os documentos**: gerado em (data e hora de Brasília), por quem (e-mail), versão da matriz e
+  **código de verificação** = SHA-256 da serialização canônica (chaves em ordem alfabética, datas em ISO) dos dados
+  usados. Mesmos dados → mesmo código; na ata, o texto final faz parte dos dados.
+- **Marca d'água "MINUTA"**: em todo documento com proposta não homologada (o espelho da proposta, o quadro do lote
+  ou a ata da pauta).
+- **Auditoria**: filtros por proposta, usuário (e-mail ou uid), ação (criar, editar, excluir) e período (padrão:
+  últimos 30 dias; até 2.000 registros por consulta); "Ver antes/depois" mostra os campos alterados. A partir desta
+  etapa o registro de auditoria guarda também o **e-mail** de quem escreveu; registros anteriores mostram o uid.
 
 ### Testar a `/api` localmente
 

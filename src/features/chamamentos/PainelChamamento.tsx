@@ -69,7 +69,11 @@ export function PainelChamamento() {
       </dl>
 
       {c.lotes.map((lote) => (
-        <Secao key={lote.codigo} titulo={`Lote ${lote.codigo} — ${lote.descricao}`}>
+        <Secao
+          key={lote.codigo}
+          titulo={`Lote ${lote.codigo} — ${lote.descricao}`}
+          acoes={<LinkBotao para={`/chamamentos/${ch}/lotes/${encodeURIComponent(lote.codigo)}/classificacao`}>Classificação do lote</LinkBotao>}
+        >
           <Tabela<ComId<Proposta>>
             rotulo={`Propostas do lote ${lote.codigo}`}
             linhas={propostas.dados.filter((p) => p.loteCodigo === lote.codigo)}
@@ -101,6 +105,9 @@ export function PainelChamamento() {
                     </Link>
                     <Link to={`/chamamentos/${ch}/propostas/${p.id}/d2`} className="text-sky-800 underline">
                       D2
+                    </Link>
+                    <Link to={`/chamamentos/${ch}/propostas/${p.id}/diligencias`} className="text-sky-800 underline">
+                      Diligências
                     </Link>
                     {admin && !p.bloqueada && (
                       <Link to={`/chamamentos/${ch}/propostas/${p.id}/editar`} className="text-sky-800 underline">
