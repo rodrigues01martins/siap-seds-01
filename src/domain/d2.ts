@@ -124,8 +124,8 @@ function temCategoria(e: Experiencia, consideradas: string[]): boolean {
 }
 
 /**
- * Período efetivo: em execução vai até a data limite; nada após a data limite é considerado
- * (Anexo IV, item 3.3.1, IV).
+ * Período efetivo: em execução vai até a data limite; nada após a data limite é considerado.
+ * C2.2: Anexo IV, item 3.3.1, IV. C2.3: decisão de sistema por analogia (ver calcularC23).
  */
 function periodoAte(e: Experiencia, dataLimite: string | undefined): { inicio: string; fim: string } | null {
   if (dataLimite === undefined) {
@@ -257,7 +257,14 @@ export function calcularC22(
   return aplicarFaixa('C2.2', criterio, meses, memoria)
 }
 
-/** C2.3 — porte e escala: 2.3.1 (A + B) + 2.3.2 + 2.3.3, sempre pelo maior total simultâneo. */
+/**
+ * C2.3 — porte e escala: 2.3.1 (A + B) + 2.3.2 + 2.3.3, sempre pelo maior total simultâneo.
+ *
+ * Decisão de sistema: no C2.3, experiências em execução são consideradas até a data-limite das
+ * propostas, por analogia ao Anexo IV, 3.3.1, IV, e porque só se pontua escala efetivamente
+ * administrada e comprovada (Anexo IV, 3.4 e 3.8.3). Experiências iniciadas após a data-limite
+ * não entram na apuração de simultaneidade.
+ */
 export function calcularC23(
   experiencias: Experiencia[],
   dataLimite?: string,

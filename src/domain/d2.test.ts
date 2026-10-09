@@ -314,6 +314,57 @@ describe('C2.3 — 2.3.3: escala financeira anual (A e B), em centavos', () => {
   })
 })
 
+describe('C2.3 — corte na data-limite (decisão de sistema; analogia ao Anexo IV, 3.3.1, IV)', () => {
+  const LIMITE = '2026-10-31'
+  const emExecucao = () => internacao({ id: 'em-execucao', vagas: 60, trabalhadores: 50, inicio: '2020-01-01', fim: null })
+
+  it('experiência iniciada após a data-limite não soma com a que está em execução', () => {
+    const r = calcularC23(
+      [emExecucao(), internacao({ id: 'posterior', vagas: 60, trabalhadores: 50, inicio: '2026-11-01', fim: '2027-12-31' })],
+      LIMITE,
+    )
+    const a = r.subcriterios['2.3.1'].A
+    expect(a.valorApurado).toBe(60) // sem o corte seriam 120 vagas (0,75)
+    expect(a.pontos).toBe(0.5)
+    expect(r.subcriterios['2.3.1'].B.valorApurado).toBe(1) // sem o corte seriam 2 unidades
+    expect(r.subcriterios['2.3.2'].valorApurado).toBe(50) // sem o corte seriam 100 trabalhadores
+    expect(a.memoria.join('\n')).toMatch(/posterior: desconsiderada — início posterior à data limite/)
+  })
+
+  it('experiência em execução vai só até a data-limite', () => {
+    const a = calcularC23([emExecucao()], LIMITE).subcriterios['2.3.1'].A
+    expect(a.memoria.join('\n')).toMatch(/em-execucao: 60 vagas de 2020-01-01 a 2026-10-31/)
+  })
+
+  it('fim posterior à data-limite é cortado: sobreposição só depois dela não soma', () => {
+    const r = calcularC23(
+      [
+        internacao({ id: 'vigente', vagas: 60, inicio: '2025-01-01', fim: '2027-06-30' }),
+        internacao({ id: 'futura', vagas: 60, inicio: '2026-11-01', fim: '2027-06-30' }),
+      ],
+      LIMITE,
+    )
+    expect(r.subcriterios['2.3.1'].A.valorApurado).toBe(60)
+  })
+
+  it('experiência iniciada exatamente na data-limite ainda soma (limite inclusivo)', () => {
+    const r = calcularC23([emExecucao(), internacao({ id: 'no-limite', vagas: 60, inicio: LIMITE, fim: null })], LIMITE)
+    expect(r.subcriterios['2.3.1'].A.valorApurado).toBe(120)
+  })
+
+  it('calcularD2 aplica a mesma data-limite ao C2.3', () => {
+    const r = calcularD2({
+      dataLimite: LIMITE,
+      experiencias: [emExecucao(), internacao({ id: 'posterior', vagas: 60, inicio: '2026-11-01', fim: null })],
+    })
+    expect(r.criterios['C2.3'].subcriterios['2.3.1'].A.valorApurado).toBe(60)
+  })
+
+  it('experiência em execução sem data-limite informada é rejeitada', () => {
+    expect(() => calcularC23([emExecucao()])).toThrow(/em-execucao.*data limite/)
+  })
+})
+
 describe('C2.3 — consolidação', () => {
   it('C2.3 = 2.3.1 + 2.3.2 + 2.3.3, limitado a 4', () => {
     const r = calcularC23([
