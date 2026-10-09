@@ -41,6 +41,7 @@ describe('imports compatíveis com ESM no Node (funções da Vercel)', () => {
     expect(ARQUIVOS).toContain(join('api', 'avaliacao.ts'))
     expect(ARQUIVOS).toContain(join('src', 'domain', 'matriz', 'index.ts'))
     expect(ARQUIVOS).toContain(join('src', 'esquemas', 'sessao.ts'))
+    expect(ARQUIVOS).toContain(join('api', 'admissibilidade.ts'))
   })
 
   it.each(ARQUIVOS)('%s', (arquivo) => {

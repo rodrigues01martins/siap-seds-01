@@ -17,6 +17,12 @@ describe('statusDaProposta (painel do chamamento)', () => {
     expect(statusDaProposta({ bloqueada: true, totais: { status: 'inapta' } })).toBe('homologada')
   })
 
+  it('admissibilidade: desclassificada (28.2) e não admitida prevalecem sobre a avaliação', () => {
+    expect(statusDaProposta({ admissibilidade: { situacao: 'desclassificada' }, totais: { status: 'apta' } })).toBe('desclassificada')
+    expect(statusDaProposta({ admissibilidade: { situacao: 'nao_admitida' } })).toBe('nao_admitida')
+    expect(statusDaProposta({ admissibilidade: { situacao: 'admitida' }, totais: { status: 'apta' } })).toBe('apta')
+  })
+
   it('status desconhecido (dado adulterado) é tratado como pendente', () => {
     expect(statusDaProposta({ totais: { status: 'aprovada' } })).toBe('pendente')
   })
@@ -27,6 +33,7 @@ describe('statusDaProposta (painel do chamamento)', () => {
       apta: 'Apta',
       inapta: 'Inapta',
       desclassificada: 'Desclassificada',
+      nao_admitida: 'Não admitida',
       homologada: 'Homologada',
     })
   })

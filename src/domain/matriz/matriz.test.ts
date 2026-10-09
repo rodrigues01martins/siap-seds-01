@@ -141,3 +141,38 @@ describe('validarMatriz', () => {
     expect(() => validarMatriz(m)).toThrow(/C2.4/)
   })
 })
+
+describe('matriz_2026.json — admissibilidade (Anexo III, item 28)', () => {
+  const { admissibilidade } = MATRIZ_2026
+
+  it('cita o Anexo III, item 28', () => {
+    expect(admissibilidade.fonte).toBe('Anexo III – Caderno de Proposta Técnica, item 28 (SEI 95574003)')
+  })
+
+  it('10 requisitos essenciais do item 28.1, transcritos', () => {
+    expect(admissibilidade.requisitosEssenciais.map((r) => r.codigo)).toEqual(
+      ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'].map((n) => `28.1.${n}`),
+    )
+    expect(admissibilidade.requisitosEssenciais[0]!.descricao).toBe('apresentação dentro do prazo estabelecido no Edital')
+    expect(admissibilidade.requisitosEssenciais[6]!.descricao).toBe('apresentação dos 6 (seis) Planos de Ação obrigatórios')
+    expect(admissibilidade.requisitosEssenciais[9]!.descricao).toBe(
+      'observância das demais exigências expressamente qualificadas no Edital como essenciais',
+    )
+  })
+
+  it('o requisito dos 6 PAs (28.1.VII) é apurado pela tabela de páginas', () => {
+    expect(admissibilidade.requisitoPlanos).toBe('28.1.VII')
+  })
+
+  it('28.2 (desclassificação) e 28.4 (irregularidade formal não desclassifica)', () => {
+    expect(admissibilidade.desclassificacao).toMatch(/^28\.2 — A ausência integral do Caderno/)
+    expect(admissibilidade.irregularidadesFormais.observacao).toMatch(/^28\.4 — Irregularidades meramente formais/)
+  })
+
+  it('5 tipos de irregularidade meramente formal do item 28.5', () => {
+    expect(admissibilidade.irregularidadesFormais.tipos.map((t) => t.codigo)).toEqual(
+      ['I', 'II', 'III', 'IV', 'V'].map((n) => `28.5.${n}`),
+    )
+    expect(admissibilidade.irregularidadesFormais.tipos[1]!.descricao).toBe('erro isolado na numeração de página')
+  })
+})
