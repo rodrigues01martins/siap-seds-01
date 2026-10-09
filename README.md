@@ -1,7 +1,7 @@
 # SIAP SEDS/GO 2026 — Avaliação de Planos de Ação
 
 App web para a Comissão de Seleção avaliar os Cadernos de Proposta Técnica (Anexo III) conforme a
-Matriz de Avaliação (Anexo IV). Regras de arquitetura e convenções: veja [`claude.md`](claude.md).
+Matriz de Avaliação (Anexo IV). Regras de arquitetura e convenções: veja [`CLAUDE.md`](CLAUDE.md).
 
 - **Front-end:** React 18 + TypeScript + Vite + Tailwind, hospedado na Vercel
 - **Back-end:** Firebase Auth + Firestore (leitura no cliente; escrita só pela `/api`, a partir da Etapa 3)
@@ -15,6 +15,7 @@ Matriz de Avaliação (Anexo IV). Regras de arquitetura e convenções: veja [`c
 | `npm run typecheck` | Checagem de tipos |
 | `npm test` | Testes de domínio e de lógica (rápidos, sem emulador) |
 | `npm run test:regras` | Testes das `firestore.rules` no emulador (exige **Java 21+**) |
+| `npm run test:api` | Testes das funções `/api` nos emuladores de Auth e Firestore (exige **Java 21+**) |
 | `npm run emuladores` | Emuladores de Auth e Firestore para desenvolvimento local |
 | `npm run seed:matriz -- --projeto dev` | Grava a matriz em `matrizes/2026` |
 | `npm run set-role -- --projeto dev --email ... --perfil ...` | Define o perfil de um usuário |
@@ -55,8 +56,22 @@ Se faltar alguma variável, o app mostra uma tela vermelha com o nome exato das 
 
 > **Por que o prefixo `VITE_` aqui é seguro?** Essas 4 informações só identificam o projeto e
 > vão para o navegador de qualquer forma; quem protege os dados são as `firestore.rules`.
-> **Não** cadastre `VITE_USAR_EMULADORES` na Vercel. A credencial do servidor
-> (`FIREBASE_SERVICE_ACCOUNT`, **sem** `VITE_`) só entra na Vercel na Etapa 3, junto com a `/api`.
+> **Não** cadastre `VITE_USAR_EMULADORES` na Vercel.
+
+### 2.1 Credencial do servidor da `/api`: `FIREBASE_SERVICE_ACCOUNT`
+
+As funções `/api` gravam no Firestore com o Admin SDK. Elas leem a chave da conta de serviço de
+`FIREBASE_SERVICE_ACCOUNT`, que **só existe no servidor** (sem prefixo `VITE_`, nunca vai para o navegador).
+
+| Key | Type | Environment | Value |
+|---|---|---|---|
+| `FIREBASE_SERVICE_ACCOUNT` | **Secret** | **Production** | JSON inteiro da chave do Admin SDK do projeto **prod** (`siap-seds-01`) |
+| `FIREBASE_SERVICE_ACCOUNT` | **Secret** | **Preview** | JSON inteiro da chave do Admin SDK do projeto **dev** (`siap-web-dev`) |
+
+Como gerar cada chave: Firebase Console (do projeto) → *Configurações do projeto* → *Contas de serviço* →
+**Gerar nova chave privada**. Abra o JSON no Bloco de Notas, copie tudo para o *Value* e apague o arquivo.
+Depois, *Redeploy*. Sem a variável, toda chamada à `/api` que precise do Firebase responde 500 e o log da
+função mostra `Defina FIREBASE_SERVICE_ACCOUNT ...`.
 
 ## 3. Secret no GitHub (publicação automática das regras em prod)
 
@@ -101,7 +116,7 @@ Para publicar as regras em **dev** manualmente: `npx firebase login` e depois
 O log de cada execução fica em *Actions*, e a auditoria registra `executor: github:<seu usuário>`.
 O mesmo workflow serve para dar ou remover perfis dos membros da Comissão (`remover-perfil`).
 
-### 4.2 Pelo terminal (exige Node.js 20+ e o repositório clonado)
+### 4.2 Pelo terminal (exige Node.js 22 e o repositório clonado)
 
 Os scripts usam o **Admin SDK** e leem a credencial da variável `FIREBASE_SERVICE_ACCOUNT`.
 
@@ -134,7 +149,54 @@ Outras opções:
 - Republicar a matriz alterada: `npm run seed:matriz -- --projeto dev --forcar`.
 - Cada execução registra um evento em `auditoria` (com quem executou); `set-role` também atualiza `usuarios/{uid}`.
 
-## 5. Desenvolvimento local com emuladores
+## 5. A `/api`: porta única de escrita
+
+O navegador **nunca** grava no Firestore (as `firestore.rules` negam toda escrita de cliente). Toda gravação
+passa por uma função `/api`, que:
+
+1. confere o login (`Authorization: Bearer <ID token>`) → sem token ou token inválido/revogado: **401**;
+2. confere o perfil do usuário contra a matriz de permissões → perfil sem permissão: **403**;
+3. valida os dados (mensagens em português) → **400** `{ erro, campos }`; método errado → **405**;
+4. grava numa transação junto com um registro em `auditoria/{id}`
+   `{ caminho, acao, antes, depois, uid, perfil, dataHora }`;
+5. recusa qualquer escrita em proposta homologada (`bloqueada = true`) ou em suas subcoleções → **409**.
+
+### Endpoints da Etapa 3a
+
+| Endpoint | Métodos | Corpo (JSON) | Perfil |
+|---|---|---|---|
+| `/api/chamamentos` | `POST` criar, `PATCH` editar | `{ numero, titulo, lotes: [{ codigo, descricao }] }` (`PATCH` com `id`) | admin |
+| `/api/oscs` | `POST` criar, `PATCH` editar | `{ cnpj, razaoSocial, nomeFantasia? }` — CNPJ numérico ou alfanumérico | admin |
+| `/api/propostas` | `POST` criar, `PATCH` editar | `{ chamamentoId, loteCodigo, oscCnpj, observacao? }` (`PATCH` com `propostaId`) | admin |
+| `/api/perfis` | `POST` dar/trocar, `DELETE` remover | `{ email, perfil }` / `{ email }` | admin |
+
+No app, use `chamarApi` de `src/lib/api.ts`: ele anexa o ID token e devolve `ErroApi` com `status`, mensagem
+e `campos` em português.
+
+### Matriz de permissões
+
+| Operação | Perfis |
+|---|---|
+| C1 — cadastros (chamamentos, OSCs, propostas) | admin |
+| C2 — nível dos subcritérios da D1 | presidente, relator, membro |
+| C3 — experiências da D2 | presidente, relator |
+| C5 — homologar proposta | presidente |
+| C6 — dar e remover perfis | admin |
+| Leitura da auditoria | admin, presidente, controle |
+
+A fonte única no código é `src/domain/permissoes.ts` (um teste garante que ela bate com esta tabela).
+
+### Testar a `/api` localmente
+
+```bash
+npm run test:api     # sobe Auth + Firestore emulados, roda tests/api/** e derruba tudo
+```
+Os testes criam usuários com cada perfil no emulador, chamam as funções como a Vercel faria
+(`Request` → `Response`) e conferem status, documento gravado e registro de auditoria.
+Nenhum dado real é tocado: com `FIRESTORE_EMULATOR_HOST` e `FIREBASE_AUTH_EMULATOR_HOST` definidas, o
+Admin SDK usa os emuladores (definir só uma das duas é recusado, para não misturar com produção).
+
+## 6. Desenvolvimento local com emuladores
 
 ```bash
 npm run emuladores            # terminal 1 (exige Java 21+)

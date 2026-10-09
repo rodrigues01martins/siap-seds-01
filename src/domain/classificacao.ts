@@ -1,5 +1,7 @@
 // Classificação das propostas por Nota Final (NF = D1 + D2), em ordem decrescente (Anexo IV, item 1.4).
 // Só propostas aptas com avaliação completa entram no ranking.
+// O sistema NÃO desempata: propostas com a mesma NF dividem a posição e são sinalizadas;
+// a Comissão decide o empate formalmente em outra instância.
 
 import type { ResultadoD1 } from './d1'
 import type { ResultadoD2 } from './d2'
@@ -16,7 +18,7 @@ export interface PosicaoRanking {
   d1: number
   d2: number
   nf: number
-  /** Mesma NF de outra proposta: o desempate segue as regras do Edital (Anexo IV, item 1.4). */
+  /** Mesma NF de outra proposta (dividem a posição); a Comissão decide fora do sistema. */
   empatada: boolean
 }
 
@@ -61,6 +63,11 @@ export function classificar(propostas: PropostaAvaliada[]): Classificacao {
   const contagemPorNF = new Map<number, number>()
   for (const n of notas) contagemPorNF.set(n.nf, (contagemPorNF.get(n.nf) ?? 0) + 1)
 
-  const ranking = notas.map((n, i) => ({ posicao: i + 1, ...n, empatada: contagemPorNF.get(n.nf)! > 1 }))
+  // Posição de competição (1, 2, 2, 4): empatadas dividem a posição da primeira do grupo.
+  const ranking = notas.map((n) => ({
+    posicao: notas.findIndex((outra) => outra.nf === n.nf) + 1,
+    ...n,
+    empatada: contagemPorNF.get(n.nf)! > 1,
+  }))
   return { ranking, inaptas, desclassificadas, pendentes, definitiva: pendentes.length === 0 }
 }
