@@ -32,6 +32,7 @@ describe('gravar (B4): transação + auditoria no mesmo commit', () => {
       antes: null,
       depois: { nome: 'OSC X' },
       uid: 'uid-relator',
+      email: 'relator@go.gov.br',
       perfil: 'relator',
     })
     expect(registro!.dataHora).toBeInstanceOf(Timestamp)

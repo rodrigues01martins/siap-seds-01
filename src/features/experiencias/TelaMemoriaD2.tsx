@@ -6,12 +6,8 @@ import { EstadoLeitura } from '../../componentes/basicos'
 import type { ResultadoCriterio, ResultadoD2 } from '../../domain/d2'
 import { formatarNumero } from '../../domain/formatacao'
 import { useColecao, useDocumento } from '../../lib/firestore'
+import { legivel } from '../../relatorios/memoriaD2'
 import { CabecalhoProposta, useDadosProposta } from '../avaliacao/CabecalhoProposta'
-
-/** Troca os ids das experiências pelas descrições, para a memória ficar legível. */
-function legivel(linha: string, nomes: Record<string, string>): string {
-  return Object.entries(nomes).reduce((texto, [id, nome]) => texto.split(id).join(`“${nome}”`), linha)
-}
 
 function Criterio({
   resultado,

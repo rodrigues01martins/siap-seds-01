@@ -9,6 +9,7 @@ import { formatarCnpj } from '../../domain/cnpj'
 import { statusDaProposta } from '../../domain/statusProposta'
 import { useConsulta, useDocumento, type ComId, type Leitura } from '../../lib/firestore'
 import type { Chamamento, Osc, Proposta, Sessao } from '../../lib/tipos'
+import { BotaoEspelho } from '../relatorios/BotoesRelatorio'
 
 export interface DadosProposta {
   chamamento: ComId<Chamamento>
@@ -89,6 +90,9 @@ export function CabecalhoProposta({ dados, ch, aba }: { dados: DadosProposta; ch
           <p className={sessaoAberta ? 'text-emerald-800' : 'text-amber-800'}>
             {sessaoAberta ? `Sessão aberta de ${dataBr(sessaoAberta.data)}` : 'Nenhuma sessão aberta'}
           </p>
+          <div className="mt-1">
+            <BotaoEspelho ch={ch} p={proposta.id} />
+          </div>
         </div>
       </div>
       <nav aria-label="Abas da proposta" className="mt-2 flex gap-4 text-sm">

@@ -4,6 +4,7 @@ import { Shell } from './componentes/Shell'
 import type { Perfil } from './domain/perfis'
 import { PERMISSOES } from './domain/permissoes'
 import { TelaAdmissibilidade } from './features/admissibilidade/TelaAdmissibilidade'
+import { TelaAuditoria } from './features/auditoria/TelaAuditoria'
 import { Login } from './features/auth/Login'
 import { TelaD1 } from './features/avaliacao/TelaD1'
 import { RotaProtegida } from './features/auth/RotaProtegida'
@@ -17,6 +18,7 @@ import { TelaMemoriaD2 } from './features/experiencias/TelaMemoriaD2'
 import { TelaOscs } from './features/oscs/TelaOscs'
 import { TelaDiligencias } from './features/diligencias/TelaDiligencias'
 import { TelaPerfis } from './features/perfis/TelaPerfis'
+import { TelaAta } from './features/relatorios/TelaAta'
 import { TelaClassificacao } from './features/resultado/TelaClassificacao'
 import { ConduzirSessao } from './features/sessoes/ConduzirSessao'
 import { NovaSessao } from './features/sessoes/NovaSessao'
@@ -47,6 +49,7 @@ export default function App() {
             <Route path="chamamentos/:ch/propostas/:p/editar" element={so(PERMISSOES.cadastros, <FormProposta />)} />
             <Route path="chamamentos/:ch/sessoes/nova" element={so(PERMISSOES.sessaoAbrirEncerrar, <NovaSessao />)} />
             <Route path="chamamentos/:ch/sessoes/:s" element={so(LEITURA, <ConduzirSessao />)} />
+            <Route path="chamamentos/:ch/sessoes/:s/ata" element={so(LEITURA, <TelaAta />)} />
             <Route path="chamamentos/:ch/propostas/:p/admissibilidade" element={so(LEITURA, <TelaAdmissibilidade />)} />
             <Route path="chamamentos/:ch/propostas/:p/d1" element={so(LEITURA, <TelaD1 />)} />
             <Route path="chamamentos/:ch/propostas/:p/d2" element={so(LEITURA, <TelaD2 />)} />
@@ -55,6 +58,7 @@ export default function App() {
             <Route path="chamamentos/:ch/lotes/:lote/classificacao" element={so(LEITURA, <TelaClassificacao />)} />
             <Route path="oscs" element={so(PERMISSOES.cadastros, <TelaOscs />)} />
             <Route path="perfis" element={so(PERMISSOES.perfis, <TelaPerfis />)} />
+            <Route path="auditoria" element={so(PERMISSOES.lerAuditoria, <TelaAuditoria />)} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

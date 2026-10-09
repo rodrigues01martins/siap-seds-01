@@ -1,5 +1,6 @@
 // /chamamentos/:ch/lotes/:lote/classificacao — classificação do lote, com homologação (C5),
 // reabertura (RF-18) e registro do desempate (RF-27) pelo presidente. Demais perfis só leem.
+// Quadro-resumo do lote em PDF e XLSX (Etapa 6b), gerado no navegador com a mesma tabela.
 
 import { Link, useParams } from 'react-router'
 import { EstadoLeitura, Titulo } from '../../componentes/basicos'
@@ -8,6 +9,7 @@ import { chamarApi } from '../../lib/api'
 import { useColecao, useDocumento } from '../../lib/firestore'
 import type { Chamamento, Osc } from '../../lib/tipos'
 import { useUsuario } from '../auth/useUsuario'
+import { BotoesQuadro } from '../relatorios/BotoesRelatorio'
 import { TabelaClassificacao, type DecisaoRegistrada, type LinhaClassificacao } from './TabelaClassificacao'
 
 export function TelaClassificacao() {
@@ -30,10 +32,19 @@ export function TelaClassificacao() {
     .filter((p) => p.loteCodigo === lote)
     .map((p) => ({ ...p, nomeOsc: nomeOsc.get(p.oscCnpj) ?? p.oscCnpj }))
   const alvo = (propostaId: string) => ({ chamamentoId: ch, propostaId })
+  const decisoes = desempates.dados.filter((d) => d.loteCodigo === lote)
 
   return (
     <>
-      <Titulo>
+      <Titulo
+        acoes={
+          <BotoesQuadro
+            cabecalho={{ chamamento: { numero: chamamento.dados.numero, titulo: chamamento.dados.titulo }, lote: dadosLote }}
+            propostas={linhas}
+            decisoes={decisoes}
+          />
+        }
+      >
         Classificação — Lote {dadosLote.codigo}: {dadosLote.descricao}
       </Titulo>
       <p className="mb-4 text-sm text-slate-600">
@@ -46,7 +57,7 @@ export function TelaClassificacao() {
       <TabelaClassificacao
         lote={dadosLote}
         propostas={linhas}
-        decisoes={desempates.dados.filter((d) => d.loteCodigo === lote)}
+        decisoes={decisoes}
         podeHomologar={podeFazer(perfil, 'homologar')}
         podeDesempatar={podeFazer(perfil, 'desempate')}
         podeReabrir={podeFazer(perfil, 'reabrir')}

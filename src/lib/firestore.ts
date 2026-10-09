@@ -3,6 +3,8 @@
 import {
   collection,
   doc,
+  getDoc,
+  getDocs,
   onSnapshot,
   query,
   type DocumentData,
@@ -72,4 +74,18 @@ export function useDocumento<T = DocumentData>(caminho: string | null): Leitura<
     )
   }, [caminho])
   return estado
+}
+
+/**
+ * Leitura única (sem tempo real), para os relatórios: o documento gerado e o código de verificação
+ * usam exatamente os dados lidos neste momento, e o texto da ata editado não é sobrescrito.
+ */
+export async function lerDocumento<T = DocumentData>(caminho: string): Promise<ComId<T> | null> {
+  const d = await getDoc(doc(obterDb(), caminho))
+  return d.exists() ? { ...(d.data() as T), id: d.id } : null
+}
+
+export async function lerColecao<T = DocumentData>(caminho: string): Promise<ComId<T>[]> {
+  const instantaneo = await getDocs(collection(obterDb(), caminho))
+  return instantaneo.docs.map((d) => ({ ...(d.data() as T), id: d.id }))
 }
