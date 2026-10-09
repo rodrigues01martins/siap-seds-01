@@ -14,7 +14,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:regras": "firebase emulators:exec --only firestore --project demo-siap-seds \"vitest run --config vitest.regras.config.ts\"",
-    "emuladores": "firebase emulators:start --only auth,firestore --project demo-siap-seds",
+    "emuladores": "firebase emulators:start --only auth,firestore --project dev",
     "seed:matriz": "tsx scripts/seed-matriz.ts",
     "set-role": "tsx scripts/set-role.ts"
   },
