@@ -180,7 +180,7 @@ describe('fluxo completo: cadastro → sessão → D2 → D1 → homologação',
       pendentes: [],
     })
     expect(semCarimbos(await ler(`${caminho}/resultadoD2/atual`))).toEqual(JSON.parse(JSON.stringify(d2)))
-    expect((await ler(`chamamentos/${ch}/sessoes/${s}`))?.foco).toEqual({ propostaId: p, subcriterio: CODIGOS.at(-1) })
+    expect((await ler(`chamamentos/${ch}/sessoes/${s}`))?.foco).toEqual({ tipo: 'subcriterio', propostaId: p, subcriterio: CODIGOS.at(-1) })
 
     // 6. Homologação (presidente) e trava
     await exigir(homologar, 'POST', alvo, presidente)

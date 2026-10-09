@@ -193,10 +193,10 @@ describe('/api/avaliacao — foco da sessão (Etapa 4b)', () => {
     const r = await chamar(rota, 'PUT', registro({ codigo: '2.1' }), membro.token)
     expect(r.status).toBe(200)
     const caminhoSessao = `chamamentos/${CH}/sessoes/${SESSAO}`
-    expect((await ler(caminhoSessao))?.foco).toEqual({ propostaId: PROP, subcriterio: '2.1' })
+    expect((await ler(caminhoSessao))?.foco).toEqual({ tipo: 'subcriterio', propostaId: PROP, subcriterio: '2.1' })
     expect((await auditoriaDe(caminhoSessao)).at(-1)).toMatchObject({
       acao: 'editar',
-      depois: { foco: { propostaId: PROP, subcriterio: '2.1' } },
+      depois: { foco: { tipo: 'subcriterio', propostaId: PROP, subcriterio: '2.1' } },
       uid: membro.uid,
     })
   })
