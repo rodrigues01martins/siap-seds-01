@@ -15,3 +15,7 @@ ui-debug.log
 *conta-de-servico*.json
 *service-account*.json
 *firebase-adminsdk*.json
+
+# Backups do Firestore (dados das propostas): nunca versionar
+backups/
+*.json.cifrado

@@ -17,7 +17,10 @@
     "emuladores": "firebase emulators:start --only auth,firestore --project dev",
     "seed:matriz": "tsx scripts/seed-matriz.ts",
     "set-role": "tsx scripts/set-role.ts",
-    "test:api": "firebase emulators:exec --only auth,firestore --project demo-siap-seds \"vitest run --config vitest.api.config.ts\""
+    "test:api": "firebase emulators:exec --only auth,firestore --project demo-siap-seds \"vitest run --config vitest.api.config.ts\"",
+    "backup": "tsx scripts/backup-firestore.ts",
+    "restaurar": "tsx scripts/restaurar-firestore.ts",
+    "ensaio": "tsx scripts/ensaio.ts"
   },
   "dependencies": {
     "exceljs": "^4.4.0",

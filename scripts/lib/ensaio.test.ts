@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { problemasDaAdmissibilidade } from '../../src/domain/admissibilidade'
+import { problemasDaAdmissibilidade, type Admissibilidade } from '../../src/domain/admissibilidade'
 import { problemasDoRegistro } from '../../src/domain/avaliacao'
 import { classificarLote } from '../../src/domain/classificacao'
 import { cnpjValido } from '../../src/domain/cnpj'
 import { problemasDaExperiencia } from '../../src/domain/d2'
 import { MATRIZ_2026 } from '../../src/domain/matriz'
-import { consolidarProposta } from '../../src/domain/proposta'
+import { consolidarProposta, type TotaisProposta } from '../../src/domain/proposta'
 import { statusDaProposta } from '../../src/domain/statusProposta'
 import { paraExperiencia } from '../../src/esquemas/experiencia'
 import { CHAMAMENTO_ENSAIO, montarEnsaio } from './ensaio'
@@ -16,7 +16,15 @@ const docs = ensaio.documentos
 const base = `chamamentos/${CHAMAMENTO_ENSAIO}`
 const daColecao = (prefixo: string) =>
   Object.entries(docs).filter(([c]) => c.startsWith(`${prefixo}/`) && c.split('/').length === prefixo.split('/').length + 1)
-const propostas = () => daColecao(`${base}/propostas`).map(([c, d]) => ({ id: c.split('/').at(-1)!, ...(d as Doc) }))
+interface PropostaDoc {
+  id: string
+  loteCodigo: string
+  oscCnpj: string
+  bloqueada?: boolean
+  totais?: TotaisProposta
+  admissibilidade?: Admissibilidade
+}
+const propostas = () => daColecao(`${base}/propostas`).map(([c, d]) => ({ ...(d as Doc), id: c.split('/').at(-1)! }) as PropostaDoc)
 
 describe('ensaio — dados fictícios do dev', () => {
   it('1 chamamento marcado como ensaio, 2 lotes e 3 OSCs com CNPJ válido', () => {
@@ -56,7 +64,7 @@ describe('ensaio — dados fictícios do dev', () => {
     const porLote = (lote: string) => propostas().filter((p) => p.loteCodigo === lote)
     const empates = ['L1', 'L2'].flatMap((lote) => {
       const r = classificarLote(
-        porLote(lote).map((p) => ({ id: p.id, totais: (p.totais as never) ?? null, admissao: (p.admissibilidade as { situacao: never } | undefined)?.situacao })),
+        porLote(lote).map((p) => ({ id: p.id, totais: p.totais ?? null, admissao: p.admissibilidade?.situacao })),
       )
       return r.empates
     })
@@ -74,8 +82,7 @@ describe('ensaio — dados fictícios do dev', () => {
     expect(experiencias.length).toBeGreaterThan(0)
     for (const [caminho, e] of experiencias) expect(problemasDaExperiencia(paraExperiencia(caminho, e as Doc)), caminho).toEqual({})
     for (const p of propostas()) {
-      const adm = p.admissibilidade as Parameters<typeof problemasDaAdmissibilidade>[0]
-      expect(problemasDaAdmissibilidade(adm), p.id).toEqual({})
+      expect(problemasDaAdmissibilidade(p.admissibilidade!), p.id).toEqual({})
     }
   })
 
