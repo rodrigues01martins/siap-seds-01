@@ -26,8 +26,13 @@ admin, presidente, relator, membro, controle
 
 ## Convenções
 - Código e nomes em português, sem acentos em identificadores (ex.: calcularD2, experiencias).
-- Um PR por etapa; todo PR com testes passando (npm run typecheck && npm test).
+- Uma branch por etapa (ex.: feat/etapa-2-firebase), criada a partir da main; um PR por etapa.
+- Todo PR com testes passando (npm run typecheck && npm test && npm run test:regras).
+- TDD: commit test: (vermelho) antes do feat:/fix: que o faz passar.
+- Merge na main com merge commit (não squash), preservando o histórico do TDD.
 - Commits no padrão: feat:, fix:, test:, chore:, docs:
 
 ## Comandos
 npm run dev | npm run build | npm test | npm run typecheck
+npm run test:regras (emulador, Java 21+) | npm run emuladores
+npm run seed:matriz -- --projeto dev|prod | npm run set-role -- --projeto dev|prod --email X --perfil Y
