@@ -69,6 +69,7 @@ describe('trilha de auditoria — filtros', () => {
     expect(descreverCaminho('chamamentos/ch1/sessoes/s1')).toBe('Sessão s1')
     expect(descreverCaminho('chamamentos/ch1/desempates/L1--a-b')).toBe('Desempate L1--a-b')
     expect(descreverCaminho('usuarios/u1')).toBe('Perfil do usuário u1')
+    expect(descreverCaminho('matrizes/2026')).toBe('Matriz de avaliação 2026')
     expect(descreverCaminho('outro/x')).toBe('outro/x')
   })
 })
