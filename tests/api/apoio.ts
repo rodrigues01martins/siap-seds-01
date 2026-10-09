@@ -101,3 +101,44 @@ export async function auditoriaDe(caminho: string): Promise<RegistroAuditoria[]>
 export async function totalAuditoria(): Promise<number> {
   return (await obterAdmin().db.collection('auditoria').count().get()).data().count
 }
+
+export const DATA_LIMITE = '2026-10-31'
+export const CH = 'ch1'
+export const PROP = 'p1'
+export const CAMINHO_PROPOSTA = `chamamentos/${CH}/propostas/${PROP}`
+
+/** Chamamento (com data limite), OSC e proposta prontos para avaliação. */
+export async function semearProposta(opcoes: { justificativaMinima?: number; bloqueada?: boolean } = {}): Promise<void> {
+  const { db } = obterAdmin()
+  await db.doc(`chamamentos/${CH}`).set({
+    numero: '001/2026',
+    titulo: 'Chamamento',
+    dataLimitePropostas: DATA_LIMITE,
+    lotes: [{ codigo: 'L1', descricao: 'Lote 1' }],
+    ...(opcoes.justificativaMinima !== undefined ? { justificativaMinima: opcoes.justificativaMinima } : {}),
+  })
+  await db.doc('oscs/11222333000181').set({ cnpj: '11222333000181', razaoSocial: 'Instituto Esperança' })
+  await db.doc(CAMINHO_PROPOSTA).set({ loteCodigo: 'L1', oscCnpj: '11222333000181', bloqueada: opcoes.bloqueada ?? false })
+}
+
+/** Grava níveis diretamente (sem a /api), para montar cenários grandes rapidamente. */
+export async function semearNiveis(niveis: Record<string, number>): Promise<void> {
+  const { db } = obterAdmin()
+  const lote = db.batch()
+  for (const [codigo, nivel] of Object.entries(niveis)) {
+    lote.set(db.doc(`${CAMINHO_PROPOSTA}/avaliacoes/${codigo}`), {
+      nivel,
+      justificativa: 'Semente de teste com justificativa suficiente.',
+      paginas: [],
+      decisao: 'unanimidade',
+      sessaoId: 's0',
+    })
+  }
+  await lote.commit()
+}
+
+/** Remove os campos de data que o servidor acrescenta, para comparar com o domínio. */
+export function semCarimbos<T extends Record<string, unknown> | undefined>(dados: T): Record<string, unknown> {
+  const { criadoEm: _c, atualizadoEm: _a, ...resto } = (dados ?? {}) as Record<string, unknown>
+  return resto
+}

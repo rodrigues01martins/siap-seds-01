@@ -1,10 +1,12 @@
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { obterAdmin } from '../../api/_lib/admin'
 import * as rota from '../../api/chamamentos'
 import { auditoriaDe, chamar, criarUsuario, ler, limparAuth, limparFirestore, type Usuario } from './apoio'
 
 const VALIDO = {
   numero: '001/2026',
   titulo: 'Chamamento Público SEDS/GO 2026',
+  dataLimitePropostas: '2026-10-31',
   lotes: [
     { codigo: 'L1', descricao: 'Centro de Atendimento Socioeducativo de Goiânia' },
     { codigo: 'L2', descricao: 'Centro de Atendimento Socioeducativo de Anápolis' },
@@ -48,12 +50,27 @@ describe('/api/chamamentos — validação', () => {
     const r = await chamar(rota, 'POST', { numero: '', titulo: 'ab', lotes: [] }, admin.token)
     expect(r.status).toBe(400)
     expect(r.corpo?.erro).toBe('Dados inválidos.')
-    expect(Object.keys(r.corpo?.campos ?? {}).sort()).toEqual(['lotes', 'numero', 'titulo'])
+    expect(Object.keys(r.corpo?.campos ?? {}).sort()).toEqual(['dataLimitePropostas', 'lotes', 'numero', 'titulo'])
   })
 
   it('lotes com código repetido → 400', async () => {
     const r = await chamar(rota, 'POST', { ...VALIDO, lotes: [VALIDO.lotes[0], VALIDO.lotes[0]] }, admin.token)
     expect(r).toMatchObject({ status: 400, corpo: { campos: { lotes: 'Há códigos de lote repetidos.' } } })
+  })
+
+  it('data limite das propostas inexistente ou fora do formato → 400', async () => {
+    for (const data of ['2026-02-30', '31/10/2026']) {
+      const r = await chamar(rota, 'POST', { ...VALIDO, dataLimitePropostas: data }, admin.token)
+      expect(r).toMatchObject({ status: 400, corpo: { campos: { dataLimitePropostas: 'Data inválida (use AAAA-MM-DD).' } } })
+    }
+  })
+
+  it('mínimo da justificativa: opcional, inteiro de 0 a 2000', async () => {
+    const r = await chamar(rota, 'POST', { ...VALIDO, justificativaMinima: -1 }, admin.token)
+    expect(r.status).toBe(400)
+    expect(r.corpo?.campos).toHaveProperty('justificativaMinima')
+    const ok = await chamar(rota, 'POST', { ...VALIDO, justificativaMinima: 50 }, admin.token)
+    expect(await ler(`chamamentos/${ok.corpo?.id as string}`)).toMatchObject({ justificativaMinima: 50 })
   })
 
   it('campo não previsto → 400', async () => {
@@ -90,6 +107,21 @@ describe('/api/chamamentos — criar e editar', () => {
   it('editar sem nenhum campo além do id → 400', async () => {
     const id = (await chamar(rota, 'POST', VALIDO, admin.token)).corpo?.id as string
     expect((await chamar(rota, 'PATCH', { id }, admin.token)).status).toBe(400)
+  })
+
+  it('data limite não muda depois que a avaliação começou (totais já calculados) → 409', async () => {
+    const id = (await chamar(rota, 'POST', VALIDO, admin.token)).corpo?.id as string
+    const { db } = obterAdmin()
+    await db.doc(`chamamentos/${id}/propostas/p1`).set({ loteCodigo: 'L1', bloqueada: false })
+    expect((await chamar(rota, 'PATCH', { id, dataLimitePropostas: '2026-11-30' }, admin.token)).status).toBe(200)
+
+    await db.doc(`chamamentos/${id}/propostas/p1`).update({ totais: { d1: 3 } })
+    const r = await chamar(rota, 'PATCH', { id, dataLimitePropostas: '2026-12-15' }, admin.token)
+    expect(r).toMatchObject({
+      status: 409,
+      corpo: { erro: 'Não é possível alterar a data limite: a avaliação de propostas deste chamamento já começou.' },
+    })
+    expect((await chamar(rota, 'PATCH', { id, titulo: 'Outro título' }, admin.token)).status).toBe(200)
   })
 
   it('editar chamamento inexistente → 404', async () => {
