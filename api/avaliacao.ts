@@ -49,7 +49,7 @@ export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
         { caminho, acao: existente.exists ? 'editar' : 'criar', dados },
         ...recalculo.operacoes,
         // Etapa 4b: o subcritério salvo vira o foco da sessão (projeção acompanha o registro).
-        { caminho: caminhoSessao, acao: 'editar', dados: { foco: { propostaId, subcriterio: codigo } } },
+        { caminho: caminhoSessao, acao: 'editar', dados: { foco: { tipo: 'subcriterio', propostaId, subcriterio: codigo } } },
       ]
     })
 

@@ -1,7 +1,8 @@
-// /chamamentos/:ch/sessoes/:s — sessão: presentes e declarações, foco { propostaId, subcriterio }
+// /chamamentos/:ch/sessoes/:s — sessão: presentes e declarações, foco { tipo, propostaId, subcriterio? }
 // (presidente e relator) e encerrar (presidente). Os demais perfis só leem.
 
 import { useState } from 'react'
+import { useWatch } from 'react-hook-form'
 import { useParams } from 'react-router'
 import { AlertaErro } from '../../componentes/AlertaErro'
 import { Botao, EstadoLeitura, LinkBotao, Secao, Titulo, dataBr } from '../../componentes/basicos'
@@ -10,7 +11,8 @@ import { Tabela } from '../../componentes/Tabela'
 import { MATRIZ_2026 } from '../../domain/matriz'
 import { podeFazer } from '../../domain/permissoes'
 import type { z } from '../../esquemas/base'
-import { esquemaAbrirSessao, esquemaFoco } from '../../esquemas/sessao'
+import { TIPOS_FOCO, esquemaAbrirSessao, esquemaFoco } from '../../esquemas/sessao'
+import { ROTULO_TIPO_FOCO, descreverFoco } from '../projecao/foco'
 import { chamarApi } from '../../lib/api'
 import { useColecao, useDocumento } from '../../lib/firestore'
 import type { Osc, Proposta, Sessao } from '../../lib/tipos'
@@ -21,6 +23,12 @@ import { useComissao } from './useComissao'
 const SUBCRITERIOS = MATRIZ_2026.dimensao1.planos.flatMap((pa) =>
   pa.subcriterios.map((s) => ({ valor: s.codigo, rotulo: `${pa.codigo} · ${s.codigo} — ${s.titulo}` })),
 )
+
+/** Subcritério só aparece quando o tipo do foco é "subcritério". */
+function CampoSubcriterio() {
+  const tipo = useWatch({ name: 'tipo' }) as string | undefined
+  return tipo === 'subcriterio' ? <CampoSelecao nome="subcriterio" rotulo="Subcritério" opcoes={SUBCRITERIOS} /> : null
+}
 
 export function ConduzirSessao() {
   const { ch, s } = useParams()
@@ -85,26 +93,35 @@ export function ConduzirSessao() {
 
       <Secao titulo="Foco da projeção">
         <p className="mb-2 text-sm text-slate-700">
-          {dados.foco
-            ? `${rotuloProposta(dados.foco.propostaId)} · subcritério ${dados.foco.subcriterio}`
-            : 'Sem foco definido.'}
+          {dados.foco ? `${rotuloProposta(dados.foco.propostaId)} · ${descreverFoco(dados.foco)}` : 'Sem foco definido.'}
+          {aberta && (
+            <a href={`/projecao/${ch}/${s}`} target="_blank" rel="noreferrer" className="ml-3 text-sky-800 underline">
+              Abrir projeção (telão)
+            </a>
+          )}
         </p>
         {conduz && (
           <div className="max-w-2xl rounded-lg border border-slate-200 bg-white p-4">
             <Formulario
               key={JSON.stringify(dados.foco)}
               esquema={esquemaFoco}
-              valoresIniciais={dados.foco ?? { propostaId: '', subcriterio: '' }}
+              valoresIniciais={{ tipo: dados.foco?.tipo ?? 'subcriterio', propostaId: dados.foco?.propostaId ?? '', subcriterio: dados.foco?.subcriterio ?? '' }}
+              transformar={(v) => ({
+                tipo: v.tipo,
+                propostaId: v.propostaId,
+                ...(v.tipo === 'subcriterio' ? { subcriterio: v.subcriterio } : {}),
+              })}
               rotuloEnviar="Definir foco"
               campoDoFormulario={(campo) => campo.replace(/^foco\./, '')}
               onEnviar={(foco) => alterar({ acao: 'foco', foco }).then(() => undefined)}
             >
+              <CampoSelecao nome="tipo" rotulo="O que projetar" opcoes={TIPOS_FOCO.map((t) => ({ valor: t, rotulo: ROTULO_TIPO_FOCO[t] }))} />
               <CampoSelecao
                 nome="propostaId"
                 rotulo="Proposta"
                 opcoes={dados.pauta.map((id) => ({ valor: id, rotulo: rotuloProposta(id) }))}
               />
-              <CampoSelecao nome="subcriterio" rotulo="Subcritério" opcoes={SUBCRITERIOS} />
+              <CampoSubcriterio />
             </Formulario>
             {dados.foco && (
               <div className="mt-3">
