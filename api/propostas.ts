@@ -3,34 +3,14 @@
 // "bloqueada" só muda pela homologação (Etapa 3b): este endpoint não aceita o campo.
 
 import type { Transaction } from 'firebase-admin/firestore'
-import { z } from 'zod'
 import { PERMISSOES } from '../src/domain/permissoes.js'
+import { esquemaCriarProposta, esquemaEditarProposta } from '../src/esquemas/cadastros.js'
 import { obterAdmin } from './_lib/admin.js'
 import { ErroApi, MENSAGENS } from './_lib/erros.js'
 import { conferirDesbloqueada, gravar } from './_lib/gravar.js'
 import { criarRota, json } from './_lib/http.js'
 import { autenticar } from './_lib/porteiro.js'
-import { algumCampoAlem, cnpj, idDocumento, lerCorpo } from './_lib/validacao.js'
-
-const loteCodigo = z.string().trim().min(1, 'Informe o lote.')
-const observacao = z.string().trim().max(2000, 'Use no máximo 2.000 caracteres.')
-
-const esquemaCriar = z.strictObject({
-  chamamentoId: idDocumento,
-  loteCodigo,
-  oscCnpj: cnpj,
-  observacao: observacao.optional(),
-})
-
-const esquemaEditar = z
-  .strictObject({
-    chamamentoId: idDocumento,
-    propostaId: idDocumento,
-    loteCodigo: loteCodigo.optional(),
-    oscCnpj: cnpj.optional(),
-    observacao: observacao.optional(),
-  })
-  .refine(algumCampoAlem(['chamamentoId', 'propostaId']), 'Informe ao menos um campo para alterar.')
+import { lerCorpo } from './_lib/validacao.js'
 
 /** Confere chamamento, lote e OSC; lança 400 com os campos problemáticos. */
 async function conferirReferencias(
@@ -74,7 +54,7 @@ async function conferirDuplicidade(
 export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   POST: async (requisicao) => {
     const autor = await autenticar(requisicao, PERMISSOES.cadastros)
-    const { chamamentoId, loteCodigo: lote, oscCnpj, observacao: obs } = await lerCorpo(requisicao, esquemaCriar)
+    const { chamamentoId, loteCodigo: lote, oscCnpj, ...demais } = await lerCorpo(requisicao, esquemaCriarProposta)
     const id = obterAdmin().db.collection(`chamamentos/${chamamentoId}/propostas`).doc().id
     await gravar(autor, async (transacao) => {
       await conferirReferencias(transacao, chamamentoId, lote, oscCnpj)
@@ -83,7 +63,7 @@ export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
         {
           caminho: `chamamentos/${chamamentoId}/propostas/${id}`,
           acao: 'criar',
-          dados: { loteCodigo: lote, oscCnpj, observacao: obs, bloqueada: false },
+          dados: { loteCodigo: lote, oscCnpj, ...demais, bloqueada: false },
         },
       ]
     })
@@ -92,7 +72,7 @@ export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
 
   PATCH: async (requisicao) => {
     const autor = await autenticar(requisicao, PERMISSOES.cadastros)
-    const { chamamentoId, propostaId, ...alteracoes } = await lerCorpo(requisicao, esquemaEditar)
+    const { chamamentoId, propostaId, ...alteracoes } = await lerCorpo(requisicao, esquemaEditarProposta)
     const caminho = `chamamentos/${chamamentoId}/propostas/${propostaId}`
     await gravar(autor, async (transacao) => {
       const atual = await transacao.get(obterAdmin().db.doc(caminho))

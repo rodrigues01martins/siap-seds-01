@@ -22,5 +22,9 @@ export const MENSAGENS = {
   jaExiste: 'Registro já existe.',
   homologada: 'Proposta homologada: alteração não permitida.',
   propostaNaoEncontrada: 'Proposta não encontrada.',
+  chamamentoNaoEncontrado: 'Chamamento não encontrado.',
+  sessaoNaoEncontrada: 'Sessão não encontrada.',
+  sessaoEncerrada: 'Sessão encerrada: alteração não permitida.',
+  semSessaoAberta: 'Avaliação só pode ser registrada em sessão aberta da Comissão.',
   interno: 'Erro interno no servidor. Tente novamente.',
 } as const

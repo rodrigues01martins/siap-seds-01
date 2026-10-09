@@ -98,7 +98,7 @@ describe('/api/propostas — criar e editar', () => {
     const registros = await auditoriaDe(`chamamentos/ch1/propostas/${id}`)
     expect(registros[1]).toMatchObject({
       acao: 'editar',
-      antes: { observacao: 'Protocolo 123' },
+      antes: { observacao: 'Entregue em mídia física' },
       depois: { observacao: 'Protocolo 456', loteCodigo: 'L1' },
     })
   })
@@ -117,7 +117,7 @@ describe('/api/propostas — proposta homologada (B5)', () => {
 
     const r = await chamar(rota, 'PATCH', { chamamentoId: 'ch1', propostaId: id, observacao: 'alterada' }, admin.token)
     expect(r).toMatchObject({ status: 409, corpo: { erro: 'Proposta homologada: alteração não permitida.' } })
-    expect(await ler(`chamamentos/ch1/propostas/${id}`)).toMatchObject({ observacao: 'Protocolo 123' })
+    expect(await ler(`chamamentos/ch1/propostas/${id}`)).toMatchObject({ observacao: 'Entregue em mídia física' })
     expect(await totalAuditoria()).toBe(antes)
   })
 })
