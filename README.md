@@ -85,6 +85,24 @@ Para publicar as regras em **dev** manualmente: `npx firebase login` e depois
 
 ## 4. Primeiro administrador e matriz
 
+### 4.1 Pelo GitHub Actions (prod, sem instalar nada)
+
+1. **Gerar a chave do Admin SDK:** Firebase Console (`siap-seds-01`) → *Configurações do projeto* →
+   *Contas de serviço* → **Gerar nova chave privada**. Abra o JSON baixado no Bloco de Notas e copie tudo.
+2. **Cadastrar o secret:** GitHub → repositório → **Settings → Secrets and variables → Actions** →
+   *New repository secret* → Name `FIREBASE_SERVICE_ACCOUNT_ADMIN_PROD`, Secret: o JSON inteiro.
+   Depois apague o arquivo baixado.
+3. **Criar o usuário:** Firebase Console → *Authentication* → *Users* → **Add user** (e-mail e senha).
+4. **Dar o perfil:** GitHub → **Actions** → *Administração (prod)* → **Run workflow** →
+   ação `definir-perfil`, o e-mail e o perfil → *Run workflow*.
+5. **Publicar a matriz:** mesmo caminho, ação `publicar-matriz` (marque *forcar* só para sobrescrever).
+6. Entre no app. Se aparecer "Acesso não autorizado", clique em **Verificar novamente**.
+
+O log de cada execução fica em *Actions*, e a auditoria registra `executor: github:<seu usuário>`.
+O mesmo workflow serve para dar ou remover perfis dos membros da Comissão (`remover-perfil`).
+
+### 4.2 Pelo terminal (exige Node.js 20+ e o repositório clonado)
+
 Os scripts usam o **Admin SDK** e leem a credencial da variável `FIREBASE_SERVICE_ACCOUNT`.
 
 1. **Gerar a chave** (no projeto em que vai rodar): Firebase Console → *Configurações do projeto* →
@@ -114,7 +132,7 @@ Outras opções:
 - Perfis válidos: `admin`, `presidente`, `relator`, `membro`, `controle`.
 - Remover o acesso: `npm run set-role -- --projeto dev --email pessoa@... --remover` (encerra as sessões).
 - Republicar a matriz alterada: `npm run seed:matriz -- --projeto dev --forcar`.
-- Cada execução registra um evento em `auditoria`; `set-role` também atualiza `usuarios/{uid}`.
+- Cada execução registra um evento em `auditoria` (com quem executou); `set-role` também atualiza `usuarios/{uid}`.
 
 ## 5. Desenvolvimento local com emuladores
 
