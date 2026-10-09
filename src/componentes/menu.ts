@@ -8,7 +8,7 @@ export interface ItemMenu {
 }
 
 const ITENS: (ItemMenu & { perfis: readonly Perfil[] })[] = [
-  { rotulo: 'Chamamentos', caminho: '/', perfis: ['admin', 'presidente', 'relator', 'membro'] },
+  { rotulo: 'Chamamentos', caminho: '/', perfis: ['admin', 'presidente', 'relator', 'membro', 'controle'] },
   { rotulo: 'OSCs', caminho: '/oscs', perfis: ['admin'] },
   { rotulo: 'Perfis de acesso', caminho: '/perfis', perfis: ['admin'] },
 ]

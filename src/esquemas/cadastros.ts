@@ -82,7 +82,7 @@ const protocolo = z
   .trim()
   .min(1, 'Informe o protocolo.')
   .max(60, 'Use no máximo 60 caracteres.')
-const numeroSei = z
+const numeroSEI = z
   .string({ error: 'Informe o nº do documento SEI.' })
   .trim()
   .min(1, 'Informe o nº do documento SEI.')
@@ -94,7 +94,7 @@ export const esquemaCriarProposta = z.strictObject({
   loteCodigo,
   oscCnpj: cnpj,
   protocolo,
-  numeroSei,
+  numeroSEI,
   observacao: opcional(observacao),
 })
 
@@ -105,7 +105,7 @@ export const esquemaEditarProposta = z
     loteCodigo: loteCodigo.optional(),
     oscCnpj: cnpj.optional(),
     protocolo: protocolo.optional(),
-    numeroSei: numeroSei.optional(),
+    numeroSEI: numeroSEI.optional(),
     observacao: opcional(observacao),
   })
   .refine(algumCampoAlem(['chamamentoId', 'propostaId']), 'Informe ao menos um campo para alterar.')

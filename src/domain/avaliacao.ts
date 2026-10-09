@@ -56,3 +56,30 @@ export function problemasDoRegistro(
   }
   return problemas
 }
+
+/** Páginas citadas acima do limite do PA do subcritério (aviso antes de enviar; a /api recusa). */
+export function paginasAcimaDoCorte(
+  codigo: string,
+  paginas: number[],
+  matriz: Matriz = MATRIZ_2026,
+): { plano: string; limite: number; acima: number[] } | null {
+  const plano = planoDoSubcriterio(codigo, matriz)
+  if (!plano) return null
+  return { plano: plano.codigo, limite: plano.limitePaginas, acima: paginas.filter((p) => p > plano.limitePaginas) }
+}
+
+/** Nível 0 neste subcritério desclassifica a proposta (Anexo IV, 3.10). */
+export function ehEliminatorio(codigo: string, matriz: Matriz = MATRIZ_2026): boolean {
+  return matriz.dimensao1.subcriteriosEliminatorios.includes(codigo)
+}
+
+/** "5, 2 7" → [2, 5, 7]; o que não for inteiro ≥ 1 vai para `invalidos`. */
+export function lerPaginas(texto: string): { paginas: number[]; invalidos: string[] } {
+  const paginas = new Set<number>()
+  const invalidos: string[] = []
+  for (const parte of texto.split(/[\s,;]+/).filter(Boolean)) {
+    if (/^\d+$/.test(parte) && Number(parte) >= 1) paginas.add(Number(parte))
+    else invalidos.push(parte)
+  }
+  return { paginas: [...paginas].sort((a, b) => a - b), invalidos }
+}

@@ -86,7 +86,7 @@ export function PainelChamamento() {
                 ),
               },
               { titulo: 'Protocolo', celula: (p) => p.protocolo ?? '—' },
-              { titulo: 'Nº SEI', celula: (p) => p.numeroSei ?? '—' },
+              { titulo: 'Nº SEI', celula: (p) => p.numeroSEI ?? '—' },
               { titulo: 'NF', celula: (p) => numero(p.totais?.nf), classe: 'text-right' },
               { titulo: 'Status', celula: (p) => <SeloStatus status={statusDaProposta(p)} /> },
               {

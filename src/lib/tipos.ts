@@ -29,7 +29,7 @@ export interface Proposta {
   loteCodigo: string
   oscCnpj: string
   protocolo?: string
-  numeroSei?: string
+  numeroSEI?: string
   observacao?: string
   bloqueada?: boolean
   totais?: { status?: StatusD1; d1?: number; d2?: number; nf?: number }

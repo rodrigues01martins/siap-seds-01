@@ -167,7 +167,7 @@ passa por uma função `/api`, que:
 |---|---|---|---|
 | `/api/chamamentos` | `POST` criar, `PATCH` editar | `{ numero, titulo, processoSei, dataLimitePropostas, indiceCorrecao?, dataBaseCorrecao?, justificativaMinima?, lotes: [{ codigo, descricao }] }` (`PATCH` com `id`) | admin |
 | `/api/oscs` | `POST` criar, `PATCH` editar | `{ cnpj, razaoSocial, nomeFantasia? }` — CNPJ numérico ou alfanumérico | admin |
-| `/api/propostas` | `POST` criar, `PATCH` editar | `{ chamamentoId, loteCodigo, oscCnpj, protocolo, numeroSei, observacao? }` (`PATCH` com `propostaId`) | admin |
+| `/api/propostas` | `POST` criar, `PATCH` editar | `{ chamamentoId, loteCodigo, oscCnpj, protocolo, numeroSEI, observacao? }` (`PATCH` com `propostaId`) | admin |
 | `/api/perfis` | `POST` dar/trocar, `DELETE` remover | `{ email, perfil }` / `{ email }` | admin |
 
 - `dataLimitePropostas` (`AAAA-MM-DD`): referência da D2 (Anexo IV, 3.3.1, IV). Depois que alguma proposta do

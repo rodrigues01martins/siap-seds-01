@@ -24,14 +24,14 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Chamamentos e tudo abaixo (propostas, avaliações...): Comissão.
+    // Chamamentos e tudo abaixo (propostas, avaliações...): Comissão, admin e controle (só leitura).
     match /chamamentos/{documento=**} {
-      allow read: if temPerfil(['admin', 'presidente', 'relator', 'membro']);
+      allow read: if temPerfil(['admin', 'presidente', 'relator', 'membro', 'controle']);
       allow write: if false;
     }
 
     match /oscs/{oscId} {
-      allow read: if temPerfil(['admin', 'presidente', 'relator', 'membro']);
+      allow read: if temPerfil(['admin', 'presidente', 'relator', 'membro', 'controle']);
       allow write: if false;
     }
 

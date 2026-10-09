@@ -8,6 +8,18 @@ import { MATRIZ_2026, type CriterioComFaixas, type Matriz } from './matriz/index
 
 export type CategoriaExperiencia = 'A' | 'B' | 'C' | 'D'
 
+export const CRITERIOS_D2 = ['C2.1', 'C2.2', 'C2.3', 'C2.4'] as const
+export type CodigoCriterioD2 = (typeof CRITERIOS_D2)[number]
+
+/**
+ * Anexo IV, 3.8.5: a documentação demonstra a experiência, mas não um elemento necessário a um
+ * critério — a Comissão a desconsidera só nesse critério, com justificativa.
+ */
+export interface Desconsideracao {
+  criterio: CodigoCriterioD2
+  justificativa: string
+}
+
 /** Experiência cadastrada pela Comissão a partir da documentação comprobatória. */
 export interface Experiencia {
   id: string
@@ -32,6 +44,10 @@ export interface Experiencia {
   valorAnualCentavos?: number | null
   /** Execução satisfatória documentalmente comprovada (Critério 2.4). */
   execucaoSatisfatoria?: boolean
+  /** Parceria regida pela Lei 13.019/2014 (exigida na categoria D). Ausente = dado anterior, não avaliado. */
+  mrosc?: boolean
+  /** Critérios em que a Comissão desconsiderou a experiência (Anexo IV, 3.8.5). */
+  desconsideracoes?: Desconsideracao[]
 }
 
 export interface EntradaD2 {
@@ -52,6 +68,8 @@ export interface ResultadoCriterio {
   valorApurado?: number
   faixa?: string
   memoria: string[]
+  /** Experiências (ids) que contribuíram para os pontos, na ordem do cadastro. */
+  usadas: string[]
 }
 
 export interface ResultadoC231 extends ResultadoCriterio {
@@ -106,6 +124,22 @@ export function problemasDaExperiencia(e: Experiencia, matriz: Matriz = MATRIZ_2
         break
       }
     }
+    if (!problemas.categorias && e.categorias.includes('D') && e.mrosc === false) {
+      problemas.categorias = 'A categoria D exige parceria regida pelo MROSC (Lei Federal nº 13.019/2014).'
+    }
+  }
+
+  const vistos = new Set<string>()
+  for (const d of e.desconsideracoes ?? []) {
+    if (!(CRITERIOS_D2 as readonly string[]).includes(d.criterio)) {
+      problemas.desconsideracoes = `Critério desconhecido: ${d.criterio}.`
+    } else if (!d.justificativa?.trim()) {
+      problemas.desconsideracoes = 'Informe a justificativa da desconsideração (Anexo IV, 3.8.5).'
+    } else if (vistos.has(d.criterio)) {
+      problemas.desconsideracoes = `Critério ${d.criterio} informado mais de uma vez.`
+    }
+    if (problemas.desconsideracoes) break
+    vistos.add(d.criterio)
   }
 
   let inicio: number | undefined
@@ -143,6 +177,19 @@ function validarExperiencias(experiencias: Experiencia[], matriz: Matriz): void 
   }
 }
 
+/** A Comissão desconsiderou a experiência neste critério? Registra na memória (Anexo IV, 3.8.5). */
+function desconsiderada(e: Experiencia, criterio: CodigoCriterioD2, memoria: string[]): boolean {
+  const d = e.desconsideracoes?.find((x) => x.criterio === criterio)
+  if (d) memoria.push(`${e.id}: desconsiderada pela Comissão neste critério — ${d.justificativa} (Anexo IV, 3.8.5)`)
+  return d !== undefined
+}
+
+/** Ids usados, na ordem do cadastro e sem repetir. */
+function naOrdem(experiencias: Experiencia[], ids: Iterable<string>): string[] {
+  const conjunto = new Set(ids)
+  return experiencias.filter((e) => conjunto.has(e.id)).map((e) => e.id)
+}
+
 function temCategoria(e: Experiencia, consideradas: string[]): boolean {
   return e.categorias.some((c) => consideradas.includes(c))
 }
@@ -174,13 +221,14 @@ function aplicarFaixa(
   criterio: CriterioComFaixas,
   valorApurado: number,
   memoria: string[],
+  usadas: string[],
 ): ResultadoCriterio {
   const faixa = pontuarPorFaixa(valorApurado, criterio.faixas)
   const pontos = Math.min(faixa.pontos, criterio.maximo)
   memoria.push(
     `Apurado: ${formatarQuantidade(valorApurado, criterio.unidade)} → faixa "${faixa.descricao}" → ${pts(pontos)}`,
   )
-  return { codigo, titulo: criterio.titulo, pontos, maximo: criterio.maximo, valorApurado, faixa: faixa.descricao, memoria }
+  return { codigo, titulo: criterio.titulo, pontos, maximo: criterio.maximo, valorApurado, faixa: faixa.descricao, memoria, usadas }
 }
 
 /** Maior soma simultânea de um quantitativo entre as experiências elegíveis (itens 3.8.3 e 3.8.4). */
@@ -194,6 +242,7 @@ function apurarSimultaneo(
   const memoria: string[] = []
   const itens: ItemTemporal[] = []
   for (const e of elegiveis) {
+    if (desconsiderada(e, 'C2.3', memoria)) continue
     const valor = e[campo]
     if (valor == null) {
       memoria.push(`${e.id}: desconsiderada — ${criterio.unidade} não comprovado(s) (item 3.8.5)`)
@@ -216,7 +265,7 @@ function apurarSimultaneo(
         `(${pico.ids.join(' + ')}); períodos sucessivos não se somam`,
     )
   }
-  return aplicarFaixa(codigo, criterio, pico.valor, memoria)
+  return aplicarFaixa(codigo, criterio, pico.valor, memoria, pico.valor > 0 ? naOrdem(elegiveis, pico.ids) : [])
 }
 
 // ---------------------------------------------------------------------------
@@ -228,9 +277,12 @@ export function calcularC21(experiencias: Experiencia[], matriz: Matriz = MATRIZ
   validarExperiencias(experiencias, matriz)
   const criterio = matriz.dimensao2.criterios['C2.1']
   const memoria: string[] = []
+  const consideradas = experiencias.filter((e) => !desconsiderada(e, 'C2.1', memoria))
+  const usadas: string[] = []
   let soma = 0
   for (const categoria of criterio.categorias) {
-    const ids = experiencias.filter((e) => e.categorias.includes(categoria.codigo as CategoriaExperiencia)).map((e) => e.id)
+    const ids = consideradas.filter((e) => e.categorias.includes(categoria.codigo as CategoriaExperiencia)).map((e) => e.id)
+    usadas.push(...ids)
     if (ids.length > 0) {
       soma += categoria.pontos
       memoria.push(`Categoria ${categoria.codigo}: comprovada por ${ids.join(', ')} → ${pts(categoria.pontos)}`)
@@ -240,7 +292,7 @@ export function calcularC21(experiencias: Experiencia[], matriz: Matriz = MATRIZ
   }
   const pontos = Math.min(soma, criterio.maximo)
   memoria.push(`Total C2.1: ${pts(pontos)}`)
-  return { codigo: 'C2.1', titulo: criterio.titulo, pontos, maximo: criterio.maximo, memoria }
+  return { codigo: 'C2.1', titulo: criterio.titulo, pontos, maximo: criterio.maximo, memoria, usadas: naOrdem(experiencias, usadas) }
 }
 
 /**
@@ -258,14 +310,17 @@ export function calcularC22(
   const memoria: string[] = []
   const periodos: { inicio: string; fim: string }[] = []
 
+  const usadas: string[] = []
   for (const e of experiencias) {
     if (!temCategoria(e, criterio.categoriasConsideradas)) continue
+    if (desconsiderada(e, 'C2.2', memoria)) continue
     const periodo = periodoAte(e, dataLimite)
     if (!periodo) {
       memoria.push(`${e.id}: desconsiderada — início posterior à data limite`)
       continue
     }
     periodos.push(periodo)
+    usadas.push(e.id)
     memoria.push(`${e.id}: ${periodo.inicio} a ${periodo.fim}${e.fim === null ? ' (em execução)' : ''}`)
   }
   if (periodos.length === 0) {
@@ -278,7 +333,7 @@ export function calcularC22(
     meses += m
     memoria.push(`Período contínuo ${bloco.inicio} a ${bloco.fim}: ${m} meses completos`)
   }
-  return aplicarFaixa('C2.2', criterio, meses, memoria)
+  return aplicarFaixa('C2.2', criterio, meses, memoria, usadas)
 }
 
 /**
@@ -310,6 +365,7 @@ export function calcularC23(
     pontos: pontos231,
     maximo: c231.maximo,
     memoria: [`2.3.1 = A (${pts(a.pontos)}) + B (${pts(b.pontos)}), limitado a ${pts(c231.maximo)} → ${pts(pontos231)}`],
+    usadas: naOrdem(experiencias, [...a.usadas, ...b.usadas]),
     A: a,
     B: b,
   }
@@ -328,6 +384,7 @@ export function calcularC23(
       `C2.3 = 2.3.1 (${pts(r231.pontos)}) + 2.3.2 (${pts(r232.pontos)}) + 2.3.3 (${pts(r233.pontos)}), ` +
         `limitado a ${pts(criterio.maximo)} → ${pts(pontos)}`,
     ],
+    usadas: naOrdem(experiencias, [...r231.usadas, ...r232.usadas, ...r233.usadas]),
     subcriterios: { '2.3.1': r231, '2.3.2': r232, '2.3.3': r233 },
   }
 }
@@ -338,16 +395,19 @@ export function calcularC24(experiencias: Experiencia[], matriz: Matriz = MATRIZ
   const criterio = matriz.dimensao2.criterios['C2.4']
   const memoria: string[] = []
   let quantidade = 0
+  const usadas: string[] = []
   for (const e of experiencias) {
     if (!temCategoria(e, criterio.categoriasConsideradas)) continue
+    if (desconsiderada(e, 'C2.4', memoria)) continue
     if (e.execucaoSatisfatoria === true) {
       quantidade += 1
+      usadas.push(e.id)
       memoria.push(`${e.id}: execução satisfatória comprovada`)
     } else {
       memoria.push(`${e.id}: desconsiderada — sem comprovação de execução satisfatória`)
     }
   }
-  return aplicarFaixa('C2.4', criterio, quantidade, memoria)
+  return aplicarFaixa('C2.4', criterio, quantidade, memoria, usadas)
 }
 
 export function calcularD2(entrada: EntradaD2, matriz: Matriz = MATRIZ_2026): ResultadoD2 {
