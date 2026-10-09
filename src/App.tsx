@@ -16,6 +16,7 @@ import { TelaD2 } from './features/experiencias/TelaD2'
 import { TelaMemoriaD2 } from './features/experiencias/TelaMemoriaD2'
 import { TelaOscs } from './features/oscs/TelaOscs'
 import { TelaPerfis } from './features/perfis/TelaPerfis'
+import { PERFIS_PROJECAO, TelaProjecao } from './features/projecao/TelaProjecao'
 import { ConduzirSessao } from './features/sessoes/ConduzirSessao'
 import { NovaSessao } from './features/sessoes/NovaSessao'
 
@@ -30,6 +31,8 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
+          {/* Telão: fora do Shell (sem menu), só leitura. */}
+          <Route path="/projecao/:ch/:sessaoId" element={so(PERFIS_PROJECAO, <TelaProjecao />)} />
           <Route
             element={
               <RotaProtegida>

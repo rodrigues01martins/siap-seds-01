@@ -3,6 +3,7 @@
 // sem recarregar a página. Usa o SDK do navegador contra o emulador, logado como o usuário do telão
 // (perfil membro), com as firestore.rules de verdade.
 
+import '@testing-library/jest-dom/vitest'
 import { readFileSync } from 'node:fs'
 import { initializeTestEnvironment, type RulesTestEnvironment } from '@firebase/rules-unit-testing'
 import { render, screen, within } from '@testing-library/react'
