@@ -101,7 +101,7 @@ Para publicar as regras em **dev** manualmente: `npx firebase login` e depois
 O log de cada execução fica em *Actions*, e a auditoria registra `executor: github:<seu usuário>`.
 O mesmo workflow serve para dar ou remover perfis dos membros da Comissão (`remover-perfil`).
 
-### 4.2 Pelo terminal (exige Node.js 20+ e o repositório clonado)
+### 4.2 Pelo terminal (exige Node.js 22 e o repositório clonado)
 
 Os scripts usam o **Admin SDK** e leem a credencial da variável `FIREBASE_SERVICE_ACCOUNT`.
 

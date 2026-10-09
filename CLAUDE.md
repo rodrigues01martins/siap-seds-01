@@ -9,7 +9,7 @@ Eliminatórias: D1 < 67,2 → inapta; nível 0 em 1.1 ou 1.2 → desclassificada
 ## Stack
 - React 18 + TypeScript + Vite, React Router, Tailwind
 - Firebase JS SDK v10 (Auth + Firestore), leitura com onSnapshot
-- Vercel Functions em /api (Node 20) com firebase-admin
+- Vercel Functions em /api (Node 22, ver .nvmrc) com firebase-admin
 - Vitest para testes
 
 ## Regras de arquitetura (não violar)
