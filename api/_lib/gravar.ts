@@ -36,6 +36,8 @@ function semIndefinidos(dados: Record<string, unknown> = {}): Record<string, unk
 export async function gravar(
   autor: Autor,
   preparar: (transacao: Transaction) => Operacao[] | Promise<Operacao[]>,
+  /** Só a reabertura (RF-18) escreve em proposta homologada; ela mesma confere a regra. */
+  opcoes: { permitirPropostaHomologada?: boolean } = {},
 ): Promise<void> {
   const { db } = obterAdmin()
   await db.runTransaction(async (transacao) => {
@@ -43,7 +45,9 @@ export async function gravar(
 
     // Leituras: trava de homologação (B5) e estado atual de cada documento.
     const propostas = new Set(operacoes.map((op) => propostaDoCaminho(op.caminho)).filter((c) => c !== null))
-    for (const caminho of propostas) await conferirDesbloqueada(transacao, caminho)
+    if (!opcoes.permitirPropostaHomologada) {
+      for (const caminho of propostas) await conferirDesbloqueada(transacao, caminho)
+    }
     const atuais = await Promise.all(operacoes.map((op) => transacao.get(db.doc(op.caminho))))
 
     // Escritas.

@@ -41,8 +41,12 @@ Fonte no código: src/domain/permissoes.ts (teste garante que bate com esta tabe
 | Sessão: abrir e encerrar | presidente |
 | Sessão: presentes, declarações de impedimento e foco | presidente, relator |
 | Admissibilidade (Anexo III, item 28) | presidente, relator |
+| Registrar decisão de desempate (RF-27) | presidente |
+| Reabrir proposta homologada (RF-18) | presidente |
+| Diligências (RF-28) | presidente, relator |
 | Leitura da auditoria | admin, presidente, controle |
-Empate de NF: o sistema só sinaliza (empatada) e não desempata; a Comissão decide em outra instância.
+Empate de NF: o sistema só sinaliza (empatada) e não calcula desempate. Enquanto o Edital não parametrizar
+o critério (RF-27), o presidente registra a decisão da Comissão com justificativa (api/desempate.ts, auditado).
 
 ## Convenções
 - Código e nomes em português, sem acentos em identificadores (ex.: calcularD2, experiencias).

@@ -240,6 +240,9 @@ e `campos` em português.
 | Sessão: abrir e encerrar | presidente |
 | Sessão: presentes, declarações de impedimento e foco | presidente, relator |
 | Admissibilidade (Anexo III, item 28) | presidente, relator |
+| Registrar decisão de desempate (RF-27) | presidente |
+| Reabrir proposta homologada (RF-18) | presidente |
+| Diligências (RF-28) | presidente, relator |
 | Leitura da auditoria | admin, presidente, controle |
 
 A fonte única no código é `src/domain/permissoes.ts` (um teste garante que ela bate com esta tabela).
@@ -284,6 +287,31 @@ Quem não pode escrever vê a tela sem os botões; proposta homologada fica some
 
 Leitura em tempo real (`onSnapshot`, `src/lib/firestore.ts`); escrita só por `chamarApi` (`src/lib/api.ts`).
 O componente `Formulario` valida com o mesmo esquema da `/api` e põe os erros 400 da `/api` nos mesmos campos.
+
+### Resultado: classificação, homologação, reabertura e diligências (Etapa 6a)
+
+| Endpoint | Método | Corpo (JSON) | Perfil |
+|---|---|---|---|
+| `/api/desempate` | `PUT` | `{ chamamentoId, loteCodigo, ordem: [propostaId, ...], justificativa }` | presidente |
+| `/api/reabrir` | `POST` | `{ chamamentoId, propostaId, motivo }` | presidente |
+| `/api/diligencias` | `POST` criar; `PATCH` com `acao` | `{ chamamentoId, propostaId, objeto, prazo }`; `{ ..., id, acao: 'responder', resposta }` ou `{ ..., id, acao: 'encerrar', conclusao }` | presidente, relator |
+
+- **Classificação** (`/chamamentos/:ch/lotes/:lote/classificacao`): `classificarLote` (src/domain/classificacao.ts)
+  aplica `classificar()` aos totais gravados. Ranking por NF entre aptas e completas, com PA1…PA6, D1, D2, NF e
+  status; inaptas, desclassificadas, não admitidas e pendentes ficam abaixo, sem posição, com o motivo do domínio.
+  Selo **"classificação não definitiva"** enquanto houver pendente ou empate sem decisão.
+- **Desempate (RF-27)**: o sistema não calcula desempate. O presidente registra a ordem decidida pela Comissão,
+  com justificativa (mín. 20 caracteres), em `chamamentos/{ch}/desempates/{id}`. A /api confere que as propostas
+  formam exatamente um empate atual do lote (senão **409**); se o grupo ou a NF mudar depois, a decisão deixa de
+  valer e o empate volta a aparecer.
+- **Homologação na tela**: botão do presidente com confirmação dupla (mostra NF e status e pede "conferi").
+  Proposta com **diligência em aberto** (aberta ou respondida) não é homologada (**409**).
+- **Reabertura (RF-18)**: só proposta homologada (senão **409**); motivo obrigatório (mín. 20); grava
+  `bloqueada = false`, `reabertoPor`, `reabertoEm`, `motivoReabertura` e limpa `homologadaPor/Em` (o histórico fica
+  na auditoria). É a única escrita aceita em proposta homologada.
+- **Diligências (RF-28)** (`/chamamentos/:ch/propostas/:p/diligencias`): aberta → respondida → encerrada; encerrada
+  não muda (**409**); prazo não pode ser anterior a hoje. Aviso fixo: *"Diligência não admite inclusão de conteúdo
+  técnico novo (Anexo III, 29.3)"*.
 
 ### Testar a `/api` localmente
 

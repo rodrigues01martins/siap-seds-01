@@ -15,7 +15,9 @@ import { PainelChamamento } from './features/chamamentos/PainelChamamento'
 import { TelaD2 } from './features/experiencias/TelaD2'
 import { TelaMemoriaD2 } from './features/experiencias/TelaMemoriaD2'
 import { TelaOscs } from './features/oscs/TelaOscs'
+import { TelaDiligencias } from './features/diligencias/TelaDiligencias'
 import { TelaPerfis } from './features/perfis/TelaPerfis'
+import { TelaClassificacao } from './features/resultado/TelaClassificacao'
 import { ConduzirSessao } from './features/sessoes/ConduzirSessao'
 import { NovaSessao } from './features/sessoes/NovaSessao'
 
@@ -49,6 +51,8 @@ export default function App() {
             <Route path="chamamentos/:ch/propostas/:p/d1" element={so(LEITURA, <TelaD1 />)} />
             <Route path="chamamentos/:ch/propostas/:p/d2" element={so(LEITURA, <TelaD2 />)} />
             <Route path="chamamentos/:ch/propostas/:p/d2/memoria" element={so(LEITURA, <TelaMemoriaD2 />)} />
+            <Route path="chamamentos/:ch/propostas/:p/diligencias" element={so(LEITURA, <TelaDiligencias />)} />
+            <Route path="chamamentos/:ch/lotes/:lote/classificacao" element={so(LEITURA, <TelaClassificacao />)} />
             <Route path="oscs" element={so(PERMISSOES.cadastros, <TelaOscs />)} />
             <Route path="perfis" element={so(PERMISSOES.perfis, <TelaPerfis />)} />
           </Route>
