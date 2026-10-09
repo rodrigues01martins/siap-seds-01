@@ -1,25 +1,24 @@
+import type { ReactNode } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
+import { Shell } from './componentes/Shell'
+import type { Perfil } from './domain/perfis'
+import { PERMISSOES } from './domain/permissoes'
 import { Login } from './features/auth/Login'
 import { RotaProtegida } from './features/auth/RotaProtegida'
-import { UsuarioProvider, useUsuario } from './features/auth/useUsuario'
+import { UsuarioProvider } from './features/auth/useUsuario'
+import { FormChamamento } from './features/chamamentos/FormChamamento'
+import { FormProposta } from './features/chamamentos/FormProposta'
+import { Inicio } from './features/chamamentos/ListaChamamentos'
+import { PainelChamamento } from './features/chamamentos/PainelChamamento'
+import { TelaOscs } from './features/oscs/TelaOscs'
+import { TelaPerfis } from './features/perfis/TelaPerfis'
+import { ConduzirSessao } from './features/sessoes/ConduzirSessao'
+import { NovaSessao } from './features/sessoes/NovaSessao'
 
-function Inicio() {
-  const { usuario, sair } = useUsuario()
-  return (
-    <main className="min-h-screen bg-slate-50 p-8 text-slate-900">
-      <header className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Avaliação de Planos de Ação — SEDS/GO 2026</h1>
-        <button type="button" onClick={() => sair()} className="rounded-md border border-slate-300 px-3 py-1.5">
-          Sair
-        </button>
-      </header>
-      <p className="mt-4 text-slate-600">
-        {usuario?.email} — perfil <strong>{usuario?.perfil}</strong>
-      </p>
-      <p className="mt-2 text-slate-500">As telas de avaliação chegam nas próximas etapas.</p>
-    </main>
-  )
-}
+/** Quem lê chamamentos e o que há abaixo deles (firestore.rules). */
+const COMISSAO_E_ADMIN: readonly Perfil[] = ['admin', 'presidente', 'relator', 'membro']
+
+const so = (perfis: readonly Perfil[], tela: ReactNode) => <RotaProtegida perfis={perfis}>{tela}</RotaProtegida>
 
 export default function App() {
   return (
@@ -28,13 +27,23 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route
-            path="/"
             element={
               <RotaProtegida>
-                <Inicio />
+                <Shell />
               </RotaProtegida>
             }
-          />
+          >
+            <Route index element={<Inicio />} />
+            <Route path="chamamentos/novo" element={so(PERMISSOES.cadastros, <FormChamamento />)} />
+            <Route path="chamamentos/:ch" element={so(COMISSAO_E_ADMIN, <PainelChamamento />)} />
+            <Route path="chamamentos/:ch/editar" element={so(PERMISSOES.cadastros, <FormChamamento />)} />
+            <Route path="chamamentos/:ch/propostas/nova" element={so(PERMISSOES.cadastros, <FormProposta />)} />
+            <Route path="chamamentos/:ch/propostas/:p/editar" element={so(PERMISSOES.cadastros, <FormProposta />)} />
+            <Route path="chamamentos/:ch/sessoes/nova" element={so(PERMISSOES.sessaoAbrirEncerrar, <NovaSessao />)} />
+            <Route path="chamamentos/:ch/sessoes/:s" element={so(COMISSAO_E_ADMIN, <ConduzirSessao />)} />
+            <Route path="oscs" element={so(PERMISSOES.cadastros, <TelaOscs />)} />
+            <Route path="perfis" element={so(PERMISSOES.perfis, <TelaPerfis />)} />
+          </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

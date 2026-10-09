@@ -13,6 +13,12 @@ export const PERMISSOES = {
   homologar: ['presidente'],
   /** C6 — dar e remover perfis */
   perfis: ['admin'],
+  /** Sessão da Comissão: abrir e encerrar */
+  sessaoAbrirEncerrar: ['presidente'],
+  /** Sessão: presentes, declarações de impedimento e foco */
+  sessaoConduzir: ['presidente', 'relator'],
+  /** Admissibilidade (Anexo III, item 28) */
+  admissibilidade: ['presidente', 'relator'],
   /** Leitura da trilha de auditoria (também nas firestore.rules) */
   lerAuditoria: ['admin', 'presidente', 'controle'],
 } as const satisfies Record<string, readonly Perfil[]>

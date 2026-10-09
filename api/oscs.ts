@@ -1,28 +1,19 @@
 // POST /api/oscs (criar) e PATCH /api/oscs (editar). Perfil: admin.
 // O documento fica em oscs/{CNPJ normalizado}: o CNPJ é único por construção.
 
-import { z } from 'zod'
 import { PERMISSOES } from '../src/domain/permissoes.js'
+import { esquemaCriarOsc, esquemaEditarOsc } from '../src/esquemas/cadastros.js'
 import { obterAdmin } from './_lib/admin.js'
 import { ErroApi } from './_lib/erros.js'
 import { gravar } from './_lib/gravar.js'
 import { criarRota, json } from './_lib/http.js'
 import { autenticar } from './_lib/porteiro.js'
-import { algumCampoAlem, cnpj, lerCorpo } from './_lib/validacao.js'
-
-const razaoSocial = z.string().trim().min(3, 'Informe a razão social.')
-const nomeFantasia = z.string().trim().min(1, 'Informe o nome fantasia.')
-
-const esquemaCriar = z.strictObject({ cnpj, razaoSocial, nomeFantasia: nomeFantasia.optional() })
-
-const esquemaEditar = z
-  .strictObject({ cnpj, razaoSocial: razaoSocial.optional(), nomeFantasia: nomeFantasia.optional() })
-  .refine(algumCampoAlem(['cnpj']), 'Informe ao menos um campo para alterar.')
+import { lerCorpo } from './_lib/validacao.js'
 
 export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   POST: async (requisicao) => {
     const autor = await autenticar(requisicao, PERMISSOES.cadastros)
-    const dados = await lerCorpo(requisicao, esquemaCriar)
+    const dados = await lerCorpo(requisicao, esquemaCriarOsc)
     const caminho = `oscs/${dados.cnpj}`
     await gravar(autor, async (transacao) => {
       if ((await transacao.get(obterAdmin().db.doc(caminho))).exists) {
@@ -35,7 +26,7 @@ export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
 
   PATCH: async (requisicao) => {
     const autor = await autenticar(requisicao, PERMISSOES.cadastros)
-    const { cnpj: chave, ...alteracoes } = await lerCorpo(requisicao, esquemaEditar)
+    const { cnpj: chave, ...alteracoes } = await lerCorpo(requisicao, esquemaEditarOsc)
     await gravar(autor, () => [{ caminho: `oscs/${chave}`, acao: 'editar', dados: alteracoes }])
     return json(200, { cnpj: chave })
   },

@@ -1,26 +1,15 @@
 // POST /api/perfis (dar ou trocar perfil) e DELETE /api/perfis (remover). Perfil: admin.
 // Define o custom claim "perfil", espelha em usuarios/{uid} e audita.
 
-import { z } from 'zod'
-import { PERFIS, extrairPerfil, type Perfil } from '../src/domain/perfis.js'
+import { extrairPerfil, type Perfil } from '../src/domain/perfis.js'
 import { PERMISSOES } from '../src/domain/permissoes.js'
+import { esquemaDefinirPerfil, esquemaRemoverPerfil } from '../src/esquemas/cadastros.js'
 import { obterAdmin } from './_lib/admin.js'
 import { ErroApi } from './_lib/erros.js'
 import { gravar, type Autor } from './_lib/gravar.js'
 import { criarRota, json } from './_lib/http.js'
 import { autenticar } from './_lib/porteiro.js'
 import { lerCorpo } from './_lib/validacao.js'
-
-const email = z
-  .email({ error: 'Informe um e-mail válido.' })
-  .transform((valor) => valor.trim().toLowerCase())
-
-const esquemaDefinir = z.strictObject({
-  email,
-  perfil: z.enum(PERFIS, { error: `Perfil inválido. Use: ${PERFIS.join(', ')}.` }),
-})
-
-const esquemaRemover = z.strictObject({ email })
 
 async function aplicarPerfil(autor: Autor, emailAlvo: string, novo: Perfil | null): Promise<Response> {
   const { auth, db } = obterAdmin()
@@ -62,13 +51,13 @@ async function aplicarPerfil(autor: Autor, emailAlvo: string, novo: Perfil | nul
 export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   POST: async (requisicao) => {
     const autor = await autenticar(requisicao, PERMISSOES.perfis)
-    const dados = await lerCorpo(requisicao, esquemaDefinir)
+    const dados = await lerCorpo(requisicao, esquemaDefinirPerfil)
     return aplicarPerfil(autor, dados.email, dados.perfil)
   },
 
   DELETE: async (requisicao) => {
     const autor = await autenticar(requisicao, PERMISSOES.perfis)
-    const dados = await lerCorpo(requisicao, esquemaRemover)
+    const dados = await lerCorpo(requisicao, esquemaRemoverPerfil)
     return aplicarPerfil(autor, dados.email, null)
   },
 })

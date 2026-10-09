@@ -4,6 +4,9 @@ export const PERFIS = ['admin', 'presidente', 'relator', 'membro', 'controle'] a
 
 export type Perfil = (typeof PERFIS)[number]
 
+/** Perfis que compõem a Comissão de Seleção (presentes nas sessões). */
+export const PERFIS_COMISSAO = ['presidente', 'relator', 'membro'] as const satisfies readonly Perfil[]
+
 export function ehPerfil(valor: unknown): valor is Perfil {
   return typeof valor === 'string' && (PERFIS as readonly string[]).includes(valor)
 }

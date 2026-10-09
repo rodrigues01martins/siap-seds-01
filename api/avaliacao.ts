@@ -2,11 +2,13 @@
 // Perfis: presidente, relator, membro. Documento em .../propostas/{p}/avaliacoes/{codigo}:
 // o primeiro registro cria, os seguintes editam (auditoria guarda antes e depois).
 // Os totais da proposta são recalculados na mesma transação (C4).
+// sessaoId precisa ser de sessão aberta do chamamento (Etapa 4a).
 
 import { z } from 'zod'
 import { problemasDoRegistro } from '../src/domain/avaliacao.js'
 import { PERMISSOES } from '../src/domain/permissoes.js'
 import { obterAdmin } from './_lib/admin.js'
+import { ErroApi, MENSAGENS } from './_lib/erros.js'
 import { gravar } from './_lib/gravar.js'
 import { criarRota, json } from './_lib/http.js'
 import { autenticar } from './_lib/porteiro.js'
@@ -36,6 +38,9 @@ export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
 
     await gravar(autor, async (transacao) => {
       await exigirPropostaEditavel(transacao, chamamentoId, propostaId)
+      // Etapa 4a: só em sessão aberta (lida na transação: encerrar a sessão conflita com a gravação).
+      const sessao = await transacao.get(db.doc(`chamamentos/${chamamentoId}/sessoes/${registro.sessaoId}`))
+      if (sessao.get('status') !== 'aberta') throw new ErroApi(409, MENSAGENS.semSessaoAberta)
 
       const chamamento = await transacao.get(db.doc(`chamamentos/${chamamentoId}`))
       const justificativaMinima = chamamento.get('justificativaMinima') as number | undefined

@@ -41,9 +41,9 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Cadastro do usuário: o próprio ou admin.
+    // Cadastro do usuário: o próprio, admin, e presidente/relator (listam a Comissão na sessão).
     match /usuarios/{uid} {
-      allow read: if logado() && (request.auth.uid == uid || perfil() == 'admin');
+      allow read: if logado() && (request.auth.uid == uid || temPerfil(['admin', 'presidente', 'relator']));
       allow write: if false;
     }
 

@@ -14,8 +14,8 @@ function arquivosTs(pasta: string): string[] {
     .map((nome) => join(pasta, nome))
 }
 
-/** Código que vai para as funções: a /api e o domínio que ela importa. */
-const ARQUIVOS = [...arquivosTs('api'), ...arquivosTs('src/domain')]
+/** Código que vai para as funções: a /api e o que ela importa (domínio e esquemas compartilhados). */
+const ARQUIVOS = [...arquivosTs('api'), ...arquivosTs('src/domain'), ...arquivosTs('src/esquemas')]
 
 function problemasDeImport(arquivo: string): string[] {
   const codigo = readFileSync(join(RAIZ, arquivo), 'utf8')
@@ -40,6 +40,7 @@ describe('imports compatíveis com ESM no Node (funções da Vercel)', () => {
   it('encontra os arquivos da /api e do domínio', () => {
     expect(ARQUIVOS).toContain(join('api', 'avaliacao.ts'))
     expect(ARQUIVOS).toContain(join('src', 'domain', 'matriz', 'index.ts'))
+    expect(ARQUIVOS).toContain(join('src', 'esquemas', 'sessao.ts'))
   })
 
   it.each(ARQUIVOS)('%s', (arquivo) => {

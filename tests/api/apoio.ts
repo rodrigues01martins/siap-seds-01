@@ -106,19 +106,38 @@ export const DATA_LIMITE = '2026-10-31'
 export const CH = 'ch1'
 export const PROP = 'p1'
 export const CAMINHO_PROPOSTA = `chamamentos/${CH}/propostas/${PROP}`
+/** Sessão da Comissão semeada aberta por semearProposta (a avaliação exige sessão aberta). */
+export const SESSAO = 'sessao-1'
 
-/** Chamamento (com data limite), OSC e proposta prontos para avaliação. */
-export async function semearProposta(opcoes: { justificativaMinima?: number; bloqueada?: boolean } = {}): Promise<void> {
+/** Chamamento (com data limite), OSC, proposta e sessão aberta prontos para avaliação. */
+export async function semearProposta(
+  opcoes: { justificativaMinima?: number; bloqueada?: boolean; sessao?: 'aberta' | 'encerrada' | null } = {},
+): Promise<void> {
   const { db } = obterAdmin()
   await db.doc(`chamamentos/${CH}`).set({
     numero: '001/2026',
     titulo: 'Chamamento',
+    processoSei: '202610319003258',
     dataLimitePropostas: DATA_LIMITE,
     lotes: [{ codigo: 'L1', descricao: 'Lote 1' }],
     ...(opcoes.justificativaMinima !== undefined ? { justificativaMinima: opcoes.justificativaMinima } : {}),
   })
   await db.doc('oscs/11222333000181').set({ cnpj: '11222333000181', razaoSocial: 'Instituto Esperança' })
   await db.doc(CAMINHO_PROPOSTA).set({ loteCodigo: 'L1', oscCnpj: '11222333000181', bloqueada: opcoes.bloqueada ?? false })
+  const sessao = opcoes.sessao === undefined ? 'aberta' : opcoes.sessao
+  if (sessao) await semearSessao(SESSAO, { status: sessao })
+}
+
+/** Grava uma sessão diretamente (sem a /api). */
+export async function semearSessao(id: string, dados: Record<string, unknown> = {}): Promise<void> {
+  await obterAdmin()
+    .db.doc(`chamamentos/${CH}/sessoes/${id}`)
+    .set({ data: '2026-11-10', pauta: [PROP], status: 'aberta', presentes: [], declaracoes: [], foco: null, ...dados })
+}
+
+/** Espelha o usuário em usuarios/{uid}, como /api/perfis e set-role fazem. */
+export async function registrarUsuario(usuario: Usuario, perfil: Perfil | null): Promise<void> {
+  await obterAdmin().db.doc(`usuarios/${usuario.uid}`).set({ email: usuario.email, perfil })
 }
 
 /** Grava níveis diretamente (sem a /api), para montar cenários grandes rapidamente. */

@@ -8,6 +8,7 @@ import {
   CH,
   DATA_LIMITE,
   PROP,
+  SESSAO,
   auditoriaDe,
   chamar,
   criarUsuario,
@@ -31,7 +32,7 @@ const registro = (dados: Record<string, unknown> = {}) => ({
   justificativa: 'Metodologia descrita com fluxos e responsáveis definidos.',
   paginas: [2, 5],
   decisao: 'unanimidade',
-  sessaoId: 'sessao-1',
+  sessaoId: SESSAO,
   ...dados,
 })
 
@@ -113,7 +114,7 @@ describe('/api/avaliacao — gravação, auditoria e recálculo (C4)', () => {
       paginas: [2, 5],
       decisao: 'maioria',
       votoDivergente: 'Membro X: nível 2.',
-      sessaoId: 'sessao-1',
+      sessaoId: SESSAO,
     })
     const [registroAuditoria] = await auditoriaDe(`${CAMINHO_PROPOSTA}/avaliacoes/3.1`)
     expect(registroAuditoria).toMatchObject({ acao: 'criar', antes: null, depois: { nivel: 3 }, uid: relator.uid, perfil: 'relator' })
@@ -165,6 +166,24 @@ describe('/api/avaliacao — gravação, auditoria e recálculo (C4)', () => {
     await semearNiveis(demais)
     const r = await chamar(rota, 'PUT', registro({ codigo: '1.1', nivel: 0, paginas: [] }), relator.token)
     expect(r.corpo?.totais).toMatchObject({ status: 'desclassificada', completa: true, d1: 108 })
+  })
+})
+
+describe('/api/avaliacao — exige sessão aberta (Etapa 4a)', () => {
+  const mensagem = 'Avaliação só pode ser registrada em sessão aberta da Comissão.'
+
+  it('sessão inexistente → 409, sem gravar nem auditar', async () => {
+    const r = await chamar(rota, 'PUT', registro({ sessaoId: 'nao-existe' }), relator.token)
+    expect(r).toMatchObject({ status: 409, corpo: { erro: mensagem } })
+    expect(await ler(`${CAMINHO_PROPOSTA}/avaliacoes/3.1`)).toBeUndefined()
+    expect(await totalAuditoria()).toBe(0)
+  })
+
+  it('sessão encerrada → 409', async () => {
+    await semearProposta({ sessao: 'encerrada' })
+    const r = await chamar(rota, 'PUT', registro(), relator.token)
+    expect(r).toMatchObject({ status: 409, corpo: { erro: mensagem } })
+    expect(await totalAuditoria()).toBe(0)
   })
 })
 

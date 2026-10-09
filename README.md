@@ -165,14 +165,28 @@ passa por uma função `/api`, que:
 
 | Endpoint | Métodos | Corpo (JSON) | Perfil |
 |---|---|---|---|
-| `/api/chamamentos` | `POST` criar, `PATCH` editar | `{ numero, titulo, dataLimitePropostas, justificativaMinima?, lotes: [{ codigo, descricao }] }` (`PATCH` com `id`) | admin |
+| `/api/chamamentos` | `POST` criar, `PATCH` editar | `{ numero, titulo, processoSei, dataLimitePropostas, indiceCorrecao?, dataBaseCorrecao?, justificativaMinima?, lotes: [{ codigo, descricao }] }` (`PATCH` com `id`) | admin |
 | `/api/oscs` | `POST` criar, `PATCH` editar | `{ cnpj, razaoSocial, nomeFantasia? }` — CNPJ numérico ou alfanumérico | admin |
-| `/api/propostas` | `POST` criar, `PATCH` editar | `{ chamamentoId, loteCodigo, oscCnpj, observacao? }` (`PATCH` com `propostaId`) | admin |
+| `/api/propostas` | `POST` criar, `PATCH` editar | `{ chamamentoId, loteCodigo, oscCnpj, protocolo, numeroSei, observacao? }` (`PATCH` com `propostaId`) | admin |
 | `/api/perfis` | `POST` dar/trocar, `DELETE` remover | `{ email, perfil }` / `{ email }` | admin |
 
 - `dataLimitePropostas` (`AAAA-MM-DD`): referência da D2 (Anexo IV, 3.3.1, IV). Depois que alguma proposta do
   chamamento já tem totais calculados, não pode mais mudar → **409**.
 - `justificativaMinima` (inteiro de 0 a 2.000, opcional): mínimo de caracteres da justificativa do nível (padrão 20).
+- `indiceCorrecao` e `dataBaseCorrecao` (opcionais, sempre juntos): correção monetária dos valores da D2.
+
+### Endpoint da Etapa 4a (sessão da Comissão)
+
+| Endpoint | Métodos | Corpo (JSON) | Perfil |
+|---|---|---|---|
+| `/api/sessao` | `POST` abrir | `{ chamamentoId, data, pauta: [propostaId], presentes?: [uid], declaracoes?: [{ uid, semImpedimento, motivo? }] }` | presidente |
+| `/api/sessao` | `PATCH` com `acao` | `{ chamamentoId, sessaoId, acao: 'presentes' \| 'declaracoes' \| 'foco' \| 'encerrar', ... }` | presidente e relator (`encerrar`: só presidente) |
+
+- Sessão em `chamamentos/{ch}/sessoes/{id}`; **uma sessão aberta por chamamento** (abrir outra → **409**).
+- Presentes precisam ter perfil da Comissão (presidente, relator, membro); só presente declara; impedimento
+  exige motivo. `foco` = `{ propostaId, subcriterio }` da pauta e da matriz (ou `null`).
+- Sessão encerrada não aceita alteração (**409**) e **a avaliação (C2) só é aceita em sessão aberta** (**409**).
+- Os esquemas zod ficam em `src/esquemas/` e são os mesmos na `/api` e nos formulários do app.
 
 ### Endpoints da Etapa 3b (avaliação)
 
@@ -214,9 +228,28 @@ e `campos` em português.
 | C3 — experiências da D2 | presidente, relator |
 | C5 — homologar proposta | presidente |
 | C6 — dar e remover perfis | admin |
+| Sessão: abrir e encerrar | presidente |
+| Sessão: presentes, declarações de impedimento e foco | presidente, relator |
+| Admissibilidade (Anexo III, item 28) | presidente, relator |
 | Leitura da auditoria | admin, presidente, controle |
 
 A fonte única no código é `src/domain/permissoes.ts` (um teste garante que ela bate com esta tabela).
+
+### Telas (Etapa 4a)
+
+| Rota | Quem usa | O que faz |
+|---|---|---|
+| `/` | Comissão e admin | lista de chamamentos |
+| `/chamamentos/:ch` | Comissão e admin | painel: propostas por lote com status (pendente, apta, inapta, desclassificada, homologada) e sessões |
+| `/chamamentos/novo`, `/chamamentos/:ch/editar` | admin | chamamento e lotes |
+| `/chamamentos/:ch/propostas/nova`, `.../:p/editar` | admin | proposta (OSC, lote, protocolo, nº SEI) |
+| `/oscs` | admin | OSCs, com máscara e validação de CNPJ |
+| `/perfis` | admin | dar, trocar e remover perfis (o admin não remove o próprio) |
+| `/chamamentos/:ch/sessoes/nova` | presidente | abertura: data, presentes, declarações, pauta |
+| `/chamamentos/:ch/sessoes/:s` | Comissão (escrita: presidente e relator) | foco, presentes e declarações, encerrar |
+
+Leitura em tempo real (`onSnapshot`, `src/lib/firestore.ts`); escrita só por `chamarApi` (`src/lib/api.ts`).
+O componente `Formulario` valida com o mesmo esquema da `/api` e põe os erros 400 da `/api` nos mesmos campos.
 
 ### Testar a `/api` localmente
 
