@@ -85,37 +85,61 @@ const CAMPOS_QUANTITATIVOS: CampoQuantitativo[] = ['vagas', 'unidades', 'trabalh
 // Validação e utilitários
 // ---------------------------------------------------------------------------
 
-function validarExperiencias(experiencias: Experiencia[], matriz: Matriz): void {
+/**
+ * Regras de uma experiência isolada, por campo (a /api usa estas mensagens; o cálculo também as aplica):
+ * categoria conhecida, A e B não coexistem (Anexo IV, 3.2.1, III), datas válidas com fim ≥ início
+ * e campos de porte inteiros não negativos.
+ */
+export function problemasDaExperiencia(e: Experiencia, matriz: Matriz = MATRIZ_2026): Record<string, string> {
+  const problemas: Record<string, string> = {}
   const { categorias, categoriasMutuamenteExclusivas } = matriz.dimensao2.criterios['C2.1']
   const conhecidas = new Set(categorias.map((c) => c.codigo))
-  const ids = new Set<string>()
 
-  for (const e of experiencias) {
-    const erro = (msg: string) => new Error(`Experiência "${e.id}": ${msg}`)
-    if (ids.has(e.id)) throw erro('id duplicado — a mesma experiência não pode ser contada duas vezes')
-    ids.add(e.id)
-
-    for (const c of e.categorias) if (!conhecidas.has(c)) throw erro(`categoria desconhecida ${c}`)
-    // Anexo IV, item 3.2.1, III: uma mesma experiência não pode ser enquadrada simultaneamente em A e B.
+  const desconhecida = e.categorias.find((c) => !conhecidas.has(c))
+  if (desconhecida !== undefined) {
+    problemas.categorias = `Categoria desconhecida: ${desconhecida}.`
+  } else {
     for (const { categorias: grupo } of categoriasMutuamenteExclusivas) {
       const presentes = grupo.filter((c) => e.categorias.includes(c as CategoriaExperiencia))
       if (presentes.length > 1) {
-        throw erro(`não pode ser enquadrada simultaneamente nas categorias ${presentes.join(' e ')}`)
+        problemas.categorias = `Não pode ser enquadrada simultaneamente nas categorias ${presentes.join(' e ')} (Anexo IV, 3.2.1, III).`
+        break
       }
     }
+  }
 
+  let inicio: number | undefined
+  try {
+    inicio = paraDia(e.inicio)
+  } catch (causa) {
+    problemas.inicio = (causa as Error).message
+  }
+  if (e.fim !== null) {
     try {
-      const inicio = paraDia(e.inicio)
-      if (e.fim !== null && paraDia(e.fim) < inicio) throw new Error(`início ${e.inicio} posterior ao fim ${e.fim}`)
+      const fim = paraDia(e.fim)
+      if (inicio !== undefined && fim < inicio) problemas.fim = 'O fim não pode ser anterior ao início.'
     } catch (causa) {
-      throw erro((causa as Error).message)
+      problemas.fim = (causa as Error).message
     }
+  }
 
-    for (const campo of CAMPOS_QUANTITATIVOS) {
-      const valor = e[campo]
-      if (valor == null) continue
-      if (!Number.isInteger(valor) || valor < 0) throw erro(`${campo} deve ser inteiro não negativo (recebido ${valor})`)
+  for (const campo of CAMPOS_QUANTITATIVOS) {
+    const valor = e[campo]
+    if (valor == null) continue
+    if (!Number.isInteger(valor) || valor < 0) problemas[campo] = 'Deve ser um número inteiro não negativo.'
+  }
+  return problemas
+}
+
+function validarExperiencias(experiencias: Experiencia[], matriz: Matriz): void {
+  const ids = new Set<string>()
+  for (const e of experiencias) {
+    if (ids.has(e.id)) {
+      throw new Error(`Experiência "${e.id}": id duplicado — a mesma experiência não pode ser contada duas vezes`)
     }
+    ids.add(e.id)
+    const [primeiro] = Object.values(problemasDaExperiencia(e, matriz))
+    if (primeiro) throw new Error(`Experiência "${e.id}": ${primeiro}`)
   }
 }
 

@@ -21,5 +21,6 @@ export const MENSAGENS = {
   naoEncontrado: 'Registro não encontrado.',
   jaExiste: 'Registro já existe.',
   homologada: 'Proposta homologada: alteração não permitida.',
+  propostaNaoEncontrada: 'Proposta não encontrada.',
   interno: 'Erro interno no servidor. Tente novamente.',
 } as const
