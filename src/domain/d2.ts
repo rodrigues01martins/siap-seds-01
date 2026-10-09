@@ -12,12 +12,15 @@ export type CategoriaExperiencia = 'A' | 'B' | 'C' | 'D'
 export interface Experiencia {
   id: string
   descricao?: string
-  /** Categorias do Critério 2.1 reconhecidas pela Comissão (A e B não podem coexistir). */
+  /**
+   * Categorias do Critério 2.1 reconhecidas pela Comissão.
+   * A e B não podem coexistir (Anexo IV, item 3.2.1, III); D pode acompanhar A ou B (item 3.2.1, IV).
+   */
   categorias: CategoriaExperiencia[]
   /** Programa de privação de liberdade em unidade socioeducativa de internação (Subcritério 2.3.1). */
   internacao?: boolean
   inicio: string
-  /** Nulo = em execução; considerada até a data limite das propostas. */
+  /** Nulo = em execução; considerada até a data limite das propostas (Anexo IV, item 3.3.1, IV). */
   fim: string | null
   /** Capacidade máxima de atendimento simultâneo. */
   vagas?: number | null
@@ -33,7 +36,10 @@ export interface Experiencia {
 
 export interface EntradaD2 {
   experiencias: Experiencia[]
-  /** Data limite para apresentação das propostas (AAAA-MM-DD). */
+  /**
+   * Data limite para apresentação das propostas (AAAA-MM-DD). Experiências em execução
+   * são consideradas até essa data (Anexo IV, item 3.3.1, IV).
+   */
   dataLimite: string
 }
 
@@ -90,6 +96,7 @@ function validarExperiencias(experiencias: Experiencia[], matriz: Matriz): void 
     ids.add(e.id)
 
     for (const c of e.categorias) if (!conhecidas.has(c)) throw erro(`categoria desconhecida ${c}`)
+    // Anexo IV, item 3.2.1, III: uma mesma experiência não pode ser enquadrada simultaneamente em A e B.
     for (const grupo of categoriasMutuamenteExclusivas) {
       const presentes = grupo.filter((c) => e.categorias.includes(c as CategoriaExperiencia))
       if (presentes.length > 1) {
@@ -116,7 +123,10 @@ function temCategoria(e: Experiencia, consideradas: string[]): boolean {
   return e.categorias.some((c) => consideradas.includes(c))
 }
 
-/** Período efetivo: em execução vai até a data limite; nada após a data limite é considerado. */
+/**
+ * Período efetivo: em execução vai até a data limite; nada após a data limite é considerado
+ * (Anexo IV, item 3.3.1, IV).
+ */
 function periodoAte(e: Experiencia, dataLimite: string | undefined): { inicio: string; fim: string } | null {
   if (dataLimite === undefined) {
     if (e.fim === null) throw new Error(`Experiência "${e.id}": em execução exige a data limite`)
@@ -209,7 +219,11 @@ export function calcularC21(experiencias: Experiencia[], matriz: Matriz = MATRIZ
   return { codigo: 'C2.1', titulo: criterio.titulo, pontos, maximo: criterio.maximo, memoria }
 }
 
-/** C2.2 — meses completos; sucessivos somam, concomitantes contam uma vez (categorias A e B). */
+/**
+ * C2.2 — tempo em meses completos (Anexo IV, item 3.3.1, I), somando períodos sucessivos de
+ * experiências distintas (item 3.3.1, II) e contando uma única vez os concomitantes (item 3.3.1, III).
+ * Apenas categorias A e B (item 3.3); o tempo de existência da OSC não conta (item 3.3.1, V).
+ */
 export function calcularC22(
   experiencias: Experiencia[],
   dataLimite: string,

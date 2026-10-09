@@ -44,6 +44,10 @@ describe('matriz_2026.json — Dimensão 1', () => {
     expect(dimensao1.planos.map((p) => p.limitePaginas)).toEqual([12, 12, 8, 12, 10, 8])
   })
 
+  it('limites de páginas citam o Anexo III, item 7.1', () => {
+    expect(dimensao1.fonteLimitePaginas).toBe('Anexo III – Caderno de Proposta Técnica, item 7.1 (SEI 95574003)')
+  })
+
   it('escala 0–4 com descritores', () => {
     expect(dimensao1.escala.map((e) => e.nivel)).toEqual([0, 1, 2, 3, 4])
     for (const e of dimensao1.escala) expect(e.descritor.length).toBeGreaterThan(0)

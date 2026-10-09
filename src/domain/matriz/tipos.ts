@@ -16,6 +16,7 @@ export interface PlanoDeAcao {
   codigo: string
   titulo: string
   finalidade: string
+  /** Limite de páginas do PA — Anexo III – Caderno de Proposta Técnica, item 7.1 (SEI 95574003). */
   limitePaginas: number
   maximo: number
   subcriterios: Subcriterio[]
@@ -50,6 +51,8 @@ export interface Matriz {
     maximo: number
     corte: number
     subcriteriosEliminatorios: string[]
+    /** Fonte dos limites de páginas (não constam no Anexo IV). */
+    fonteLimitePaginas: string
     escala: NivelEscala[]
     planos: PlanoDeAcao[]
   }
@@ -62,6 +65,7 @@ export interface Matriz {
         titulo: string
         maximo: number
         categorias: CategoriaD2[]
+        /** Anexo IV, item 3.2.1, III: a mesma experiência não pode ser enquadrada em A e B. */
         categoriasMutuamenteExclusivas: string[][]
       }
       'C2.2': CriterioComFaixas & { categoriasConsideradas: string[] }

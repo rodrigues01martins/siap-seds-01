@@ -48,7 +48,8 @@ function paraDias({ inicio, fim }: Intervalo): [number, number] {
 
 /**
  * Une períodos sobrepostos ou contíguos (fim + 1 dia = próximo início).
- * Resultado: períodos disjuntos, em ordem cronológica — concomitâncias contam uma única vez.
+ * Resultado: períodos disjuntos, em ordem cronológica — concomitâncias contam uma única vez
+ * (Anexo IV, item 3.3.1, III) e sucessivos permanecem somáveis (item 3.3.1, II).
  */
 export function mesclarIntervalos(intervalos: Intervalo[]): Intervalo[] {
   const ordenados = intervalos.map(paraDias).sort((x, y) => x[0] - y[0])
@@ -61,7 +62,10 @@ export function mesclarIntervalos(intervalos: Intervalo[]): Intervalo[] {
   return mesclados.map(([inicio, fim]) => ({ inicio: deDia(inicio), fim: deDia(fim) }))
 }
 
-/** Meses completos de um período com fim inclusivo (ex.: 01/01 a 31/12 = 12 meses). */
+/**
+ * Meses completos de um período com fim inclusivo (ex.: 01/01 a 31/12 = 12 meses).
+ * Anexo IV, item 3.3.1, I: "o tempo será apurado em meses completos".
+ */
 export function mesesCompletos(intervalo: Intervalo): number {
   const [inicio, fim] = paraDias(intervalo)
   const a = new Date(inicio * MS_POR_DIA)

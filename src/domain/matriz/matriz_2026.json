@@ -7,6 +7,7 @@
     "maximo": 112,
     "corte": 67.2,
     "subcriteriosEliminatorios": ["1.1", "1.2"],
+    "fonteLimitePaginas": "Anexo III – Caderno de Proposta Técnica, item 7.1 (SEI 95574003)",
     "escala": [
       {
         "nivel": 0,
