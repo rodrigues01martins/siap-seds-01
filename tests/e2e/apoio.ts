@@ -62,7 +62,14 @@ export async function percorrerComTeclado(pagina: Page) {
       const visivel = el.getClientRects().length > 0 && estilo.visibility !== 'hidden'
       if (!visivel || el.tabIndex < 0 || (el as HTMLButtonElement).disabled || el.closest('[inert]')) continue
       if (el instanceof HTMLInputElement && el.type === 'radio') {
+        // Grupo de rádios = uma parada do Tab: a opção marcada ou, sem marcada, a primeira.
         if (vistos.has(el.name)) continue
+        const marcada = document.querySelector<HTMLInputElement>(`input[type="radio"][name="${CSS.escape(el.name)}"]:checked`)
+        if (marcada && marcada !== el) {
+          vistos.add(el.name)
+          marcada.dataset.e2eFocavel = String(n++)
+          continue
+        }
         vistos.add(el.name)
       }
       el.dataset.e2eFocavel = String(n++)
@@ -82,8 +89,9 @@ export async function percorrerComTeclado(pagina: Page) {
       el.dataset.e2eVisitado = 'sim'
       const estilo = getComputedStyle(el)
       const visivel = estilo.outlineStyle !== 'none' && parseFloat(estilo.outlineWidth) >= 2
-      const nome = (el.getAttribute('aria-label') ?? el.textContent ?? el.getAttribute('name') ?? el.tagName).trim().slice(0, 40)
-      return { nome: `${el.tagName.toLowerCase()} "${nome}"`, visivel, volta }
+      const nome = (el.getAttribute('aria-label') || el.textContent || el.getAttribute('name') || el.id || el.tagName).trim().slice(0, 40)
+      const tipo = el instanceof HTMLInputElement ? `[${el.type}]` : ''
+      return { nome: `${el.tagName.toLowerCase()}${tipo} "${nome}"`, visivel, volta }
     })
     if (info.volta) break
     if (!info.nome) continue
