@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { lazy, Suspense, type ReactNode } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 import { Shell } from './componentes/Shell'
 import type { Exigencia } from './domain/permissoes'
@@ -22,6 +22,9 @@ import { TelaClassificacao } from './features/resultado/TelaClassificacao'
 import { ConduzirSessao } from './features/sessoes/ConduzirSessao'
 import { NovaSessao } from './features/sessoes/NovaSessao'
 import { TelaUsuarios } from './features/usuarios/TelaUsuarios'
+
+/** Catálogo de componentes (/ui, administrador): carregado só quando aberto. */
+const TelaCatalogo = lazy(() => import('./features/catalogo/TelaCatalogo').then((m) => ({ default: m.TelaCatalogo })))
 
 /** Tela que exige uma permissão (ou o administrador); sem `exige`, basta ter acesso ao app. */
 const so = (exige: Exigencia | null, tela: ReactNode) => <RotaProtegida exige={exige ?? undefined}>{tela}</RotaProtegida>
@@ -59,6 +62,15 @@ export default function App() {
             <Route path="oscs" element={so('oscs', <TelaOscs />)} />
             <Route path="usuarios" element={so('admin', <TelaUsuarios />)} />
             <Route path="auditoria" element={so('admin', <TelaAuditoria />)} />
+            <Route
+              path="ui"
+              element={so(
+                'admin',
+                <Suspense fallback={<p className="text-body-md text-text-secondary">Carregando catálogo…</p>}>
+                  <TelaCatalogo />
+                </Suspense>,
+              )}
+            />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

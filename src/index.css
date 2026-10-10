@@ -71,6 +71,7 @@
   --shadow-modal: var(--sds-shadow-modal);
 
   /* Cores: tokens semânticos (nível 2) e de componente (nível 3). */
+  --color-overlay: var(--sds-overlay);
   --color-background-default: var(--sds-background-default);
   --color-background-surface: var(--sds-background-surface);
   --color-background-disabled: var(--sds-background-disabled);

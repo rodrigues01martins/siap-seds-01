@@ -39,7 +39,7 @@ interface PropsFormulario<E extends z.ZodType<FieldValues>> {
 const identidade = <T,>(valor: T) => valor
 
 /** { "a.0.b": msg } → { a: { 0: { b: { message } } } }, o formato de erros do react-hook-form. */
-function paraErros(campos: Campos): FieldErrors {
+export function paraErros(campos: Campos): FieldErrors {
   const erros: Record<string, unknown> = {}
   for (const [caminho, message] of Object.entries(campos)) {
     const partes = caminho === CAMPO_RAIZ ? ['root'] : caminho.split('.')

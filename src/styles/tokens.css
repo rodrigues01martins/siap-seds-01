@@ -169,6 +169,9 @@
   --sds-data-grid: var(--sds-neutral-200);
   --sds-data-label: var(--sds-neutral-600);
 
+  /* Fundo escurecido atrás de diálogos e painéis laterais (modal: elevação 3, §11). */
+  --sds-overlay: color-mix(in srgb, var(--sds-neutral-950) 48%, transparent);
+
   /* Superfícies elevadas (§11). */
   --sds-shadow-card: var(--sds-elevation-0);
   --sds-shadow-dropdown: var(--sds-elevation-2);
