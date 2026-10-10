@@ -27,7 +27,9 @@ Eliminatórias: D1 < 67,2 → inapta; nível 0 em 1.1 ou 1.2 → desclassificada
    Telas usam os templates de src/components/templates (AppShell, AuthPage, ListPage, FormPage, DetailPage,
    WizardPage, DashboardPage), PageHeader com no máximo UMA ação primária por área, e FormularioApi nos
    formulários ligados à /api. Marcas: só arquivos oficiais em public/brand/ (Brand.tsx); sem eles, texto.
-   Telão (/projecao): tokens --sds-projecao-*. Relatórios: cores em CORES_DOCUMENTO (documento.ts), iguais aos tokens.
+   Telão (/projecao): tokens --sds-projecao-*. Relatórios: CORES_DOCUMENTO (documento.ts) lidas do tokens.css.
+   Nenhum HEX fora de src/styles/tokens.css (tests/design/hex.test.ts). Mensagens de erro em região aria-live
+   (MensagensCampo/MensagemErro em Field.tsx).
 
 ## Decisões
 - Os PDFs dos Cadernos NÃO são carregados no app. A consulta é feita no SEI; o app guarda apenas o
@@ -91,6 +93,8 @@ npm run test:e2e:baseline (Playwright + axe nos emuladores; FASE_AUDITORIA=antes
 npm run test:e2e:ui (axe no catálogo /ui, WCAG 2.2 AA, sem violações)
 npm run test:e2e:etapa3 (telas migradas: teclado, axe 1280/768 e screenshots → docs/auditoria-design/etapa-3/)
 npm run test:e2e:etapa4 (telas operacionais: axe, screenshots antes/depois e fluxo completo pela /api nos emuladores)
+npm run test:e2e:uso (testes de uso por perfil, com tempos) | npm run test:e2e:acessibilidade (teclado, foco, zoom 200%, aria-live)
+Teste com usuários: docs/TESTE-USABILIDADE.md · Backlog de interface: docs/auditoria-design/pendencias.md
 npm run seed:matriz -- --projeto dev|prod | npm run tornar-admin -- --projeto dev|prod --email X (emergência)
 npm run backup -- --projeto dev|prod [--chamamento ID] | npm run restaurar -- --projeto dev --arquivo F | npm run ensaio -- --projeto dev
 Dia da sessão: docs/ROTEIRO-SESSAO.md · Produção: docs/CHECKLIST-PRODUCAO.md

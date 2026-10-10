@@ -34,7 +34,8 @@ const CONHECIDOS: Record<string, string[]> = {
 
 const resultados: Resultado[] = []
 const erros: { formulario: string; anunciado: boolean; mensagem: string }[] = []
-// Cada teste grava o que mediu (o Playwright reinicia o worker depois de uma falha e a memória se perde).
+// Cada teste grava o que mediu (o Playwright reinicia o worker depois de uma falha e a memória se perde);
+// os .json são temporários (fora do git) e o afterAll os junta no acessibilidade.md.
 const ARQ_ROTAS = join(PASTA, 'acessibilidade-rotas.json')
 const ARQ_ERROS = join(PASTA, 'acessibilidade-erros.json')
 const ler = <T,>(arquivo: string): T[] => (existsSync(arquivo) ? JSON.parse(readFileSync(arquivo, 'utf8')) : [])

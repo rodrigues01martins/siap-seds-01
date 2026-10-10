@@ -440,6 +440,40 @@ Fonte de verdade: [`docs/DESIGN-SYSTEM-SEDS.md`](docs/DESIGN-SYSTEM-SEDS.md). Co
 | Templates (AppShell, AuthPage, ListPage, FormPage, DetailPage, WizardPage, DashboardPage) | `src/components/templates` |
 | Navegação por domínio (Sessão, Avaliação, Resultado, Cadastros, Administração) | `src/components/templates/navegacao.ts` |
 
+### Mapa de telas
+
+| Rota | Template | Tela |
+|---|---|---|
+| `/login` | AuthPage | entrada (e-mail e senha) |
+| `/` | ListPage | chamamentos (busca e ordenação) |
+| `/chamamentos/novo`, `/chamamentos/:ch/editar` | FormPage | chamamento e lotes |
+| `/chamamentos/:ch` | DetailPage | painel: resumo, propostas por lote com status, sessões |
+| `/chamamentos/:ch/propostas/nova`, `…/:p/editar` | FormPage | proposta (OSC, lote, protocolo, nº SEI) |
+| `/chamamentos/:ch/sessoes/nova` | WizardPage | abertura da sessão: 1. data → 2. presentes e declarações → 3. pauta |
+| `/chamamentos/:ch/sessoes/:s` | DetailPage | sessão: foco da projeção, presentes, pauta, encerrar |
+| `/chamamentos/:ch/sessoes/:s/ata` | FormPage | minuta de ata editável e PDF |
+| `…/propostas/:p/admissibilidade` | FormPage | checklist 28.1, páginas por PA (alerta de excesso), 28.5, resultado |
+| `…/propostas/:p/d1` | DetailPage | navegação PA1…PA6 com progresso, subcritério em seções, rodapé fixo com D1 parcial e Salvar |
+| `…/propostas/:p/d2` | ListPage | experiências (tabela + painel lateral), linha do tempo A/B |
+| `…/propostas/:p/d2/memoria` | DetailPage | memória de cálculo da D2 em abas por critério |
+| `…/propostas/:p/diligencias` | ListPage | diligências da proposta |
+| `…/propostas/:p/diligencias/nova`, `…/diligencias/:d` | FormPage | abrir; responder e encerrar |
+| `/chamamentos/:ch/lotes/:lote/classificacao` | ListPage | ranking, empates, homologar e reabrir, quadro-resumo PDF/XLSX |
+| `/projecao/:ch/:s` | (layout próprio) | telão: alto contraste, sem menu nem ações |
+| `/oscs` | ListPage | OSCs (painel lateral para cadastrar e editar) |
+| `/usuarios` | ListPage | usuários, permissões, papel na Comissão |
+| `/auditoria` | ListPage | histórico de alterações e exportação XLSX |
+| `/ui` | — | catálogo de componentes (só administrador) |
+
+### Catálogo de componentes (`/ui`)
+
+Página só do administrador (menu **Administração → Catálogo de componentes**) com todos os componentes de
+`src/components/ui` em todos os estados: botões (4 variantes, 3 tamanhos, carregando, desabilitado), campos
+(texto, área com contador, seleção, data, número, CNPJ, moeda, checkbox, rádio, chave), formulário ligado ao
+esquema da `/api`, alertas, toast, estados vazio/erro/carregando, diálogo, confirmação, painel lateral, abas,
+trilha, tabela de dados, selos de status e ícones. Use-o para conferir uma mudança visual antes de aplicá-la nas
+telas; `npm run test:e2e:ui` exige zero violações do axe nele.
+
 Testes de navegador (emuladores + Playwright + axe, WCAG 2.2 AA):
 
 ```bash
@@ -448,7 +482,14 @@ npm run test:e2e:ui         # catálogo /ui sem violações
 npm run test:e2e:etapa3     # telas migradas: teclado, axe e screenshots (docs/auditoria-design/etapa-3/)
 npm run test:e2e:etapa4     # telas operacionais: axe + screenshots e o fluxo completo (docs/auditoria-design/etapa-4/)
 FASE_ETAPA4=antes npm run test:e2e:etapa4   # só screenshots, para comparar antes/depois
+FASE_AUDITORIA=depois npm run test:e2e:baseline   # medição depois + comparativo com o antes (docs/auditoria-design/depois/)
+npm run test:e2e:uso        # testes de uso por perfil (relator, membro, presidente, controle, telão), com tempos
+npm run test:e2e:acessibilidade   # teclado, foco visível, zoom 200% e erros anunciados em todas as rotas
 ```
+
+Resultados e decisões: [`docs/auditoria-design/README.md`](docs/auditoria-design/README.md) (antes × depois),
+[`pendencias.md`](docs/auditoria-design/pendencias.md) (backlog por prioridade) e o roteiro de teste com usuários
+reais em [`docs/TESTE-USABILIDADE.md`](docs/TESTE-USABILIDADE.md) (planilha: `docs/teste-usabilidade-resultados.xlsx`).
 
 O fluxo completo (sessão → admissibilidade → D1 → D2 → classificação → homologação) grava de verdade pela
 `/api` nos emuladores: só nos testes de navegador, `vite.e2e.config.ts` monta as funções de `api/` no servidor
@@ -458,7 +499,8 @@ do Vite (`tests/e2e/apiNoVite.ts`). Nada disso entra no build nem na Vercel.
 
 Cabeçalho em toda página com a marca na hierarquia do Kit (Secretaria → Governo de Goiás) e o sistema; títulos
 em azul institucional; tabelas com cabeçalho neutral.200 e linhas alternadas em neutral.100; rodapé com o código
-de verificação. As cores ficam em `CORES_DOCUMENTO` (`src/relatorios/documento.ts`), presas aos tokens por teste.
+de verificação. As cores (`CORES_DOCUMENTO`, `src/relatorios/documento.ts`) são lidas de `src/styles/tokens.css`:
+nenhum HEX fora dos tokens (teste `tests/design/hex.test.ts`).
 Fonte: Roboto embutida do pdfmake. **Gotham** só com os arquivos licenciados em `public/fonts/` (registrar em
 `src/relatorios/pdf.ts` e trocar `FONTE_PDF`); nunca de fonte externa.
 
