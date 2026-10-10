@@ -20,6 +20,8 @@ Eliminatórias: D1 < 67,2 → inapta; nível 0 em 1.1 ou 1.2 → desclassificada
 3. A matriz vem de src/domain/matriz/matriz_2026.json; nada de pesos ou faixas fixos no código.
 4. Proposta com campo bloqueada=true não aceita escrita (homologada).
 5. Segredos nunca usam prefixo VITE_. FIREBASE_SERVICE_ACCOUNT só existe no servidor.
+6. Componentes só usam tokens semânticos; nunca cores HEX diretas. Fonte de verdade visual:
+   docs/DESIGN-SYSTEM-SEDS.md (Sistema de Design SEDS — Web Corporativo 1.0).
 
 ## Decisões
 - Os PDFs dos Cadernos NÃO são carregados no app. A consulta é feita no SEI; o app guarda apenas o
@@ -79,6 +81,7 @@ desempate registra a ordem com justificativa (api/desempate.ts, auditado; 409 pa
 ## Comandos
 npm run dev | npm run build | npm test | npm run typecheck
 npm run test:regras | npm run test:api (emuladores, Java 21+) | npm run emuladores
+npm run test:e2e:baseline (Playwright + axe nos emuladores; FASE_AUDITORIA=antes|depois → docs/auditoria-design/)
 npm run seed:matriz -- --projeto dev|prod | npm run tornar-admin -- --projeto dev|prod --email X (emergência)
 npm run backup -- --projeto dev|prod [--chamamento ID] | npm run restaurar -- --projeto dev --arquivo F | npm run ensaio -- --projeto dev
 Dia da sessão: docs/ROTEIRO-SESSAO.md · Produção: docs/CHECKLIST-PRODUCAO.md
