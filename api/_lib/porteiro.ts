@@ -10,11 +10,10 @@ export interface Autor {
   perfil: Perfil
 }
 
-/**
- * Lê "Authorization: Bearer <ID token>". Sem token ou token inválido/revogado → 401;
- * perfil ausente ou fora de `permitidos` → 403.
- */
-export async function autenticar(requisicao: Request, permitidos: readonly Perfil[]): Promise<Autor> {
+/** Quem está chamando: ID token válido (401 se ausente, inválido ou revogado), com ou sem perfil. */
+export async function identificar(
+  requisicao: Request,
+): Promise<{ uid: string; email: string | null; perfil: Perfil | null }> {
   const cabecalho = requisicao.headers.get('Authorization') ?? ''
   const token = /^Bearer\s+(\S+)$/i.exec(cabecalho)?.[1]
   if (!token) throw new ErroApi(401, MENSAGENS.semLogin)
@@ -28,8 +27,15 @@ export async function autenticar(requisicao: Request, permitidos: readonly Perfi
   } catch {
     throw new ErroApi(401, MENSAGENS.sessaoInvalida)
   }
+  return { uid: decodificado.uid, email: decodificado.email ?? null, perfil: extrairPerfil(decodificado) }
+}
 
-  const perfil = extrairPerfil(decodificado)
+/**
+ * Lê "Authorization: Bearer <ID token>". Sem token ou token inválido/revogado → 401;
+ * perfil ausente ou fora de `permitidos` → 403.
+ */
+export async function autenticar(requisicao: Request, permitidos: readonly Perfil[]): Promise<Autor> {
+  const { uid, email, perfil } = await identificar(requisicao)
   if (!perfil || !permitidos.includes(perfil)) throw new ErroApi(403, MENSAGENS.semPermissao)
-  return { uid: decodificado.uid, email: decodificado.email ?? null, perfil }
+  return { uid, email, perfil }
 }

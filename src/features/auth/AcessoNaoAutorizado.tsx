@@ -1,14 +1,31 @@
 import { useState } from 'react'
+import { AlertaErro } from '../../componentes/AlertaErro'
+import { chamarApi } from '../../lib/api'
 import { useUsuario } from './useUsuario'
 
 export function AcessoNaoAutorizado() {
   const { usuario, sair, recarregarPerfil } = useUsuario()
   const [verificando, setVerificando] = useState(false)
+  const [erro, setErro] = useState<unknown>(null)
 
   async function verificarNovamente() {
     setVerificando(true)
     try {
       await recarregarPerfil()
+    } finally {
+      setVerificando(false)
+    }
+  }
+
+  /** Primeiro acesso do sistema: vira admin se for a conta de ADMIN_INICIAL_EMAIL e não houver admin. */
+  async function tornarPrimeiroAdmin() {
+    setErro(null)
+    setVerificando(true)
+    try {
+      await chamarApi('/api/primeiro-admin', { metodo: 'POST' })
+      await recarregarPerfil()
+    } catch (e) {
+      setErro(e)
     } finally {
       setVerificando(false)
     }
@@ -33,6 +50,20 @@ export function AcessoNaoAutorizado() {
         <button type="button" onClick={() => sair()} className="rounded-md border border-slate-300 px-4 py-2">
           Sair
         </button>
+      </div>
+      <div className="mt-6 border-t border-slate-200 pt-4 text-sm text-slate-600">
+        <p>Primeira instalação, ainda sem nenhum administrador?</p>
+        <button
+          type="button"
+          onClick={tornarPrimeiroAdmin}
+          disabled={verificando}
+          className="mt-2 rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-800 disabled:opacity-60"
+        >
+          Sou o administrador inicial
+        </button>
+        <div className="mt-3">
+          <AlertaErro erro={erro} />
+        </div>
       </div>
     </main>
   )
