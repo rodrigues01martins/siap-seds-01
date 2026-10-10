@@ -425,3 +425,33 @@ alfanumérico fictício (`ENSAIO…`) e 6 propostas no formato que a `/api` grav
 
 `--recriar` apaga e grava de novo; `--remover` só apaga (o chamamento e as OSCs com `ensaio: true`). O script
 recusa `--projeto prod`.
+
+## 8. Interface: Sistema de Design SEDS
+
+Fonte de verdade: [`docs/DESIGN-SYSTEM-SEDS.md`](docs/DESIGN-SYSTEM-SEDS.md). Componentes só usam tokens semânticos (nunca HEX).
+
+| Peça | Onde |
+|---|---|
+| Tokens (primitivos, semânticos, componentes) | `src/styles/tokens.css`; tema do Tailwind em `src/index.css` |
+| Componentes (botões, campos, feedback, overlays, DataTable, ícones, Brand, PageHeader) | `src/components/ui` — catálogo em **`/ui`** (só administrador) |
+| Templates (AppShell, AuthPage, ListPage, FormPage, DetailPage, WizardPage, DashboardPage) | `src/components/templates` |
+| Navegação por domínio (Sessão, Avaliação, Resultado, Cadastros, Administração) | `src/components/templates/navegacao.ts` |
+
+Testes de navegador (emuladores + Playwright + axe, WCAG 2.2 AA):
+
+```bash
+npm run test:e2e:baseline   # medição de todas as rotas (docs/auditoria-design/antes/)
+npm run test:e2e:ui         # catálogo /ui sem violações
+npm run test:e2e:etapa3     # telas migradas: teclado, axe e screenshots (docs/auditoria-design/etapa-3/)
+```
+
+### Marcas (TODO)
+
+O app só usa **arquivos oficiais** das marcas (Kit de Divulgação). Enquanto eles não existirem, a marca aparece
+**em texto** ("SEDS | Governo de Goiás"; no login e no rodapé, "Secretaria de Estado de Desenvolvimento Social |
+Governo de Goiás"), respeitando a hierarquia do Kit (… → Secretarias → Governo de Goiás).
+
+- [ ] Colocar em `public/brand/` os arquivos oficiais da assinatura SEDS + Governo de Goiás, de preferência SVG:
+      versão para fundo claro (`light`), para fundo escuro (`dark`) e monocromática (`monochrome`).
+- [ ] Preencher `MARCAS` em `src/components/ui/Brand.tsx` com os caminhos (ex.: `light: '/brand/seds-governo-light.svg'`).
+- [ ] Validar com a Comunicação da SEDS as cores derivadas do DS (§2 e §8).

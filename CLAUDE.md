@@ -24,6 +24,9 @@ Eliminatórias: D1 < 67,2 → inapta; nível 0 em 1.1 ou 1.2 → desclassificada
    docs/DESIGN-SYSTEM-SEDS.md (Sistema de Design SEDS — Web Corporativo 1.0).
    Tokens em src/styles/tokens.css (3 níveis) e tema em src/index.css; biblioteca em src/components/ui
    (catálogo em /ui, só administrador); ícones só de lucide-react (componente Icone, 16/20/24).
+   Telas usam os templates de src/components/templates (AppShell, AuthPage, ListPage, FormPage, DetailPage,
+   WizardPage, DashboardPage), PageHeader com no máximo UMA ação primária por área, e FormularioApi nos
+   formulários ligados à /api. Marcas: só arquivos oficiais em public/brand/ (Brand.tsx); sem eles, texto.
 
 ## Decisões
 - Os PDFs dos Cadernos NÃO são carregados no app. A consulta é feita no SEI; o app guarda apenas o
@@ -85,6 +88,7 @@ npm run dev | npm run build | npm test | npm run typecheck
 npm run test:regras | npm run test:api (emuladores, Java 21+) | npm run emuladores
 npm run test:e2e:baseline (Playwright + axe nos emuladores; FASE_AUDITORIA=antes|depois → docs/auditoria-design/)
 npm run test:e2e:ui (axe no catálogo /ui, WCAG 2.2 AA, sem violações)
+npm run test:e2e:etapa3 (telas migradas: teclado, axe 1280/768 e screenshots → docs/auditoria-design/etapa-3/)
 npm run seed:matriz -- --projeto dev|prod | npm run tornar-admin -- --projeto dev|prod --email X (emergência)
 npm run backup -- --projeto dev|prod [--chamamento ID] | npm run restaurar -- --projeto dev --arquivo F | npm run ensaio -- --projeto dev
 Dia da sessão: docs/ROTEIRO-SESSAO.md · Produção: docs/CHECKLIST-PRODUCAO.md
