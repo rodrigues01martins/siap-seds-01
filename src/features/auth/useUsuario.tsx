@@ -1,16 +1,18 @@
-// Sessão do usuário: um único listener do Firebase Auth compartilhado via contexto.
-// O perfil vem do custom claim "perfil" do ID token (definido por scripts/set-role.ts).
+// Sessão do usuário: login (Firebase Auth) + cadastro em usuarios/{uid}, ouvido em tempo real.
+// Quando o administrador libera ou retira uma permissão, a tela muda sozinha (sem sair e entrar).
+// Conta sem acesso (sem cadastro ou cadastro antigo): pede uma vez ao servidor (PUT /api/usuarios), que só
+// dá acesso a um administrador inicial (api/_lib/adminsIniciais.ts) enquanto o projeto não tiver administrador.
 
-import { onIdTokenChanged, signOut } from 'firebase/auth'
+import { onAuthStateChanged, signOut } from 'firebase/auth'
+import { doc, onSnapshot } from 'firebase/firestore'
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { extrairPerfil } from '../../domain/perfis'
-import { obterAuth } from '../../lib/firebase'
+import { lerAcesso, podeLer } from '../../domain/permissoes'
+import { chamarApi } from '../../lib/api'
+import { obterAuth, obterDb } from '../../lib/firebase'
 import type { EstadoUsuario } from './acesso'
 
 interface ValorUsuario extends EstadoUsuario {
   sair: () => Promise<void>
-  /** Força a renovação do ID token para ler um perfil recém-atribuído. */
-  recarregarPerfil: () => Promise<void>
 }
 
 const ContextoUsuario = createContext<ValorUsuario | null>(null)
@@ -19,38 +21,51 @@ export function UsuarioProvider({ children }: { children: ReactNode }) {
   const [estado, setEstado] = useState<EstadoUsuario>({ carregando: true, usuario: null })
 
   useEffect(() => {
-    const auth = obterAuth()
     let ativo = true
-    // onIdTokenChanged também dispara quando o token é renovado (ex.: recarregarPerfil).
-    const cancelar = onIdTokenChanged(auth, async (user) => {
+    let pararCadastro: (() => void) | null = null
+    const atualizar = (novo: EstadoUsuario) => {
+      if (ativo) setEstado(novo)
+    }
+
+    const pararLogin = onAuthStateChanged(obterAuth(), (user) => {
+      pararCadastro?.()
+      pararCadastro = null
       if (!user) {
-        if (ativo) setEstado({ carregando: false, usuario: null })
+        atualizar({ carregando: false, usuario: null })
         return
       }
-      let perfil = null
-      try {
-        perfil = extrairPerfil((await user.getIdTokenResult()).claims)
-      } catch {
-        perfil = null // sem token legível não há acesso
-      }
-      if (ativo) setEstado({ carregando: false, usuario: { uid: user.uid, email: user.email, perfil } })
+      atualizar({ carregando: true, usuario: null })
+      const base = { uid: user.uid, email: user.email, nome: user.displayName }
+      let pediuPrimeiroAcesso = false
+
+      pararCadastro = onSnapshot(
+        doc(obterDb(), 'usuarios', user.uid),
+        (documento) => {
+          const dados = documento.data()
+          const acesso = lerAcesso(dados)
+          if (!podeLer(acesso) && !pediuPrimeiroAcesso) {
+            // Continua "carregando" até o servidor responder; se criar o cadastro, este listener dispara de novo.
+            pediuPrimeiroAcesso = true
+            chamarApi('/api/usuarios', { metodo: 'PUT' }).catch(() =>
+              atualizar({ carregando: false, usuario: { ...base, acesso } }),
+            )
+            return
+          }
+          const nome = typeof dados?.nome === 'string' ? dados.nome : base.nome
+          atualizar({ carregando: false, usuario: { ...base, nome, acesso } })
+        },
+        () => atualizar({ carregando: false, usuario: { ...base, acesso: null } }),
+      )
     })
+
     return () => {
       ativo = false
-      cancelar()
+      pararLogin()
+      pararCadastro?.()
     }
   }, [])
 
-  const valor = useMemo<ValorUsuario>(
-    () => ({
-      ...estado,
-      sair: () => signOut(obterAuth()),
-      recarregarPerfil: async () => {
-        await obterAuth().currentUser?.getIdToken(true)
-      },
-    }),
-    [estado],
-  )
+  const valor = useMemo<ValorUsuario>(() => ({ ...estado, sair: () => signOut(obterAuth()) }), [estado])
 
   return <ContextoUsuario.Provider value={valor}>{children}</ContextoUsuario.Provider>
 }

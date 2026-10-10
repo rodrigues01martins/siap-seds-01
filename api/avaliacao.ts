@@ -6,7 +6,6 @@
 // ao salvar, o subcritério vira o foco da sessão, na mesma transação.
 
 import { problemasDoRegistro } from '../src/domain/avaliacao.js'
-import { PERMISSOES } from '../src/domain/permissoes.js'
 import { esquemaRegistroAvaliacao } from '../src/esquemas/avaliacao.js'
 import { obterAdmin } from './_lib/admin.js'
 import { ErroApi, MENSAGENS } from './_lib/erros.js'
@@ -19,7 +18,7 @@ import type { TotaisProposta } from '../src/domain/proposta.js'
 
 export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   PUT: async (requisicao) => {
-    const autor = await autenticar(requisicao, PERMISSOES.nivelD1)
+    const autor = await autenticar(requisicao, 'nivelD1')
     const { chamamentoId, propostaId, ...registro } = await lerCorpo(requisicao, esquemaRegistroAvaliacao)
     const { db } = obterAdmin()
     let totais: TotaisProposta | undefined

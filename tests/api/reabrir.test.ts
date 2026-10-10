@@ -60,7 +60,7 @@ describe('/api/reabrir — reabertura (RF-18)', () => {
       acao: 'editar',
       antes: { bloqueada: true },
       depois: { bloqueada: false, motivoReabertura: MOTIVO },
-      perfil: 'presidente',
+      perfil: 'usuario',
     })
 
     const nivel = await chamar(

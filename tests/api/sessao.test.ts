@@ -73,25 +73,25 @@ describe('/api/sessao — acesso', () => {
     expect((await chamar(rota, 'POST', abertura(), null)).status).toBe(401)
   })
 
-  it('abrir: só o presidente (relator, membro e admin → 403)', async () => {
-    for (const usuario of [relator, membro, admin]) {
+  it('abrir: presidente e administrador (relator e membro → 403)', async () => {
+    for (const usuario of [relator, membro]) {
       expect((await chamar(rota, 'POST', abertura(), usuario.token)).status).toBe(403)
     }
     expect(await totalAuditoria()).toBe(0)
   })
 
-  it('alterar: presidente e relator; membro e admin → 403', async () => {
+  it('alterar: presidente, relator e administrador; membro → 403', async () => {
     const id = await abrir()
     const corpo = alterar(id, { acao: 'foco', foco: null })
     expect((await chamar(rota, 'PATCH', corpo, membro.token)).status).toBe(403)
-    expect((await chamar(rota, 'PATCH', corpo, admin.token)).status).toBe(403)
+    expect((await chamar(rota, 'PATCH', corpo, admin.token)).status).toBe(200)
     expect((await chamar(rota, 'PATCH', corpo, relator.token)).status).toBe(200)
   })
 
   it('encerrar: só o presidente (relator → 403)', async () => {
     const id = await abrir()
     const r = await chamar(rota, 'PATCH', alterar(id, { acao: 'encerrar' }), relator.token)
-    expect(r).toMatchObject({ status: 403, corpo: { erro: 'Seu perfil não tem permissão para esta operação.' } })
+    expect(r).toMatchObject({ status: 403, corpo: { erro: 'Você não tem permissão para esta operação. Peça ao administrador.' } })
   })
 })
 
@@ -118,7 +118,7 @@ describe('/api/sessao — abrir', () => {
     })
     expect(sessao?.abertaEm).toBeInstanceOf(Timestamp)
     const [registro] = await auditoriaDe(caminhoSessao(id))
-    expect(registro).toMatchObject({ acao: 'criar', antes: null, uid: presidente.uid, perfil: 'presidente' })
+    expect(registro).toMatchObject({ acao: 'criar', antes: null, uid: presidente.uid, perfil: 'usuario' })
   })
 
   it('presentes e declarações são opcionais na abertura', async () => {
@@ -136,7 +136,7 @@ describe('/api/sessao — abrir', () => {
     expect(await totalAuditoria()).toBe(0)
   })
 
-  it('presente que não é da Comissão (admin) → 400', async () => {
+  it('presente sem papel na Comissão (admin) → 400', async () => {
     const r = await chamar(rota, 'POST', abertura({ presentes: [presidente.uid, admin.uid], declaracoes: [] }), presidente.token)
     expect(r).toMatchObject({ status: 400, corpo: { campos: { presentes: `Não é membro da Comissão: ${admin.email}.` } } })
   })
@@ -185,7 +185,7 @@ describe('/api/sessao — presentes, declarações e foco', () => {
     expect((sessao?.presentes as { uid: string }[]).map((p) => p.uid)).toEqual([presidente.uid, relator.uid])
     expect((sessao?.declaracoes as { uid: string }[]).map((d) => d.uid)).toEqual([presidente.uid, relator.uid])
     const registro = (await auditoriaDe(caminhoSessao(id))).at(-1)
-    expect(registro).toMatchObject({ acao: 'editar', uid: relator.uid, perfil: 'relator' })
+    expect(registro).toMatchObject({ acao: 'editar', uid: relator.uid, perfil: 'usuario' })
     expect((registro?.antes?.presentes as unknown[]).length).toBe(3)
     expect((registro?.depois?.presentes as unknown[]).length).toBe(2)
   })

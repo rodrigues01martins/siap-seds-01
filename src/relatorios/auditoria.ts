@@ -55,7 +55,7 @@ export function descreverCaminho(caminho: string): string {
     if (!sub) return `Chamamento ${id}`
   }
   if (raiz === 'oscs' && id && partes.length === 2) return `OSC ${id}`
-  if (raiz === 'usuarios' && id && partes.length === 2) return `Perfil do usuário ${id}`
+  if (raiz === 'usuarios' && id && partes.length === 2) return `Acesso do usuário ${id}`
   if (raiz === 'matrizes' && id && partes.length === 2) return `Matriz de avaliação ${id}`
   return caminho
 }

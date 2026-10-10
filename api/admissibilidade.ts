@@ -5,7 +5,6 @@
 
 import { FieldValue } from 'firebase-admin/firestore'
 import { calcularAdmissibilidade, problemasDaAdmissibilidade } from '../src/domain/admissibilidade.js'
-import { PERMISSOES } from '../src/domain/permissoes.js'
 import { esquemaAdmissibilidade } from '../src/esquemas/admissibilidade.js'
 import { obterAdmin } from './_lib/admin.js'
 import { ErroApi, MENSAGENS } from './_lib/erros.js'
@@ -16,7 +15,7 @@ import { exigirSemProblemas, lerCorpo } from './_lib/validacao.js'
 
 export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   PUT: async (requisicao) => {
-    const autor = await autenticar(requisicao, PERMISSOES.admissibilidade)
+    const autor = await autenticar(requisicao, 'admissibilidade')
     const { chamamentoId, propostaId, ...entrada } = await lerCorpo(requisicao, esquemaAdmissibilidade)
     const caminho = `chamamentos/${chamamentoId}/propostas/${propostaId}`
     let apurada: ReturnType<typeof calcularAdmissibilidade> | undefined

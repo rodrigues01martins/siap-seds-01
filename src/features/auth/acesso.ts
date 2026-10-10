@@ -1,12 +1,13 @@
 // Decisão de acesso da rota protegida, separada do React para ser testável.
 
-import type { Perfil } from '../../domain/perfis'
+import { podeFazer, podeLer, type Acesso, type Exigencia } from '../../domain/permissoes'
 
 export interface Usuario {
   uid: string
   email: string | null
-  /** Custom claim "perfil"; null = autenticado, mas sem acesso. */
-  perfil: Perfil | null
+  nome: string | null
+  /** Cadastro em usuarios/{uid}; null = autenticado, mas sem cadastro (sem acesso). */
+  acesso: Acesso | null
 }
 
 export interface EstadoUsuario {
@@ -16,11 +17,12 @@ export interface EstadoUsuario {
 
 export type DecisaoAcesso = 'carregando' | 'login' | 'nao-autorizado' | 'liberado'
 
-export function decidirAcesso(estado: EstadoUsuario, perfisPermitidos?: readonly Perfil[]): DecisaoAcesso {
+/** Sem `exigencia`: basta entrar no app (podeLer). Com ela: a permissão ou ser administrador. */
+export function decidirAcesso(estado: EstadoUsuario, exigencia?: Exigencia): DecisaoAcesso {
   if (estado.carregando) return 'carregando'
   if (!estado.usuario) return 'login'
-  const { perfil } = estado.usuario
-  if (!perfil) return 'nao-autorizado'
-  if (perfisPermitidos && !perfisPermitidos.includes(perfil)) return 'nao-autorizado'
+  const { acesso } = estado.usuario
+  if (!podeLer(acesso)) return 'nao-autorizado'
+  if (exigencia && !podeFazer(acesso, exigencia)) return 'nao-autorizado'
   return 'liberado'
 }

@@ -3,7 +3,6 @@
 // proposta já tem totais calculados. justificativaMinima configura o mínimo da justificativa (C2).
 // processoSei, indiceCorrecao e dataBaseCorrecao (correção monetária dos valores da D2): Etapa 4a.
 
-import { PERMISSOES } from '../src/domain/permissoes.js'
 import { esquemaCriarChamamento, esquemaEditarChamamento } from '../src/esquemas/cadastros.js'
 import { obterAdmin } from './_lib/admin.js'
 import { ErroApi } from './_lib/erros.js'
@@ -14,7 +13,7 @@ import { lerCorpo } from './_lib/validacao.js'
 
 export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   POST: async (requisicao) => {
-    const autor = await autenticar(requisicao, PERMISSOES.cadastros)
+    const autor = await autenticar(requisicao, 'chamamentos')
     const dados = await lerCorpo(requisicao, esquemaCriarChamamento)
     const id = obterAdmin().db.collection('chamamentos').doc().id
     await gravar(autor, () => [{ caminho: `chamamentos/${id}`, acao: 'criar', dados }])
@@ -22,7 +21,7 @@ export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   },
 
   PATCH: async (requisicao) => {
-    const autor = await autenticar(requisicao, PERMISSOES.cadastros)
+    const autor = await autenticar(requisicao, 'chamamentos')
     const { id, ...alteracoes } = await lerCorpo(requisicao, esquemaEditarChamamento)
     await gravar(autor, async (transacao) => {
       const { db } = obterAdmin()

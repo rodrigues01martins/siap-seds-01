@@ -1,13 +1,12 @@
 // /projecao/:ch/:sessaoId — telão da sala: só leitura, tela cheia, fonte grande e alto contraste,
 // sem menu e sem nenhum controle de escrita. Acompanha em tempo real (onSnapshot) o foco da sessão,
 // a proposta em foco (totais, admissibilidade) e o documento do item projetado.
-// Qualquer perfil com leitura abre; o telão usa um login próprio com perfil membro (README).
+// Qualquer usuário com acesso abre; o telão usa um login próprio só com a permissão Consulta (README).
 
 import { useState } from 'react'
 import { useParams } from 'react-router'
 import { formatarCnpj } from '../../domain/cnpj'
 import type { ResultadoD2 } from '../../domain/d2'
-import { PERFIS, type Perfil } from '../../domain/perfis'
 import type { TotaisProposta } from '../../domain/proposta'
 import { statusDaProposta } from '../../domain/statusProposta'
 import type { Admissibilidade } from '../../domain/admissibilidade'
@@ -21,9 +20,6 @@ import {
   TelaEspera,
 } from './ConteudoProjecao'
 import { tipoDoFoco } from './foco'
-
-/** Todos os perfis leem a projeção (o telão usa um usuário com perfil membro). */
-export const PERFIS_PROJECAO: readonly Perfil[] = PERFIS
 
 type ComCarimbo = { atualizadoEm?: { toDate(): Date } }
 

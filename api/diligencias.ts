@@ -5,7 +5,6 @@
 // Não admite inclusão de conteúdo técnico novo (Anexo III, 29.3) — aviso fixo na tela.
 
 import { FieldValue } from 'firebase-admin/firestore'
-import { PERMISSOES } from '../src/domain/permissoes.js'
 import { esquemaAlterarDiligencia, esquemaCriarDiligencia } from '../src/esquemas/resultado.js'
 import { obterAdmin } from './_lib/admin.js'
 import { ErroApi, MENSAGENS } from './_lib/erros.js'
@@ -18,7 +17,7 @@ const assinatura = (autor: Autor) => ({ uid: autor.uid, email: autor.email })
 
 export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   POST: async (requisicao) => {
-    const autor = await autenticar(requisicao, PERMISSOES.diligencias)
+    const autor = await autenticar(requisicao, 'diligencias')
     const { chamamentoId, propostaId, objeto, prazo } = await lerCorpo(requisicao, esquemaCriarDiligencia)
     const { db } = obterAdmin()
     const caminhoProposta = `chamamentos/${chamamentoId}/propostas/${propostaId}`
@@ -38,7 +37,7 @@ export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   },
 
   PATCH: async (requisicao) => {
-    const autor = await autenticar(requisicao, PERMISSOES.diligencias)
+    const autor = await autenticar(requisicao, 'diligencias')
     const alteracao = await lerCorpo(requisicao, esquemaAlterarDiligencia)
     const caminho = `chamamentos/${alteracao.chamamentoId}/propostas/${alteracao.propostaId}/diligencias/${alteracao.id}`
 

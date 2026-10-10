@@ -5,7 +5,7 @@ import { ErroApi } from '../../api/_lib/erros'
 import { gravar, type Autor } from '../../api/_lib/gravar'
 import { auditoriaDe, ler, limparFirestore, totalAuditoria } from './apoio'
 
-const autor: Autor = { uid: 'uid-relator', email: 'relator@go.gov.br', perfil: 'relator' }
+const autor: Autor = { uid: 'uid-relator', email: 'relator@go.gov.br', perfil: 'usuario' }
 const PROPOSTA = 'chamamentos/c1/propostas/p1'
 
 async function semente(caminho: string, dados: Record<string, unknown>) {
@@ -33,7 +33,7 @@ describe('gravar (B4): transação + auditoria no mesmo commit', () => {
       depois: { nome: 'OSC X' },
       uid: 'uid-relator',
       email: 'relator@go.gov.br',
-      perfil: 'relator',
+      perfil: 'usuario',
     })
     expect(registro!.dataHora).toBeInstanceOf(Timestamp)
   })

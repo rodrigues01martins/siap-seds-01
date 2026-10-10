@@ -15,7 +15,7 @@ export class ErroApi extends Error {
 export const MENSAGENS = {
   semLogin: 'Faça login para continuar.',
   sessaoInvalida: 'Sessão inválida ou expirada. Entre novamente.',
-  semPermissao: 'Seu perfil não tem permissão para esta operação.',
+  semPermissao: 'Você não tem permissão para esta operação. Peça ao administrador.',
   dadosInvalidos: 'Dados inválidos.',
   jsonInvalido: 'O corpo da requisição deve ser um JSON válido.',
   naoEncontrado: 'Registro não encontrado.',

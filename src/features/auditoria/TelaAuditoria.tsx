@@ -56,7 +56,7 @@ export function TelaAuditoria() {
           </button>
         }
       >
-        Trilha de auditoria
+        Histórico de alterações
       </Titulo>
       <p className="mb-4 text-sm text-slate-600">
         Cada escrita da /api grava aqui, na mesma transação, quem fez, quando, o que mudou (antes e depois). Somente leitura.

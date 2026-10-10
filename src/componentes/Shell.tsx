@@ -1,20 +1,12 @@
-// Layout das telas logadas: menu lateral por perfil, cabeçalho com usuário/perfil e sair.
+// Layout das telas logadas: menu lateral conforme o acesso, cabeçalho com o usuário e sair.
 
 import { NavLink, Outlet } from 'react-router'
 import { useUsuario } from '../features/auth/useUsuario'
 import { itensDoMenu } from './menu'
 
-const ROTULO_PERFIL: Record<string, string> = {
-  admin: 'Administrador',
-  presidente: 'Presidente',
-  relator: 'Relator',
-  membro: 'Membro',
-  controle: 'Controle',
-}
-
 export function Shell() {
   const { usuario, sair } = useUsuario()
-  const itens = itensDoMenu(usuario?.perfil ?? null)
+  const itens = itensDoMenu(usuario?.acesso ?? null)
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 md:flex">
@@ -44,8 +36,8 @@ export function Shell() {
           <span className="text-sm text-slate-600">Avaliação de Planos de Ação — Comissão de Seleção</span>
           <div className="flex items-center gap-3 text-sm">
             <span>
-              {usuario?.email} ·{' '}
-              <strong>{usuario?.perfil ? ROTULO_PERFIL[usuario.perfil] : 'sem perfil'}</strong>
+              {usuario?.nome ?? usuario?.email} ·{' '}
+              <strong>{usuario?.acesso?.admin ? 'Administrador' : 'Usuário'}</strong>
             </span>
             <button
               type="button"

@@ -61,17 +61,16 @@ beforeEach(async () => {
 })
 
 describe('/api/admissibilidade — acesso', () => {
-  it('405 com Allow PUT, 401, 403 (membro e admin)', async () => {
+  it('405 com Allow PUT, 401, 403 (membro)', async () => {
     const r = await chamar(rota, 'GET', undefined, relator.token)
     expect(r.status).toBe(405)
     expect(r.headers.get('Allow')).toBe('PUT')
     expect((await chamar(rota, 'PUT', corpo(), null)).status).toBe(401)
     expect((await chamar(rota, 'PUT', corpo(), membro.token)).status).toBe(403)
-    expect((await chamar(rota, 'PUT', corpo(), admin.token)).status).toBe(403)
   })
 
-  it.each(['presidente', 'relator'] as const)('%s registra', async (perfil) => {
-    expect((await chamar(rota, 'PUT', corpo(), { presidente, relator }[perfil].token)).status).toBe(200)
+  it.each(['presidente', 'relator', 'admin'] as const)('%s registra', async (perfil) => {
+    expect((await chamar(rota, 'PUT', corpo(), { presidente, relator, admin }[perfil].token)).status).toBe(200)
   })
 })
 

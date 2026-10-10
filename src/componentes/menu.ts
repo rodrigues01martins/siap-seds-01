@@ -1,21 +1,21 @@
-// Itens do menu lateral por perfil (separado do React para ser testável).
+// Itens do menu lateral conforme o acesso (separado do React para ser testável).
 
-import type { Perfil } from '../domain/perfis'
-import { PERMISSOES } from '../domain/permissoes'
+import { podeFazer, podeLer, type Acesso, type Exigencia } from '../domain/permissoes'
 
 export interface ItemMenu {
   rotulo: string
   caminho: string
 }
 
-const ITENS: (ItemMenu & { perfis: readonly Perfil[] })[] = [
-  { rotulo: 'Chamamentos', caminho: '/', perfis: ['admin', 'presidente', 'relator', 'membro', 'controle'] },
-  { rotulo: 'OSCs', caminho: '/oscs', perfis: ['admin'] },
-  { rotulo: 'Perfis de acesso', caminho: '/perfis', perfis: ['admin'] },
-  { rotulo: 'Auditoria', caminho: '/auditoria', perfis: PERMISSOES.lerAuditoria },
+/** Sem `exige`: aparece para todos que entram no app. */
+const ITENS: (ItemMenu & { exige?: Exigencia })[] = [
+  { rotulo: 'Chamamentos', caminho: '/' },
+  { rotulo: 'OSCs', caminho: '/oscs', exige: 'oscs' },
+  { rotulo: 'Usuários', caminho: '/usuarios', exige: 'admin' },
+  { rotulo: 'Histórico de alterações', caminho: '/auditoria', exige: 'admin' },
 ]
 
-export function itensDoMenu(perfil: Perfil | null): ItemMenu[] {
-  if (!perfil) return []
-  return ITENS.filter((item) => item.perfis.includes(perfil)).map(({ rotulo, caminho }) => ({ rotulo, caminho }))
+export function itensDoMenu(acesso: Acesso | null): ItemMenu[] {
+  if (!podeLer(acesso)) return []
+  return ITENS.filter((item) => !item.exige || podeFazer(acesso, item.exige)).map(({ rotulo, caminho }) => ({ rotulo, caminho }))
 }

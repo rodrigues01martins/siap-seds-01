@@ -1,8 +1,7 @@
 import type { ReactNode } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 import { Shell } from './componentes/Shell'
-import type { Perfil } from './domain/perfis'
-import { PERMISSOES } from './domain/permissoes'
+import type { Exigencia } from './domain/permissoes'
 import { TelaAdmissibilidade } from './features/admissibilidade/TelaAdmissibilidade'
 import { TelaAuditoria } from './features/auditoria/TelaAuditoria'
 import { Login } from './features/auth/Login'
@@ -17,17 +16,15 @@ import { TelaD2 } from './features/experiencias/TelaD2'
 import { TelaMemoriaD2 } from './features/experiencias/TelaMemoriaD2'
 import { TelaOscs } from './features/oscs/TelaOscs'
 import { TelaDiligencias } from './features/diligencias/TelaDiligencias'
-import { TelaPerfis } from './features/perfis/TelaPerfis'
-import { PERFIS_PROJECAO, TelaProjecao } from './features/projecao/TelaProjecao'
+import { TelaProjecao } from './features/projecao/TelaProjecao'
 import { TelaAta } from './features/relatorios/TelaAta'
 import { TelaClassificacao } from './features/resultado/TelaClassificacao'
 import { ConduzirSessao } from './features/sessoes/ConduzirSessao'
 import { NovaSessao } from './features/sessoes/NovaSessao'
+import { TelaUsuarios } from './features/usuarios/TelaUsuarios'
 
-/** Quem lê chamamentos e o que há abaixo deles (firestore.rules); controle só lê. */
-const LEITURA: readonly Perfil[] = ['admin', 'presidente', 'relator', 'membro', 'controle']
-
-const so = (perfis: readonly Perfil[], tela: ReactNode) => <RotaProtegida perfis={perfis}>{tela}</RotaProtegida>
+/** Tela que exige uma permissão (ou o administrador); sem `exige`, basta ter acesso ao app. */
+const so = (exige: Exigencia | null, tela: ReactNode) => <RotaProtegida exige={exige ?? undefined}>{tela}</RotaProtegida>
 
 export default function App() {
   return (
@@ -36,7 +33,7 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           {/* Telão: fora do Shell (sem menu), só leitura. */}
-          <Route path="/projecao/:ch/:sessaoId" element={so(PERFIS_PROJECAO, <TelaProjecao />)} />
+          <Route path="/projecao/:ch/:sessaoId" element={so(null, <TelaProjecao />)} />
           <Route
             element={
               <RotaProtegida>
@@ -45,23 +42,23 @@ export default function App() {
             }
           >
             <Route index element={<Inicio />} />
-            <Route path="chamamentos/novo" element={so(PERMISSOES.cadastros, <FormChamamento />)} />
-            <Route path="chamamentos/:ch" element={so(LEITURA, <PainelChamamento />)} />
-            <Route path="chamamentos/:ch/editar" element={so(PERMISSOES.cadastros, <FormChamamento />)} />
-            <Route path="chamamentos/:ch/propostas/nova" element={so(PERMISSOES.cadastros, <FormProposta />)} />
-            <Route path="chamamentos/:ch/propostas/:p/editar" element={so(PERMISSOES.cadastros, <FormProposta />)} />
-            <Route path="chamamentos/:ch/sessoes/nova" element={so(PERMISSOES.sessaoAbrirEncerrar, <NovaSessao />)} />
-            <Route path="chamamentos/:ch/sessoes/:s" element={so(LEITURA, <ConduzirSessao />)} />
-            <Route path="chamamentos/:ch/sessoes/:s/ata" element={so(LEITURA, <TelaAta />)} />
-            <Route path="chamamentos/:ch/propostas/:p/admissibilidade" element={so(LEITURA, <TelaAdmissibilidade />)} />
-            <Route path="chamamentos/:ch/propostas/:p/d1" element={so(LEITURA, <TelaD1 />)} />
-            <Route path="chamamentos/:ch/propostas/:p/d2" element={so(LEITURA, <TelaD2 />)} />
-            <Route path="chamamentos/:ch/propostas/:p/d2/memoria" element={so(LEITURA, <TelaMemoriaD2 />)} />
-            <Route path="chamamentos/:ch/propostas/:p/diligencias" element={so(LEITURA, <TelaDiligencias />)} />
-            <Route path="chamamentos/:ch/lotes/:lote/classificacao" element={so(LEITURA, <TelaClassificacao />)} />
-            <Route path="oscs" element={so(PERMISSOES.cadastros, <TelaOscs />)} />
-            <Route path="perfis" element={so(PERMISSOES.perfis, <TelaPerfis />)} />
-            <Route path="auditoria" element={so(PERMISSOES.lerAuditoria, <TelaAuditoria />)} />
+            <Route path="chamamentos/novo" element={so('chamamentos', <FormChamamento />)} />
+            <Route path="chamamentos/:ch" element={so(null, <PainelChamamento />)} />
+            <Route path="chamamentos/:ch/editar" element={so('chamamentos', <FormChamamento />)} />
+            <Route path="chamamentos/:ch/propostas/nova" element={so('propostas', <FormProposta />)} />
+            <Route path="chamamentos/:ch/propostas/:p/editar" element={so('propostas', <FormProposta />)} />
+            <Route path="chamamentos/:ch/sessoes/nova" element={so('sessaoAbrirEncerrar', <NovaSessao />)} />
+            <Route path="chamamentos/:ch/sessoes/:s" element={so(null, <ConduzirSessao />)} />
+            <Route path="chamamentos/:ch/sessoes/:s/ata" element={so(null, <TelaAta />)} />
+            <Route path="chamamentos/:ch/propostas/:p/admissibilidade" element={so(null, <TelaAdmissibilidade />)} />
+            <Route path="chamamentos/:ch/propostas/:p/d1" element={so(null, <TelaD1 />)} />
+            <Route path="chamamentos/:ch/propostas/:p/d2" element={so(null, <TelaD2 />)} />
+            <Route path="chamamentos/:ch/propostas/:p/d2/memoria" element={so(null, <TelaMemoriaD2 />)} />
+            <Route path="chamamentos/:ch/propostas/:p/diligencias" element={so(null, <TelaDiligencias />)} />
+            <Route path="chamamentos/:ch/lotes/:lote/classificacao" element={so(null, <TelaClassificacao />)} />
+            <Route path="oscs" element={so('oscs', <TelaOscs />)} />
+            <Route path="usuarios" element={so('admin', <TelaUsuarios />)} />
+            <Route path="auditoria" element={so('admin', <TelaAuditoria />)} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

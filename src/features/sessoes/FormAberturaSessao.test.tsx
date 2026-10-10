@@ -94,6 +94,6 @@ describe('Tela de abertura da sessão', () => {
 
   it('sem membros da Comissão cadastrados: aviso', () => {
     render(<FormAberturaSessao membros={[]} propostas={PROPOSTAS} onAbrir={vi.fn()} />)
-    expect(screen.getByText(/Nenhum membro da Comissão com perfil/)).toBeInTheDocument()
+    expect(screen.getByText(/Nenhum usuário com papel na Comissão/)).toBeInTheDocument()
   })
 })

@@ -4,14 +4,15 @@
 
 import { useFormContext, useWatch, type FieldValues } from 'react-hook-form'
 import { Campo, Formulario, mensagemDoCampo } from '../../componentes/Formulario'
-import type { Perfil } from '../../domain/perfis'
+import { ROTULO_PAPEL, type PapelComissao } from '../../domain/comissao'
 import type { z } from '../../esquemas/base'
 import { esquemaAbrirSessao, type Declaracao } from '../../esquemas/sessao'
 
 export interface MembroComissao {
   uid: string
   email: string | null
-  perfil: Perfil
+  /** Papel na Comissão (usuarios/{uid}.comissao). */
+  perfil: PapelComissao
 }
 
 export interface PropostaPauta {
@@ -67,7 +68,7 @@ function LinhaDoMembro({ membro, indice }: { membro: MembroComissao; indice: num
     <tr className="border-t border-slate-200 align-top">
       <td className="py-2 pr-4">
         <span className="font-medium">{nome}</span>
-        <span className="ml-2 text-xs text-slate-500">{membro.perfil}</span>
+        <span className="ml-2 text-xs text-slate-500">{ROTULO_PAPEL[membro.perfil]}</span>
       </td>
       <td className="py-2 pr-4">
         <label className="inline-flex items-center gap-2">
@@ -119,8 +120,8 @@ export function LinhasMembros({ membros }: { membros: MembroComissao[] }) {
       <legend className="text-sm font-medium text-slate-700">Membros presentes e declarações</legend>
       {membros.length === 0 ? (
         <p className="mt-2 rounded-md bg-amber-50 p-3 text-sm text-amber-900">
-          Nenhum membro da Comissão com perfil atribuído. Peça ao administrador para dar os perfis (presidente,
-          relator, membro).
+          Nenhum usuário com papel na Comissão. Peça ao administrador para definir o papel (presidente, relator ou
+          membro) na tela Usuários.
         </p>
       ) : (
         <table className="mt-2 w-full text-sm">

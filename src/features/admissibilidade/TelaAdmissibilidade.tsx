@@ -25,8 +25,8 @@ export function TelaAdmissibilidade() {
   const gravada = (proposta as { admissibilidade?: Gravada }).admissibilidade ?? null
   const motivo = proposta.bloqueada
     ? 'Proposta homologada: somente leitura.'
-    : !podeFazer(usuario?.perfil ?? null, 'admissibilidade')
-      ? 'Seu perfil consulta a admissibilidade; o registro é do presidente ou do relator.'
+    : !podeFazer(usuario?.acesso ?? null, 'admissibilidade')
+      ? 'Você consulta a admissibilidade; o registro exige a permissão "Admissibilidade".'
       : null
 
   return (

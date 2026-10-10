@@ -6,7 +6,6 @@
 
 import { FieldValue } from 'firebase-admin/firestore'
 import { classificarLote, type PropostaDoLote } from '../src/domain/classificacao.js'
-import { PERMISSOES } from '../src/domain/permissoes.js'
 import { esquemaDesempate } from '../src/esquemas/resultado.js'
 import { obterAdmin } from './_lib/admin.js'
 import { ErroApi, MENSAGENS } from './_lib/erros.js'
@@ -22,7 +21,7 @@ function idDaDecisao(lote: string, propostas: string[]): string {
 
 export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   PUT: async (requisicao) => {
-    const autor = await autenticar(requisicao, PERMISSOES.desempate)
+    const autor = await autenticar(requisicao, 'desempate')
     const { chamamentoId, loteCodigo, ordem, justificativa } = await lerCorpo(requisicao, esquemaDesempate)
     const { db } = obterAdmin()
     const id = idDaDecisao(loteCodigo, ordem)

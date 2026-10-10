@@ -37,8 +37,8 @@ export function TelaD2() {
     ? 'Proposta homologada: somente leitura.'
     : admissao === 'nao_admitida' || admissao === 'desclassificada'
       ? 'Proposta não admitida (Anexo III, item 28): não segue para avaliação.'
-      : !podeFazer(usuario?.perfil ?? null, 'experienciasD2')
-      ? 'Seu perfil consulta as experiências, mas não as edita.'
+      : !podeFazer(usuario?.acesso ?? null, 'experienciasD2')
+      ? 'Você consulta as experiências, mas não as edita (permissão "Experiências da D2").'
       : null
   const alvo = { chamamentoId: ch, propostaId: p }
   const nomes = Object.fromEntries(lista.map((e) => [e.id, e.descricao]))

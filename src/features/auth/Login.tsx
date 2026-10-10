@@ -4,6 +4,7 @@ import { useState, type FormEvent } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router'
 import { obterAuth } from '../../lib/firebase'
 import { mensagemErroLogin } from './mensagens'
+import { enviarEmailDeSenha } from './senha'
 import { useUsuario } from './useUsuario'
 
 export function Login() {
@@ -14,12 +15,29 @@ export function Login() {
   const [senha, setSenha] = useState('')
   const [erro, setErro] = useState<string | null>(null)
   const [enviando, setEnviando] = useState(false)
+  const [aviso, setAviso] = useState<string | null>(null)
 
   if (!carregando && usuario) return <Navigate to={destino} replace />
+
+  async function pedirSenha() {
+    setErro(null)
+    setAviso(null)
+    if (!email.trim()) {
+      setErro('Digite o seu e-mail acima e clique de novo.')
+      return
+    }
+    try {
+      await enviarEmailDeSenha(email)
+      setAviso(`Se ${email.trim()} estiver cadastrado, chegará um e-mail com o link para criar a senha. Veja também o spam.`)
+    } catch (e) {
+      setErro((e as Error).message)
+    }
+  }
 
   async function entrar(evento: FormEvent) {
     evento.preventDefault()
     setErro(null)
+    setAviso(null)
     setEnviando(true)
     try {
       await signInWithEmailAndPassword(obterAuth(), email.trim(), senha)
@@ -63,12 +81,20 @@ export function Login() {
             {erro}
           </p>
         )}
+        {aviso && (
+          <p role="status" className="text-sm text-emerald-800">
+            {aviso}
+          </p>
+        )}
         <button
           type="submit"
           disabled={enviando}
           className="w-full rounded-md bg-slate-900 px-4 py-2 font-medium text-white disabled:opacity-60"
         >
           {enviando ? 'Entrando…' : 'Entrar'}
+        </button>
+        <button type="button" onClick={pedirSenha} className="w-full text-sm text-slate-700 underline">
+          Primeiro acesso ou esqueci minha senha
         </button>
       </form>
     </main>

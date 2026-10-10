@@ -24,8 +24,8 @@ export function TelaDiligencias() {
   const { proposta } = leitura.dados
   const motivo = proposta.bloqueada
     ? 'Proposta homologada: somente leitura.'
-    : !podeFazer(usuario?.perfil ?? null, 'diligencias')
-      ? 'Seu perfil consulta as diligências; o registro é do presidente ou do relator.'
+    : !podeFazer(usuario?.acesso ?? null, 'diligencias')
+      ? 'Você consulta as diligências; o registro exige a permissão "Diligências".'
       : null
   const base = { chamamentoId: ch, propostaId: p }
   const lista = [...diligencias.dados].sort((a, b) => a.prazo.localeCompare(b.prazo))

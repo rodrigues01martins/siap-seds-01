@@ -32,7 +32,7 @@ export function motivoSomenteLeituraD1(
   if (admissao === 'nao_admitida' || admissao === 'desclassificada') {
     return 'Proposta não admitida (Anexo III, item 28): não segue para avaliação.'
   }
-  if (!podeRegistrar) return 'Seu perfil consulta a avaliação, mas não registra níveis.'
+  if (!podeRegistrar) return 'Você consulta a avaliação, mas não registra níveis (permissão "Níveis da D1").'
   if (!dados.sessaoAberta) return 'Nenhuma sessão aberta: o presidente precisa abrir a sessão para registrar níveis.'
   if (!dados.sessaoAberta.pauta.includes(dados.proposta.id)) return 'Proposta fora da pauta da sessão aberta.'
   return null
@@ -55,9 +55,9 @@ export function TelaD1() {
   const registros = new Map(avaliacoes.dados.map((a) => [a.id, a]))
   const previa = calcularD1(Object.fromEntries(avaliacoes.dados.map((a) => [a.id, a.nivel])))
   const atual = escolhido ?? previa.pendentes[0] ?? CODIGOS[0]!
-  const motivo = motivoSomenteLeituraD1(dados, podeFazer(usuario?.perfil ?? null, 'nivelD1'))
+  const motivo = motivoSomenteLeituraD1(dados, podeFazer(usuario?.acesso ?? null, 'nivelD1'))
   const sessao = dados.sessaoAberta
-  const podeProjetar = sessao !== null && sessao.pauta.includes(p) && podeFazer(usuario?.perfil ?? null, 'sessaoConduzir')
+  const podeProjetar = sessao !== null && sessao.pauta.includes(p) && podeFazer(usuario?.acesso ?? null, 'sessaoConduzir')
   async function projetar(pedido: PedidoProjecao) {
     setErroProjecao(null)
     try {

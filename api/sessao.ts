@@ -1,13 +1,13 @@
 // /api/sessao — sessão da Comissão em chamamentos/{ch}/sessoes/{id}.
-// POST abre (presidente). PATCH com "acao": presentes, declaracoes e foco (presidente e relator)
-// ou encerrar (presidente). Sessão encerrada não aceita alteração (409). Tudo auditado.
+// POST abre (permissão sessaoAbrirEncerrar). PATCH com "acao": presentes, declaracoes e foco (sessaoConduzir)
+// ou encerrar (sessaoAbrirEncerrar). Presentes: quem tem papel na Comissão (usuarios/{uid}.comissao). Sessão encerrada não aceita alteração (409). Tudo auditado.
 // foco = { tipo: admissibilidade | subcriterio | d2 | resumo, propostaId, subcriterio? } (Etapa 5: telão).
 // A avaliação (C2) só é aceita com sessaoId de sessão aberta (api/avaliacao.ts).
 
 import { FieldValue, type Transaction } from 'firebase-admin/firestore'
 import { planoDoSubcriterio } from '../src/domain/avaliacao.js'
-import { PERFIS_COMISSAO } from '../src/domain/perfis.js'
-import { PERMISSOES } from '../src/domain/permissoes.js'
+import { ehPapelComissao } from '../src/domain/comissao.js'
+import { podeFazer } from '../src/domain/permissoes.js'
 import { esquemaAbrirSessao, esquemaAlterarSessao, type Declaracao } from '../src/esquemas/sessao.js'
 import { obterAdmin } from './_lib/admin.js'
 import { ErroApi, MENSAGENS } from './_lib/erros.js'
@@ -19,6 +19,7 @@ import { exigirSemProblemas, lerCorpo } from './_lib/validacao.js'
 interface Presente {
   uid: string
   email: string | null
+  /** Papel na Comissão (presidente, relator ou membro). */
   perfil: string
 }
 
@@ -30,16 +31,16 @@ async function lerUsuarios(transacao: Transaction, uids: string[]) {
   return documentos.map((d, i) => ({
     uid: uids[i]!,
     email: (d.get('email') as string | undefined) ?? null,
-    perfil: d.get('perfil') as string | undefined,
+    comissao: d.get('comissao') as unknown,
   }))
 }
 
-/** Presentes precisam ser da Comissão (presidente, relator ou membro). */
+/** Presentes precisam ter papel na Comissão (presidente, relator ou membro), gravado na sessão e na ata. */
 async function membrosDaComissao(transacao: Transaction, uids: string[]): Promise<Presente[]> {
   const usuarios = await lerUsuarios(transacao, uids)
-  const fora = usuarios.find((u) => !(PERFIS_COMISSAO as readonly (string | undefined)[]).includes(u.perfil))
+  const fora = usuarios.find((u) => !ehPapelComissao(u.comissao))
   if (fora) exigirSemProblemas({ presentes: `Não é membro da Comissão: ${fora.email ?? fora.uid}.` })
-  return usuarios.map((u) => ({ uid: u.uid, email: u.email, perfil: u.perfil! }))
+  return usuarios.map((u) => ({ uid: u.uid, email: u.email, perfil: u.comissao as string }))
 }
 
 /** Só quem está presente declara; o motivo só é gravado quando há impedimento. */
@@ -63,7 +64,7 @@ const assinatura = (autor: Autor) => ({ uid: autor.uid, email: autor.email })
 
 export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   POST: async (requisicao) => {
-    const autor = await autenticar(requisicao, PERMISSOES.sessaoAbrirEncerrar)
+    const autor = await autenticar(requisicao, 'sessaoAbrirEncerrar')
     const { chamamentoId, data, pauta, presentes, declaracoes } = await lerCorpo(requisicao, esquemaAbrirSessao)
     const sessoes = db().collection(`chamamentos/${chamamentoId}/sessoes`)
     const id = sessoes.doc().id
@@ -105,9 +106,9 @@ export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   },
 
   PATCH: async (requisicao) => {
-    const autor = await autenticar(requisicao, PERMISSOES.sessaoConduzir)
+    const autor = await autenticar(requisicao, 'sessaoConduzir')
     const alteracao = await lerCorpo(requisicao, esquemaAlterarSessao)
-    if (alteracao.acao === 'encerrar' && !(PERMISSOES.sessaoAbrirEncerrar as readonly string[]).includes(autor.perfil)) {
+    if (alteracao.acao === 'encerrar' && !podeFazer(autor.acesso, 'sessaoAbrirEncerrar')) {
       throw new ErroApi(403, MENSAGENS.semPermissao)
     }
     const caminho = `chamamentos/${alteracao.chamamentoId}/sessoes/${alteracao.sessaoId}`

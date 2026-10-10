@@ -16,7 +16,7 @@ const numero = (valor: number | undefined) =>
 export function PainelChamamento() {
   const { ch } = useParams()
   const { usuario } = useUsuario()
-  const perfil = usuario?.perfil ?? null
+  const acesso = usuario?.acesso ?? null
   const chamamento = useDocumento<Chamamento>(`chamamentos/${ch}`)
   const propostas = useColecao<Proposta>(`chamamentos/${ch}/propostas`)
   const oscs = useColecao<Osc>('oscs')
@@ -29,7 +29,7 @@ export function PainelChamamento() {
 
   const c = chamamento.dados
   const nomeOsc = new Map(oscs.dados.map((o) => [o.cnpj, o.razaoSocial]))
-  const admin = podeFazer(perfil, 'cadastros')
+  const admin = podeFazer(acesso, 'chamamentos')
   const sessaoAberta = sessoes.dados.find((s) => s.status === 'aberta')
 
   return (
@@ -125,7 +125,7 @@ export function PainelChamamento() {
       <Secao
         titulo="Sessões da Comissão"
         acoes={
-          podeFazer(perfil, 'sessaoAbrirEncerrar') &&
+          podeFazer(acesso, 'sessaoAbrirEncerrar') &&
           !sessaoAberta && (
             <LinkBotao para={`/chamamentos/${ch}/sessoes/nova`} primario>
               Abrir sessão

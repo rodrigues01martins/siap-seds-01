@@ -3,6 +3,7 @@
 import { Link } from 'react-router'
 import { EstadoLeitura, LinkBotao, Titulo, dataBr } from '../../componentes/basicos'
 import { Tabela } from '../../componentes/Tabela'
+import { podeFazer } from '../../domain/permissoes'
 import { useColecao } from '../../lib/firestore'
 import type { Chamamento } from '../../lib/tipos'
 import { useUsuario } from '../auth/useUsuario'
@@ -19,7 +20,7 @@ function ListaChamamentos() {
 
   return (
     <>
-      <Titulo acoes={usuario?.perfil === 'admin' && <LinkBotao para="/chamamentos/novo" primario>Novo chamamento</LinkBotao>}>
+      <Titulo acoes={podeFazer(usuario?.acesso ?? null, 'chamamentos') && <LinkBotao para="/chamamentos/novo" primario>Novo chamamento</LinkBotao>}>
         Chamamentos
       </Titulo>
       <EstadoLeitura carregando={leitura.carregando} erro={leitura.erro} />

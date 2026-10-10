@@ -15,7 +15,7 @@ import { TabelaClassificacao, type DecisaoRegistrada, type LinhaClassificacao } 
 export function TelaClassificacao() {
   const { ch = '', lote = '' } = useParams()
   const { usuario } = useUsuario()
-  const perfil = usuario?.perfil ?? null
+  const acesso = usuario?.acesso ?? null
   const chamamento = useDocumento<Chamamento>(`chamamentos/${ch}`)
   const propostas = useColecao<Omit<LinhaClassificacao, 'id' | 'nomeOsc'> & { loteCodigo: string; oscCnpj: string }>(`chamamentos/${ch}/propostas`)
   const oscs = useColecao<Osc>('oscs')
@@ -58,9 +58,9 @@ export function TelaClassificacao() {
         lote={dadosLote}
         propostas={linhas}
         decisoes={decisoes}
-        podeHomologar={podeFazer(perfil, 'homologar')}
-        podeDesempatar={podeFazer(perfil, 'desempate')}
-        podeReabrir={podeFazer(perfil, 'reabrir')}
+        podeHomologar={podeFazer(acesso, 'homologar')}
+        podeDesempatar={podeFazer(acesso, 'desempate')}
+        podeReabrir={podeFazer(acesso, 'reabrir')}
         onHomologar={async (id) => {
           await chamarApi('/api/homologar', { metodo: 'POST', corpo: alvo(id) })
         }}

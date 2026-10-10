@@ -8,6 +8,7 @@ import { AlertaErro } from '../../componentes/AlertaErro'
 import { Botao, EstadoLeitura, LinkBotao, Secao, Titulo, dataBr } from '../../componentes/basicos'
 import { CampoSelecao, Formulario } from '../../componentes/Formulario'
 import { Tabela } from '../../componentes/Tabela'
+import { ROTULO_PAPEL } from '../../domain/comissao'
 import { MATRIZ_2026 } from '../../domain/matriz'
 import { podeFazer } from '../../domain/permissoes'
 import type { z } from '../../esquemas/base'
@@ -33,7 +34,7 @@ function CampoSubcriterio() {
 export function ConduzirSessao() {
   const { ch, s } = useParams()
   const { usuario } = useUsuario()
-  const perfil = usuario?.perfil ?? null
+  const acesso = usuario?.acesso ?? null
   const sessao = useDocumento<Sessao>(`chamamentos/${ch}/sessoes/${s}`)
   const propostas = useColecao<Proposta>(`chamamentos/${ch}/propostas`)
   const oscs = useColecao<Osc>('oscs')
@@ -46,7 +47,7 @@ export function ConduzirSessao() {
 
   const dados = sessao.dados
   const aberta = dados.status === 'aberta'
-  const conduz = aberta && podeFazer(perfil, 'sessaoConduzir')
+  const conduz = aberta && podeFazer(acesso, 'sessaoConduzir')
   const nomeOsc = new Map(oscs.dados.map((o) => [o.cnpj, o.razaoSocial]))
   const rotuloProposta = (id: string) => {
     const p = propostas.dados.find((x) => x.id === id)
@@ -72,7 +73,7 @@ export function ConduzirSessao() {
         acoes={
           <>
             <LinkBotao para={`/chamamentos/${ch}/sessoes/${s}/ata`}>Minuta de ata</LinkBotao>
-            {aberta && podeFazer(perfil, 'sessaoAbrirEncerrar') && (
+            {aberta && podeFazer(acesso, 'sessaoAbrirEncerrar') && (
               <Botao
                 perigo
                 onClick={() => {
@@ -140,7 +141,7 @@ export function ConduzirSessao() {
           vazio="Nenhum presente registrado."
           colunas={[
             { titulo: 'Membro', celula: (p) => p.email ?? p.uid },
-            { titulo: 'Perfil', celula: (p) => p.perfil },
+            { titulo: 'Papel', celula: (p) => ROTULO_PAPEL[p.perfil] ?? p.perfil },
             {
               titulo: 'Declaração',
               celula: (p) => {

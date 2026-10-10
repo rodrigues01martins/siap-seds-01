@@ -53,7 +53,7 @@ describe('/api/diligencias — criar', () => {
     const doc = await ler(caminho(id))
     expect(doc).toMatchObject({ objeto: nova().objeto, prazo: PRAZO, status: 'aberta', criadaPor: { uid: relator.uid } })
     expect(doc?.criadaEm).toBeInstanceOf(Timestamp)
-    expect((await auditoriaDe(caminho(id)))[0]).toMatchObject({ acao: 'criar', perfil: 'relator' })
+    expect((await auditoriaDe(caminho(id)))[0]).toMatchObject({ acao: 'criar', perfil: 'usuario' })
   })
 
   it.each([
