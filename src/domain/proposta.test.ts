@@ -24,6 +24,12 @@ describe('consolidarProposta (C4)', () => {
       totaisPorPA: d1.totaisPorPA,
       d1: d1.d1,
       d2: d2.total,
+      d2PorCriterio: {
+        'C2.1': d2.criterios['C2.1'].pontos,
+        'C2.2': d2.criterios['C2.2'].pontos,
+        'C2.3': d2.criterios['C2.3'].pontos,
+        'C2.4': d2.criterios['C2.4'].pontos,
+      },
       nf: d1.d1 + d2.total,
       status: d1.status,
       completa: d1.completa,

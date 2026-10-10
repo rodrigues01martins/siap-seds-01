@@ -57,6 +57,16 @@ export function validarMatriz(matriz: Matriz): Matriz {
 
   if (matriz.notaFinalMaxima !== d1.maximo + d2.maximo) erros.push('Nota final máxima difere de D1 + D2')
 
+  // Desempate (RF-27): cada critério aponta para D1, um PA ou um critério da D2 existentes.
+  const referencias = new Set(['D1', ...d1.planos.map((p) => p.codigo), ...Object.keys(d2.criterios)])
+  const ordens = new Set<string>()
+  for (const c of matriz.desempate) {
+    if (!referencias.has(c.referencia)) erros.push(`Desempate ${c.ordem}: referência inexistente ${c.referencia}`)
+    if (ordens.has(c.ordem)) erros.push(`Desempate: ordem ${c.ordem} repetida`)
+    ordens.add(c.ordem)
+  }
+  if (matriz.desempate.length > 0 && !matriz.fonteDesempate) erros.push('Desempate sem fonteDesempate')
+
   const { admissibilidade: adm } = matriz
   if (!adm.requisitosEssenciais.some((r) => r.codigo === adm.requisitoPlanos)) {
     erros.push(`Admissibilidade: requisito dos PAs ${adm.requisitoPlanos} não está entre os requisitos essenciais`)

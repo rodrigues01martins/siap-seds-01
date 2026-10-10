@@ -89,7 +89,7 @@ describe('classificar — ordem e exclusões', () => {
     expect(r.desclassificadas).toEqual(['descl'])
   })
 
-  it('empate em NF: mesma posição e sinalização; o sistema não desempata (a Comissão decide em outra instância)', () => {
+  it('empate em NF que os critérios do Edital não resolvem (pontuações iguais): mesma posição e sinalização', () => {
     const r = classificar([
       proposta('a', niveis(3)),
       proposta('b', niveis(3)),
@@ -186,5 +186,155 @@ describe('classificarLote — usa classificar() sobre os totais gravados', () =>
 
     const outraNF = classificarLote(tres.slice(0, 2), [{ propostas: ['b', 'c'], nf: 80, ordem: ['c', 'b'] }])
     expect(outraNF.empates[0]!.decidido).toBe(false)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// RF-27 — critérios de desempate do Edital (matriz_2026.json: desempate), em ordem
+// ---------------------------------------------------------------------------
+
+interface Pontos {
+  pas: [number, number, number, number, number, number]
+  c21: number
+  c22: number
+  c23: number
+  c24: number
+}
+
+const BASE: Pontos = { pas: [15, 15, 12, 18, 12, 12], c21: 4, c22: 2, c23: 1, c24: 1 }
+
+/** Proposta apta e completa com pontos por PA e por critério da D2 escolhidos no teste. */
+function avaliada(id: string, ajuste: Partial<Pontos> = {}): PropostaAvaliada {
+  const p = { ...BASE, ...ajuste }
+  const codigosPA = MATRIZ_2026.dimensao1.planos.map((pa) => pa.codigo)
+  return {
+    id,
+    d1: {
+      d1: p.pas.reduce((a, b) => a + b, 0),
+      status: 'apta',
+      completa: true,
+      pendentes: [],
+      totaisPorPA: p.pas.map((pontos, i) => ({ codigo: codigosPA[i]!, pontos })),
+    },
+    d2: {
+      total: p.c21 + p.c22 + p.c23 + p.c24,
+      criterios: { 'C2.1': { pontos: p.c21 }, 'C2.2': { pontos: p.c22 }, 'C2.3': { pontos: p.c23 }, 'C2.4': { pontos: p.c24 } },
+    },
+  }
+}
+
+const ordemDoRanking = (r: ReturnType<typeof classificar>) =>
+  r.ranking.map((p) => [p.posicao, p.id, p.empatada, p.desempatadaPeloEdital, p.criterioDesempate])
+
+describe('desempate pelo Edital (RF-27) — matriz', () => {
+  it('ordem I a VI e fonte registradas no matriz_2026.json', () => {
+    expect(MATRIZ_2026.desempate.map((c) => [c.ordem, c.referencia])).toEqual([
+      ['I', 'D1'],
+      ['II', 'PA1'],
+      ['III', 'PA2'],
+      ['IV', 'PA5'],
+      ['V', 'C2.1'],
+      ['VI', 'C2.3'],
+    ])
+    expect(MATRIZ_2026.fonteDesempate).toMatch(/Edital/)
+  })
+})
+
+describe('desempate pelo Edital (RF-27) — um caso por critério', () => {
+  // Em cada caso as duas propostas têm a mesma NF e empatam nos critérios anteriores.
+  it.each([
+    ['I — maior D1', { pas: [16, 15, 12, 18, 12, 12] as Pontos['pas'], c22: 1 }],
+    ['II — maior PA1', { pas: [16, 14, 12, 18, 12, 12] as Pontos['pas'] }],
+    ['III — maior PA2', { pas: [15, 16, 11, 18, 12, 12] as Pontos['pas'] }],
+    ['IV — maior PA5', { pas: [15, 15, 11, 18, 13, 12] as Pontos['pas'] }],
+    ['V — maior C2.1', { c21: 6, c22: 0 }],
+    ['VI — maior C2.3', { c23: 2, c24: 0 }],
+  ])('%s', (nome, ajuste) => {
+    const criterio = nome.split(' ')[0]!
+    const vencedora = avaliada('vencedora', ajuste)
+    const r = classificar([avaliada('outra'), vencedora])
+    expect(vencedora.d1.d1 + vencedora.d2.total).toBe(avaliada('outra').d1.d1 + avaliada('outra').d2.total)
+    expect(ordemDoRanking(r)).toEqual([
+      [1, 'vencedora', false, true, criterio],
+      [2, 'outra', false, true, criterio],
+    ])
+  })
+
+  it('aplica os critérios em sequência: três propostas separadas pelo I e depois pelo II', () => {
+    const r = classificar([
+      avaliada('c', { pas: [14, 16, 12, 18, 12, 12] }),
+      avaliada('a', { pas: [16, 15, 12, 18, 12, 12], c22: 1 }),
+      avaliada('b', { pas: [15, 15, 12, 18, 12, 12] }),
+    ])
+    expect(ordemDoRanking(r)).toEqual([
+      [1, 'a', false, true, 'I'],
+      [2, 'b', false, true, 'II'],
+      [3, 'c', false, true, 'II'],
+    ])
+  })
+})
+
+describe('desempate pelo Edital (RF-27) — quando não resolve', () => {
+  it('todos os critérios iguais: continua empatada (mesma posição) e cai na decisão manual da Comissão', () => {
+    const r = classificar([avaliada('a'), avaliada('b')])
+    expect(ordemDoRanking(r)).toEqual([
+      [1, 'a', true, false, null],
+      [1, 'b', true, false, null],
+    ])
+    expect(r.empates).toEqual([{ nf: 92, ids: ['a', 'b'], posicao: 1 }])
+  })
+
+  it('resolve uma parte do grupo: a resolvida ganha a posição e as demais seguem empatadas', () => {
+    const r = classificar([avaliada('b'), avaliada('a', { pas: [16, 15, 12, 18, 12, 12], c22: 1 }), avaliada('c')])
+    expect(ordemDoRanking(r)).toEqual([
+      [1, 'a', false, true, 'I'],
+      [2, 'b', true, false, null],
+      [2, 'c', true, false, null],
+    ])
+    expect(r.empates).toEqual([{ nf: 92, ids: ['b', 'c'], posicao: 2 }])
+  })
+
+  it('sem o dado de um critério (ex.: totais gravados antes do RF-27), para nele e mantém o empate', () => {
+    const a = avaliada('a', { c21: 6, c22: 0 })
+    const b = avaliada('b')
+    delete b.d2.criterios
+    const r = classificar([a, b])
+    expect(ordemDoRanking(r)).toEqual([
+      [1, 'a', true, false, null],
+      [1, 'b', true, false, null],
+    ])
+  })
+
+  it('classificarLote: decisão manual só vale para o empate que os critérios não resolveram', () => {
+    const gravados = (id: string, ajuste: Partial<Pontos> = {}) => {
+      const p = avaliada(id, ajuste)
+      return {
+        id,
+        totais: {
+          d1: p.d1.d1,
+          d2: p.d2.total,
+          status: 'apta',
+          completa: true,
+          pendentes: [],
+          totaisPorPA: p.d1.totaisPorPA,
+          d2PorCriterio: { 'C2.1': p.d2.criterios!['C2.1']!.pontos, 'C2.2': p.d2.criterios!['C2.2']!.pontos, 'C2.3': p.d2.criterios!['C2.3']!.pontos, 'C2.4': p.d2.criterios!['C2.4']!.pontos },
+        },
+      }
+    }
+    const lote = [gravados('a', { pas: [16, 15, 12, 18, 12, 12], c22: 1 }), gravados('b'), gravados('c')]
+    const semDecisao = classificarLote(lote)
+    expect(semDecisao.empates).toEqual([{ nf: 92, ids: ['b', 'c'], decidido: false }])
+    expect(semDecisao.definitiva).toBe(false)
+
+    // Decisão sobre o grupo que o Edital já resolveu é ignorada.
+    expect(classificarLote(lote, [{ propostas: ['a', 'b', 'c'], nf: 92, ordem: ['c', 'b', 'a'] }]).empates[0]!.decidido).toBe(false)
+
+    const comDecisao = classificarLote(lote, [{ propostas: ['b', 'c'], nf: 92, ordem: ['c', 'b'] }])
+    expect(comDecisao.ranking.map((p) => [p.posicao, p.id, p.desempatadaPeloEdital, p.desempatadaPelaComissao])).toEqual([
+      [1, 'a', true, false],
+      [2, 'c', false, true],
+      [3, 'b', false, true],
+    ])
+    expect(comDecisao.definitiva).toBe(true)
   })
 })

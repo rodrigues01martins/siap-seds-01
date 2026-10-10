@@ -1,16 +1,24 @@
 // Classificação das propostas por Nota Final (NF = D1 + D2), em ordem decrescente (Anexo IV, item 1.4).
 // Só propostas aptas com avaliação completa entram no ranking.
-// O sistema NÃO calcula desempate: propostas com a mesma NF dividem a posição e são sinalizadas.
-// Enquanto o Edital não parametrizar o critério (RF-27), a decisão da Comissão é registrada pelo
-// presidente (api/desempate.ts) e aplicada por classificarLote só ao mesmo grupo e à mesma NF.
+// Empate de NF (RF-27): aplicam-se, sucessivamente, os critérios do Edital registrados na matriz
+// (matriz_2026.json: desempate, fonteDesempate). Se ainda assim persistir o empate, as propostas
+// dividem a posição e a Comissão decide; o presidente registra a decisão (api/desempate.ts), aplicada
+// por classificarLote só ao mesmo grupo residual e à mesma NF.
 
-import type { ResultadoD1 } from './d1.js'
-import type { ResultadoD2 } from './d2.js'
+import type { ResultadoD1, TotalPA } from './d1.js'
+import type { CodigoCriterioD2, ResultadoD2 } from './d2.js'
+import { MATRIZ_2026, type CriterioDesempate, type Matriz } from './matriz/index.js'
 
 export interface PropostaAvaliada {
   id: string
-  d1: Pick<ResultadoD1, 'd1' | 'status' | 'completa' | 'pendentes'>
-  d2: Pick<ResultadoD2, 'total'>
+  d1: Pick<ResultadoD1, 'd1' | 'status' | 'completa' | 'pendentes'> & {
+    /** Pontos por PA (critérios de desempate II a IV). */
+    totaisPorPA?: Pick<TotalPA, 'codigo' | 'pontos'>[]
+  }
+  d2: Pick<ResultadoD2, 'total'> & {
+    /** Pontos por critério da D2 (critérios de desempate V e VI). */
+    criterios?: Partial<Record<CodigoCriterioD2, { pontos: number }>>
+  }
 }
 
 export interface PosicaoRanking {
@@ -19,10 +27,21 @@ export interface PosicaoRanking {
   d1: number
   d2: number
   nf: number
-  /** Mesma NF de outra proposta (dividem a posição) e sem decisão registrada da Comissão. */
+  /** Mesma NF de outra proposta, sem desempate pelo Edital nem decisão registrada da Comissão. */
   empatada: boolean
-  /** Posição definida pela decisão de desempate registrada (RF-27). */
+  /** Posição definida pelos critérios de desempate do Edital (RF-27). */
+  desempatadaPeloEdital: boolean
+  /** Ordem do critério do Edital ("I"…"VI") que separou esta proposta das demais empatadas. */
+  criterioDesempate: string | null
+  /** Posição definida pela decisão de desempate registrada pela Comissão (RF-27). */
   desempatadaPelaComissao: boolean
+}
+
+/** Grupo que segue empatado depois dos critérios do Edital (divide a posição). */
+export interface EmpateResidual {
+  nf: number
+  ids: string[]
+  posicao: number
 }
 
 export interface Classificacao {
@@ -30,6 +49,8 @@ export interface Classificacao {
   inaptas: string[]
   desclassificadas: string[]
   pendentes: string[]
+  /** Empates que os critérios do Edital não resolveram. */
+  empates: EmpateResidual[]
   /** Falso enquanto houver proposta pendente de avaliação. */
   definitiva: boolean
 }
@@ -46,7 +67,40 @@ function situacao({ d1 }: PropostaAvaliada): Situacao {
   return d1.status
 }
 
-export function classificar(propostas: PropostaAvaliada[]): Classificacao {
+/** Valor da proposta no critério de desempate (undefined = dado ausente; o critério não se aplica). */
+function valorNoCriterio(p: PropostaAvaliada, criterio: CriterioDesempate): number | undefined {
+  const ref = criterio.referencia
+  if (ref === 'D1') return p.d1.d1
+  const pa = p.d1.totaisPorPA?.find((t) => t.codigo === ref)
+  if (pa) return pa.pontos
+  return p.d2.criterios?.[ref as CodigoCriterioD2]?.pontos
+}
+
+interface Subgrupo {
+  propostas: PropostaAvaliada[]
+  /** Critério que deixou a proposta sozinha no subgrupo (null = segue empatada ou nunca empatou). */
+  criterio: string | null
+}
+
+/**
+ * Aplica os critérios sucessivamente a um grupo de mesma NF: em cada critério, maior valor vence;
+ * quem empata segue para o próximo. Para no primeiro critério sem dado para alguma proposta do grupo.
+ */
+function desempatar(grupo: PropostaAvaliada[], criterios: CriterioDesempate[], nivel = 0): Subgrupo[] {
+  const criterio = criterios[nivel]
+  if (grupo.length <= 1 || !criterio) return [{ propostas: grupo, criterio: null }]
+  const valores = grupo.map((p) => valorNoCriterio(p, criterio))
+  if (valores.some((v) => v === undefined)) return [{ propostas: grupo, criterio: null }]
+
+  const distintos = [...new Set(valores as number[])].sort((a, b) => b - a)
+  return distintos.flatMap((valor) => {
+    const sub = grupo.filter((_, i) => valores[i] === valor)
+    if (sub.length === 1) return [{ propostas: sub, criterio: criterio.ordem }]
+    return desempatar(sub, criterios, nivel + 1)
+  })
+}
+
+export function classificar(propostas: PropostaAvaliada[], matriz: Matriz = MATRIZ_2026): Classificacao {
   const aptas: PropostaAvaliada[] = []
   const inaptas: string[] = []
   const desclassificadas: string[] = []
@@ -60,20 +114,36 @@ export function classificar(propostas: PropostaAvaliada[]): Classificacao {
     else pendentes.push(p.id)
   }
 
-  const notas = aptas
-    .map((p) => ({ id: p.id, d1: p.d1.d1, d2: p.d2.total, nf: p.d1.d1 + p.d2.total }))
-    .sort((x, y) => y.nf - x.nf)
-  const contagemPorNF = new Map<number, number>()
-  for (const n of notas) contagemPorNF.set(n.nf, (contagemPorNF.get(n.nf) ?? 0) + 1)
+  const nf = (p: PropostaAvaliada) => p.d1.d1 + p.d2.total
+  const porNF = new Map<number, PropostaAvaliada[]>()
+  for (const p of aptas) porNF.set(nf(p), [...(porNF.get(nf(p)) ?? []), p])
 
-  // Posição de competição (1, 2, 2, 4): empatadas dividem a posição da primeira do grupo.
-  const ranking = notas.map((n) => ({
-    posicao: notas.findIndex((outra) => outra.nf === n.nf) + 1,
-    ...n,
-    empatada: contagemPorNF.get(n.nf)! > 1,
-    desempatadaPelaComissao: false,
-  }))
-  return { ranking, inaptas, desclassificadas, pendentes, definitiva: pendentes.length === 0 }
+  const ranking: PosicaoRanking[] = []
+  const empates: EmpateResidual[] = []
+  for (const valorNF of [...porNF.keys()].sort((a, b) => b - a)) {
+    const grupo = porNF.get(valorNF)!
+    const empateDeNF = grupo.length > 1
+    for (const sub of desempatar(grupo, matriz.desempate)) {
+      // Posição de competição (1, 2, 2, 4): quem segue empatado divide a posição.
+      const posicao = ranking.length + 1
+      const residual = sub.propostas.length > 1
+      if (residual) empates.push({ nf: valorNF, ids: sub.propostas.map((p) => p.id), posicao })
+      for (const p of sub.propostas) {
+        ranking.push({
+          posicao,
+          id: p.id,
+          d1: p.d1.d1,
+          d2: p.d2.total,
+          nf: valorNF,
+          empatada: residual,
+          desempatadaPeloEdital: empateDeNF && !residual,
+          criterioDesempate: residual ? null : sub.criterio,
+          desempatadaPelaComissao: false,
+        })
+      }
+    }
+  }
+  return { ranking, inaptas, desclassificadas, pendentes, empates, definitiva: pendentes.length === 0 }
 }
 
 // ---------------------------------------------------------------------------
@@ -89,6 +159,9 @@ export interface TotaisGravados {
   status: string
   completa: boolean
   pendentes: string[]
+  totaisPorPA?: Pick<TotalPA, 'codigo' | 'pontos'>[]
+  /** Ausente em totais gravados antes do RF-27: os critérios V e VI não se aplicam até o recálculo. */
+  d2PorCriterio?: Partial<Record<CodigoCriterioD2, number>>
 }
 
 export interface PropostaDoLote {
@@ -111,14 +184,19 @@ export interface GrupoEmpatado {
   decidido: boolean
 }
 
-export interface ClassificacaoLote extends Classificacao {
+export interface ClassificacaoLote extends Omit<Classificacao, 'empates'> {
   naoAdmitidas: string[]
+  /** Empates que os critérios do Edital não resolveram, com ou sem decisão da Comissão. */
   empates: GrupoEmpatado[]
 }
 
 const mesmoConjunto = (a: string[], b: string[]) => a.length === b.length && a.every((x) => b.includes(x))
 
-export function classificarLote(propostas: PropostaDoLote[], decisoes: DecisaoDesempate[] = []): ClassificacaoLote {
+export function classificarLote(
+  propostas: PropostaDoLote[],
+  decisoes: DecisaoDesempate[] = [],
+  matriz: Matriz = MATRIZ_2026,
+): ClassificacaoLote {
   const naoAdmitidas: string[] = []
   const desclassificadasNaAdmissao: string[] = []
   const semTotais: string[] = []
@@ -132,26 +210,29 @@ export function classificarLote(propostas: PropostaDoLote[], decisoes: DecisaoDe
       const t = p.totais
       avaliadas.push({
         id: p.id,
-        d1: { d1: t.d1, status: t.status as ResultadoD1['status'], completa: t.completa, pendentes: t.pendentes },
-        d2: { total: t.d2 },
+        d1: { d1: t.d1, status: t.status as ResultadoD1['status'], completa: t.completa, pendentes: t.pendentes, totaisPorPA: t.totaisPorPA },
+        d2: {
+          total: t.d2,
+          criterios: t.d2PorCriterio
+            ? Object.fromEntries(Object.entries(t.d2PorCriterio).map(([c, pontos]) => [c, { pontos }]))
+            : undefined,
+        },
       })
     }
   }
 
-  const base = classificar(avaliadas)
+  const base = classificar(avaliadas, matriz)
   const ranking = [...base.ranking]
   const empates: GrupoEmpatado[] = []
 
-  for (const nf of [...new Set(ranking.filter((p) => p.empatada).map((p) => p.nf))]) {
-    const ids = ranking.filter((p) => p.nf === nf).map((p) => p.id)
-    const decisao = decisoes.find((d) => d.nf === nf && mesmoConjunto(d.propostas, ids) && mesmoConjunto(d.ordem, ids))
-    empates.push({ nf, ids, decidido: decisao !== undefined })
+  for (const grupo of base.empates) {
+    const decisao = decisoes.find((d) => d.nf === grupo.nf && mesmoConjunto(d.propostas, grupo.ids) && mesmoConjunto(d.ordem, grupo.ids))
+    empates.push({ nf: grupo.nf, ids: grupo.ids, decidido: decisao !== undefined })
     if (!decisao) continue
-    const inicio = ranking.findIndex((p) => p.nf === nf)
-    const posicaoInicial = ranking[inicio]!.posicao
+    const inicio = ranking.findIndex((p) => p.id === grupo.ids[0])
     decisao.ordem.forEach((id, i) => {
       const entrada = base.ranking.find((p) => p.id === id)!
-      ranking[inicio + i] = { ...entrada, posicao: posicaoInicial + i, empatada: false, desempatadaPelaComissao: true }
+      ranking[inicio + i] = { ...entrada, posicao: grupo.posicao + i, empatada: false, desempatadaPelaComissao: true }
     })
   }
 

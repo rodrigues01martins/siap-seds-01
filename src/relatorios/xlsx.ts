@@ -56,7 +56,7 @@ export async function quadroXlsx(cabecalho: CabecalhoQuadro, quadro: Quadro, rod
 
   if (quadro.empates.length > 0) {
     planilha.addRow([])
-    planilha.addRow(['Empates (RF-27)']).font = { bold: true }
+    planilha.addRow(['Empates não resolvidos pelos critérios do Edital (RF-27)']).font = { bold: true }
     for (const e of quadro.empates) planilha.addRow([textoEmpate(e)])
   }
   escreverRodape(planilha, rodape)
