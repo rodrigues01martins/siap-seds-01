@@ -22,7 +22,7 @@ export function AcessoNaoAutorizado() {
     setErro(null)
     setVerificando(true)
     try {
-      await chamarApi('/api/primeiro-admin', { metodo: 'POST' })
+      await chamarApi('/api/perfis', { metodo: 'PUT' })
       await recarregarPerfil()
     } catch (e) {
       setErro(e)

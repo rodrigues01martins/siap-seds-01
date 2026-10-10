@@ -122,11 +122,11 @@ Uma vez por projeto (dev e prod):
 2. **Vercel:** cadastre `ADMIN_INICIAL_EMAIL` com esse e-mail (Production para prod, Preview para dev) e faça
    **Redeploy** do ambiente.
 3. **No app:** entre com essa conta. Na tela "Acesso não autorizado", clique em **Sou o administrador inicial**.
-   A `/api/primeiro-admin` confere o e-mail, dá o perfil `admin`, registra em `usuarios/{uid}` e na auditoria.
+   O `PUT /api/perfis` confere o e-mail, dá o perfil `admin`, registra em `usuarios/{uid}` e na auditoria.
 4. Pronto: os demais perfis (presidente, relator, membro, controle) são dados pelo admin na tela
    **Perfis de acesso** (`/perfis`). Cada pessoa precisa ter a conta criada no *Authentication* antes.
 
-A `/api/primeiro-admin` só funciona enquanto **não existir nenhum admin** no projeto; depois responde 409.
+O `PUT /api/perfis` só funciona enquanto **não existir nenhum admin** no projeto; depois responde 409.
 Sem a variável, ou com outro e-mail, responde 403.
 
 **Opcional, pelo terminal** (exige Node.js 22, o repositório clonado e a chave do Admin SDK fora do repositório):
@@ -160,7 +160,7 @@ passa por uma função `/api`, que:
 > Os PDFs dos Cadernos **não** são carregados no app: a consulta é feita no SEI. O app guarda só o nº SEI
 > (`numeroSEI`) e as páginas citadas.
 | `/api/perfis` | `POST` dar/trocar, `DELETE` remover | `{ email, perfil }` / `{ email }` | admin |
-| `/api/primeiro-admin` | `POST` | — | qualquer conta logada com o e-mail de `ADMIN_INICIAL_EMAIL`, só enquanto não houver admin (seção 4) |
+| `/api/perfis` | `PUT` primeiro admin | — | qualquer conta logada com o e-mail de `ADMIN_INICIAL_EMAIL`, só enquanto não houver admin (seção 4) |
 
 - `dataLimitePropostas` (`AAAA-MM-DD`): referência da D2 (Anexo IV, 3.3.1, IV). Depois que alguma proposta do
   chamamento já tem totais calculados, não pode mais mudar → **409**.

@@ -70,7 +70,9 @@ a ordem com justificativa (api/desempate.ts, auditado; 409 para grupo que o Edit
   - teste de emulador (/api, regras): commit test: com um esboço do módulo que compila, depois feat:/fix:;
   - teste que roda no npm test: rode-o vermelho localmente e commite teste e código juntos no feat:/fix:.
 - Commits no padrão: feat:, fix:, test:, chore:, docs:
-- Primeiro admin de cada projeto: api/primeiro-admin.ts (ADMIN_INICIAL_EMAIL na Vercel); demais perfis pela tela (C6).
+- Primeiro admin de cada projeto: PUT /api/perfis (ADMIN_INICIAL_EMAIL na Vercel); demais perfis pela tela (C6).
+- Plano Hobby da Vercel: no máximo 12 arquivos de função em api/ (api/_lib/limiteFuncoes.test.ts). Endpoint novo
+  entra como método ou ação de um arquivo existente; utilitários ficam em api/_lib.
 
 ## Comandos
 npm run dev | npm run build | npm test | npm run typecheck
