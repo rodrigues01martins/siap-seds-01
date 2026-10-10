@@ -17,7 +17,7 @@ export default defineConfig({
     launchOptions: process.env.PLAYWRIGHT_CHROMIUM ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM } : {},
   },
   webServer: {
-    command: `npx vite --port ${PORTA} --strictPort`,
+    command: `npx vite --config vite.e2e.config.ts --port ${PORTA} --strictPort`,
     url: `http://localhost:${PORTA}/login`,
     reuseExistingServer: false,
     timeout: 120_000,

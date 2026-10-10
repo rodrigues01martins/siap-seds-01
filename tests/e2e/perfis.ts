@@ -3,6 +3,9 @@ import { CHAMAMENTO_ENSAIO } from '../../scripts/lib/ensaio'
 
 export const SENHA_E2E = 'senha-e2e-123'
 export const SESSAO_ABERTA = 'e2e-sessao-aberta'
+/** Chamamento só do teste de fluxo completo (sem sessão aberta, proposta ainda não avaliada). */
+export const CHAMAMENTO_FLUXO = 'e2e-fluxo'
+export const PROPOSTA_FLUXO = 'e2e-fluxo-p1'
 
 export interface PerfilE2E {
   id: string

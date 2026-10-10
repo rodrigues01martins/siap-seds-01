@@ -1,13 +1,15 @@
 // Etapa 4 (telas operacionais): screenshots 1280/768 de cada tela em docs/auditoria-design/etapa-4/<fase>/.
 // FASE_ETAPA4=antes só fotografa (estado anterior à migração); FASE_ETAPA4=depois (padrão) também exige
-// axe (WCAG 2.2 AA) sem violações nas duas larguras.
+// axe (WCAG 2.2 AA) sem violações nas duas larguras e roda o fluxo completo pela interface, gravando pela /api
+// nos emuladores: sessão → admissibilidade → D1 (28 subcritérios) → D2 → classificação → homologação.
 // Uso: npm run test:e2e:etapa4 (depois) | FASE_ETAPA4=antes npm run test:e2e:etapa4
 import AxeBuilder from '@axe-core/playwright'
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Browser, type Page } from '@playwright/test'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { CHAMAMENTO_ENSAIO, montarEnsaio } from '../../scripts/lib/ensaio'
-import { PERFIS_E2E, SENHA_E2E, SESSAO_ABERTA, propostaE2E } from './perfis'
+import { MATRIZ_2026 } from '../../src/domain/matriz'
+import { CHAMAMENTO_FLUXO, PERFIS_E2E, PROPOSTA_FLUXO, SENHA_E2E, SESSAO_ABERTA, propostaE2E } from './perfis'
 
 const FASE = process.env.FASE_ETAPA4 === 'antes' ? 'antes' : 'depois'
 const PASTA = join('docs', 'auditoria-design', 'etapa-4')
@@ -85,6 +87,116 @@ for (const id of ['administrador', 'avaliador']) {
     }
   })
 }
+
+async function semViolacoes(pagina: Page, onde: string) {
+  expect(await violacoesAxe(pagina), `axe: ${onde}`).toEqual([])
+}
+
+async function comoPerfil(navegador: Browser, id: string): Promise<Page> {
+  const contexto = await navegador.newContext({ viewport: { width: 1280, height: 900 }, locale: 'pt-BR', timezoneId: 'America/Sao_Paulo', baseURL: test.info().project.use.baseURL })
+  const pagina = await contexto.newPage()
+  pagina.setDefaultTimeout(30_000)
+  await entrar(pagina, id)
+  return pagina
+}
+
+test('fluxo completo pela interface: sessão → admissibilidade → D1 → D2 → classificação → homologação', async ({ browser }) => {
+  test.skip(FASE === 'antes', 'só depois da migração')
+  test.setTimeout(10 * 60_000)
+  const CHF = `/chamamentos/${CHAMAMENTO_FLUXO}`
+  const PF = `${CHF}/propostas/${PROPOSTA_FLUXO}`
+
+  // 1. Sessão (administrador = presidente): assistente em 3 etapas.
+  const admin = await comoPerfil(browser, 'administrador')
+  await admin.goto(`${CHF}/sessoes/nova`)
+  await expect(admin.getByRole('heading', { name: '1. Abertura' })).toBeVisible({ timeout: 30_000 })
+  await admin.getByLabel(/^Data da sessão/).fill('2026-11-10')
+  await admin.getByRole('button', { name: 'Avançar' }).click()
+  await expect(admin.getByRole('heading', { name: '2. Presentes e declarações' })).toBeFocused()
+  await expect(admin.getByRole('checkbox', { name: /^Presente: avaliador@/ })).toBeChecked()
+  await admin.getByRole('button', { name: 'Avançar' }).click()
+  await expect(admin.getByRole('checkbox', { name: /Instituto Alfa/ })).toBeChecked()
+  await semViolacoes(admin, 'assistente — pauta')
+  await admin.getByRole('button', { name: 'Abrir sessão' }).click()
+  await expect(admin.getByRole('heading', { level: 1, name: 'Sessão de 10/11/2026' })).toBeVisible({ timeout: 30_000 })
+
+  // 2. Admissibilidade (avaliador): requisitos, páginas dentro do limite, admitida.
+  const avaliador = await comoPerfil(browser, 'avaliador')
+  await avaliador.goto(`${PF}/admissibilidade`)
+  await expect(avaliador.getByRole('button', { name: 'Registrar admissibilidade' })).toBeVisible({ timeout: 30_000 })
+  for (const r of MATRIZ_2026.admissibilidade.requisitosEssenciais) {
+    if (r.codigo !== MATRIZ_2026.admissibilidade.requisitoPlanos) await avaliador.getByRole('checkbox', { name: `${r.codigo} — ${r.descricao}` }).check()
+  }
+  let pagina = 3
+  for (const pa of MATRIZ_2026.dimensao1.planos) {
+    await avaliador.getByLabel(`Página inicial do ${pa.codigo}`).fill(String(pagina))
+    await avaliador.getByLabel(`Página final do ${pa.codigo}`).fill(String(pagina + pa.limitePaginas - 1))
+    pagina += pa.limitePaginas
+  }
+  await avaliador.getByRole('radio', { name: 'Admitida', exact: true }).check()
+  await avaliador.getByRole('button', { name: 'Registrar admissibilidade' }).click()
+  await expect(avaliador.getByRole('status').filter({ hasText: 'Situação registrada: Admitida' })).toBeVisible({ timeout: 30_000 })
+
+  // 3. D1: os 28 subcritérios, salvando pelo rodapé fixo (o painel avança ao próximo pendente).
+  await avaliador.goto(`${PF}/d1`)
+  const resumo = avaliador.getByRole('region', { name: 'Resumo da D1' })
+  await expect(resumo).toContainText('Faltam 28', { timeout: 30_000 })
+  for (let faltam = 28; faltam > 0; faltam--) {
+    await avaliador.getByRole('radio', { name: 'Nível 3', exact: true }).check()
+    await avaliador.getByRole('radio', { name: 'Unanimidade' }).check()
+    await avaliador.getByRole('textbox', { name: /^Justificativa/ }).fill('Registro do teste de fluxo completo (E2E), nível 3.')
+    await avaliador.getByRole('textbox', { name: 'Páginas citadas' }).fill('1')
+    if (faltam === 28) await semViolacoes(avaliador, 'D1 preenchida')
+    await resumo.getByRole('button', { name: /^Salvar avaliação/ }).click()
+    await expect(resumo).toContainText(`Faltam ${faltam - 1} de`, { timeout: 30_000 })
+  }
+  await expect(resumo).toContainText('D1 parcial: 84')
+  await expect(resumo.getByText('Apta').first()).toBeVisible()
+
+  // 4. D2: nova experiência com documento aceito, no painel lateral.
+  await avaliador.goto(`${PF}/d2`)
+  await avaliador.getByRole('button', { name: 'Nova experiência' }).click()
+  const painel = avaliador.getByRole('dialog', { name: 'Nova experiência' })
+  await painel.getByRole('textbox', { name: 'Descrição' }).fill('Internação socioeducativa (E2E)')
+  await painel.getByRole('checkbox', { name: /^Categoria A —/ }).check()
+  await painel.getByLabel('Modalidade').selectOption('internacao')
+  await painel.getByRole('checkbox', { name: /^Parceria regida pelo MROSC/ }).check()
+  await painel.getByLabel('Início').fill('2018-01-01')
+  await painel.getByRole('spinbutton', { name: 'Vagas' }).fill('60')
+  await painel.getByRole('button', { name: 'Adicionar documento' }).click()
+  await painel.getByRole('textbox', { name: 'Tipo do documento 1' }).fill('Atestado de capacidade técnica')
+  await painel.getByRole('textbox', { name: 'Nº SEI do documento 1' }).fill('00000123')
+  await painel.getByRole('checkbox', { name: /^Documento 1 comprova/ }).check()
+  await painel.getByRole('checkbox', { name: /^Documento 1 aceito/ }).check()
+  await semViolacoes(avaliador, 'D2 — painel lateral')
+  await painel.getByRole('button', { name: 'Salvar experiência' }).click()
+  await expect(painel).toBeHidden({ timeout: 30_000 })
+  await expect(avaliador.getByRole('table', { name: 'Experiências da OSC' })).toContainText('Internação socioeducativa (E2E)')
+  await expect(avaliador.getByText(/D2 gravada pela \/api: [1-9]/)).toBeVisible({ timeout: 30_000 })
+
+  // 5. Classificação e 6. homologação (administrador): ConfirmDialog com NF e status.
+  await admin.goto(`${CHF}/lotes/F1/classificacao`)
+  const ranking = admin.getByRole('table', { name: 'Classificação do lote F1' })
+  const linha = ranking.getByRole('row').filter({ hasText: 'Instituto Alfa (ENSAIO)' })
+  await expect(linha).toContainText('1º', { timeout: 30_000 })
+  await expect(linha).toContainText('Apta')
+  await linha.getByRole('button', { name: 'Homologar' }).click()
+  const confirmacao = admin.getByRole('alertdialog', { name: /^Homologar Instituto Alfa/ })
+  await expect(confirmacao).toContainText('NF ')
+  await expect(confirmacao.getByRole('button', { name: 'Cancelar' })).toBeFocused()
+  await semViolacoes(admin, 'ConfirmDialog de homologação')
+  await confirmacao.getByRole('checkbox', { name: /Conferi a NF e o status/ }).check()
+  await confirmacao.getByRole('button', { name: 'Confirmar homologação' }).click()
+  await expect(confirmacao).toBeHidden({ timeout: 30_000 })
+  await expect(linha).toContainText('Homologada', { timeout: 30_000 })
+  await expect(linha.getByRole('button', { name: 'Reabrir' })).toBeVisible()
+  await admin.screenshot({ path: join(PASTA, FASE, 'fluxo--homologada--1280.jpg'), fullPage: true, type: 'jpeg', quality: 70 })
+
+  // A proposta homologada fica somente leitura na D1.
+  await avaliador.goto(`${PF}/d1`)
+  await expect(avaliador.getByText('Proposta homologada: somente leitura.')).toBeVisible({ timeout: 30_000 })
+  await expect(avaliador.getByRole('button', { name: /^Salvar/ })).toHaveCount(0)
+})
 
 test.afterAll(() => {
   const linhas = [

@@ -247,8 +247,8 @@ A fonte única no código é `src/domain/permissoes.ts` (um teste garante que el
 | `/chamamentos/:ch/propostas/nova`, `.../:p/editar` | `propostas` | proposta (OSC, lote, protocolo, nº SEI) |
 | `/oscs` | `oscs` | OSCs, com máscara e validação de CNPJ |
 | `/usuarios` | administrador | usuários, permissões por área, papel na Comissão, e-mail de senha e desativação |
-| `/chamamentos/:ch/sessoes/nova` | `sessaoAbrirEncerrar` | abertura: data, presentes, declarações, pauta |
-| `/chamamentos/:ch/sessoes/:s` | todos com acesso (escrita: `sessaoConduzir`) | foco, presentes e declarações, encerrar |
+| `/chamamentos/:ch/sessoes/nova` | `sessaoAbrirEncerrar` | abertura em assistente: 1. data → 2. presentes e declarações → 3. pauta (com revisão) |
+| `/chamamentos/:ch/sessoes/:s` | todos com acesso (escrita: `sessaoConduzir`) | foco, presentes e declarações, encerrar (com confirmação) |
 
 ### Admissibilidade (Anexo III, item 28)
 
@@ -267,16 +267,17 @@ A fonte única no código é `src/domain/permissoes.ts` (um teste garante que el
 
 | Rota | Escrita | O que faz |
 |---|---|---|
-| `/chamamentos/:ch/propostas/:p/admissibilidade` | `admissibilidade` | checklist 28.1, páginas por PA com página de corte e alerta, irregularidades formais (28.5), resultado e motivação |
-| `/chamamentos/:ch/propostas/:p/d1` | `nivelD1` (com sessão aberta e a proposta na pauta) | navegação PA1…PA6, painel do subcritério (escala com descritores, elementos como apoio, decisão, voto divergente, justificativa com contador, páginas com aviso de corte), alerta de nível 0 em 1.1/1.2 e rodapé com a prévia (src/domain) e o status oficial |
-| `/chamamentos/:ch/propostas/:p/d2` | `experienciasD2` | experiências e documentos, desconsiderar por critério (3.8.5) e linha do tempo A/B |
-| `/chamamentos/:ch/propostas/:p/d2/memoria` | — | memória de cálculo da D2 (`resultadoD2/atual`) |
+| `/chamamentos/:ch/propostas/:p/admissibilidade` | `admissibilidade` | seções: 1. checklist 28.1 (com contador), 2. páginas por PA com página de corte e alerta de atenção ao exceder, 3. irregularidades formais (28.5), 4. resultado e motivação |
+| `/chamamentos/:ch/propostas/:p/d1` | `nivelD1` (com sessão aberta e a proposta na pauta) | navegação PA1…PA6 com progresso por PA; painel do subcritério em seções (Identificação, Elementos, Escala 0–4 em cartões com o descritor sempre visível, Decisão, Justificativa e páginas); alerta de nível 0 em 1.1/1.2; rodapé fixo com a D1 parcial, a prévia, o status oficial e **Salvar** |
+| `/chamamentos/:ch/propostas/:p/d2` | `experienciasD2` | tabela de experiências; painel lateral para criar/editar (com documentos); desconsiderar por critério (3.8.5) em diálogo; excluir com confirmação; linha do tempo A (teal) / B (azul) com rótulos |
+| `/chamamentos/:ch/propostas/:p/d2/memoria` | — | memória de cálculo da D2 (`resultadoD2/atual`) em abas por critério |
 
 Quem não pode escrever vê a tela sem os botões; proposta homologada fica somente leitura. Quem tem só a
 permissão **Consulta** lê chamamentos, propostas e avaliações (firestore.rules), sem escrever.
 
 Leitura em tempo real (`onSnapshot`, `src/lib/firestore.ts`); escrita só por `chamarApi` (`src/lib/api.ts`).
-O componente `Formulario` valida com o mesmo esquema da `/api` e põe os erros 400 da `/api` nos mesmos campos.
+O componente `FormularioApi` (`src/components/ui`) valida com o mesmo esquema da `/api` e põe os erros 400 da
+`/api` nos mesmos campos.
 
 ### Resultado: classificação, homologação, reabertura e diligências (Etapa 6a)
 
@@ -337,7 +338,9 @@ Os dados são lidos uma vez no momento de gerar, e o documento é montado por c�
 ### Modo projeção — telão da sala (Etapa 5)
 
 - Rota **`/projecao/:ch/:sessaoId`** (o link "Abrir telão" aparece na tela da D1 e na tela da sessão).
-  Somente leitura, sem menu e sem botões de escrita; fonte grande, alto contraste e botão **Tela cheia**.
+  Somente leitura, sem menu e sem nenhuma ação; tema próprio de alto contraste (fundo branco, texto quase preto,
+  nível registrado em azul de ação com o rótulo "Nível registrado"), tipografia display para leitura a 6 m e
+  troca de foco com fade curto (desligado em "reduzir movimento"). Tela cheia: **F11** no navegador.
 - Acompanha em tempo real (`onSnapshot`) o **foco da sessão** e mostra, conforme o tipo:
   `admissibilidade` (checklist 28.1 e páginas por PA com excessos), `subcriterio` (escala com o nível
   registrado destacado, decisão, justificativa, páginas), `d2` (pontos por critério e memória resumida) ou
@@ -443,7 +446,21 @@ Testes de navegador (emuladores + Playwright + axe, WCAG 2.2 AA):
 npm run test:e2e:baseline   # medição de todas as rotas (docs/auditoria-design/antes/)
 npm run test:e2e:ui         # catálogo /ui sem violações
 npm run test:e2e:etapa3     # telas migradas: teclado, axe e screenshots (docs/auditoria-design/etapa-3/)
+npm run test:e2e:etapa4     # telas operacionais: axe + screenshots e o fluxo completo (docs/auditoria-design/etapa-4/)
+FASE_ETAPA4=antes npm run test:e2e:etapa4   # só screenshots, para comparar antes/depois
 ```
+
+O fluxo completo (sessão → admissibilidade → D1 → D2 → classificação → homologação) grava de verdade pela
+`/api` nos emuladores: só nos testes de navegador, `vite.e2e.config.ts` monta as funções de `api/` no servidor
+do Vite (`tests/e2e/apiNoVite.ts`). Nada disso entra no build nem na Vercel.
+
+### Relatórios (PDF e XLSX)
+
+Cabeçalho em toda página com a marca na hierarquia do Kit (Secretaria → Governo de Goiás) e o sistema; títulos
+em azul institucional; tabelas com cabeçalho neutral.200 e linhas alternadas em neutral.100; rodapé com o código
+de verificação. As cores ficam em `CORES_DOCUMENTO` (`src/relatorios/documento.ts`), presas aos tokens por teste.
+Fonte: Roboto embutida do pdfmake. **Gotham** só com os arquivos licenciados em `public/fonts/` (registrar em
+`src/relatorios/pdf.ts` e trocar `FONTE_PDF`); nunca de fonte externa.
 
 ### Marcas (TODO)
 
