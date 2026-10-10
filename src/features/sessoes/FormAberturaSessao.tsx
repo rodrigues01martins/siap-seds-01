@@ -229,12 +229,15 @@ function NavegacaoAssistente({ passo, membros, onPasso }: { passo: number; membr
           </Button>
         )}
       </div>
+      {/* key distinta: sem ela o React reaproveita o mesmo <button>, que vira type="submit" ainda durante o
+          clique em "Avançar" e o navegador envia o formulário antes da revisão da pauta. */}
       {ultimo ? (
-        <Button type="submit" carregando={isSubmitting}>
+        <Button key="enviar" type="submit" carregando={isSubmitting}>
           Abrir sessão
         </Button>
       ) : (
         <Button
+          key="avancar"
           onClick={async () => {
             if (await trigger(camposDoPasso(passo, membros))) onPasso(passo + 1)
           }}

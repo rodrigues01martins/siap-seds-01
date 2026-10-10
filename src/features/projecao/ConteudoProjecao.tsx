@@ -268,7 +268,7 @@ export function ProjecaoResumo({ totais, status }: { totais: TotaisProposta | nu
               ))}
             </tbody>
           </table>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4 self-start">
             <Bloco rotulo="D1" valor={formatarNumero(totais.d1)} />
             <Bloco rotulo="D2" valor={formatarNumero(totais.d2)} />
             <Bloco rotulo="NF" valor={formatarNumero(totais.nf)} />

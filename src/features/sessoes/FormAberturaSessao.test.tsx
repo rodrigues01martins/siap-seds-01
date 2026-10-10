@@ -63,6 +63,17 @@ describe('Tela de abertura da sessão', () => {
     })
   })
 
+  it('Avançar para a última etapa não envia o formulário (o botão de enviar é outro elemento)', async () => {
+    const onAbrir = montar()
+    await avancar()
+    const avancarNaEtapa2 = screen.getByRole('button', { name: 'Avançar' })
+    await avancar()
+    expect(screen.getByRole('group', { name: 'Pauta' })).toBeVisible()
+    expect(avancarNaEtapa2).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Abrir sessão' })).toHaveAttribute('type', 'submit')
+    expect(onAbrir).not.toHaveBeenCalled()
+  })
+
   it('pauta escolhida pelos checkboxes', async () => {
     const onAbrir = montar()
     await avancar()
