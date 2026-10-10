@@ -108,6 +108,16 @@ describe('quadro-resumo do lote — a mesma tabela da classificação', () => {
     expect(texto).toContain('c'.repeat(64))
     expect(texto).toContain('presidente@seds.go.gov.br')
     expect(texto).toContain('Classificação não definitiva')
+    // Identidade do DS: marca e hierarquia do Kit no topo e no cabeçalho de impressão, título em azul
+    // institucional, cabeçalho da tabela em neutral.200 e linhas alternadas em neutral.100.
+    const topo = todas.slice(0, cabecalho).flat().map(String).join('\n')
+    expect(topo.indexOf('Secretaria de Estado de Desenvolvimento Social')).toBeLessThan(topo.indexOf('Governo de Goiás'))
+    expect(planilha.headerFooter.oddHeader).toContain('Governo de Goiás')
+    const titulo = todas.findIndex((r) => String(r[0]).startsWith('Quadro-resumo')) + 1
+    expect(planilha.getRow(titulo).font?.color?.argb).toBe('FF005FAA')
+    const preenchimento = (n: number) => (planilha.getRow(n).getCell(1).fill as { fgColor?: { argb?: string } } | undefined)?.fgColor?.argb
+    expect(preenchimento(cabecalho + 1)).toBe('FFE2E2E2')
+    expect([preenchimento(cabecalho + 2), preenchimento(cabecalho + 3)]).toEqual([undefined, 'FFEEEEEE'])
   })
 })
 

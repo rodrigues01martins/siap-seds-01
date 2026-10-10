@@ -96,4 +96,22 @@ describe('cores no Tailwind: só tokens semânticos e de componente', () => {
       expect(TEMA.get(nome), nome).toBe(`var(--${token})`)
     }
   })
+
+  it('projeção: tema próprio de alto contraste (neutral.0 / neutral.950, nível em action.primary) ligado ao Tailwind', () => {
+    const TOKENS = readFileSync(join(process.cwd(), 'src', 'styles', 'tokens.css'), 'utf8')
+    expect(TOKENS).toMatch(/--sds-projecao-bg: var\(--sds-background-surface\);/)
+    expect(TOKENS).toMatch(/--sds-background-surface: var\(--sds-neutral-0\);/)
+    expect(TOKENS).toMatch(/--sds-projecao-fg: var\(--sds-text-strong\);/)
+    expect(TOKENS).toMatch(/--sds-text-strong: var\(--sds-neutral-950\);/)
+    expect(TOKENS).toMatch(/--sds-projecao-destaque-bg: var\(--sds-action-primary\);/)
+    for (const nome of ['bg', 'fg', 'fg-secundario', 'borda', 'destaque-bg', 'destaque-fg']) {
+      expect(CSS).toContain(`--color-projecao-${nome}: var(--sds-projecao-${nome});`)
+    }
+  })
+
+  it('projeção: transição de foco some com prefers-reduced-motion', () => {
+    expect(CSS).toMatch(/\.projecao-entrada \{\s*animation: sds-projecao-entrada var\(--sds-motion-moderate\)/)
+    const bloco = /@media \(prefers-reduced-motion: reduce\) \{([\s\S]*?)\n\}/.exec(CSS)?.[1] ?? ''
+    expect(bloco).toMatch(/\.projecao-entrada \{\s*animation: none;/)
+  })
 })

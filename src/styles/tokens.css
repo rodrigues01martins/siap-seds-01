@@ -113,6 +113,8 @@
   --sds-text-inverse: var(--sds-neutral-0);
   --sds-text-link: var(--sds-primary-600);
   --sds-text-positive: var(--sds-green-700); /* §8: texto verde só em Green 700 */
+  --sds-text-strong: var(--sds-neutral-950); /* contraste máximo (projeção a distância) */
+  --sds-text-emphasis: var(--sds-neutral-800);
 
   /* Bordas (§6). border-input: decisão de contraste do app (WCAG 1.4.11 exige 3:1 na borda que identifica
      o campo; #E2E2E2 e #CCCCCC ficam abaixo disso), por isso Neutral 500. */
@@ -121,6 +123,7 @@
   --sds-border-focus: var(--sds-primary-600);
   --sds-border-input: var(--sds-neutral-500);
   --sds-border-input-hover: var(--sds-neutral-700);
+  --sds-border-contrast: var(--sds-neutral-700); /* separador visível a distância (projeção) */
 
   /* Ação (azul = interação, §4 e §6). */
   --sds-action-primary: var(--sds-primary-600);
@@ -232,6 +235,19 @@
   --sds-sidebar-item-bg-active: var(--sds-navigation-selected);
   --sds-sidebar-item-fg-active: var(--sds-navigation-text);
   --sds-sidebar-item-indicator: var(--sds-accent);
+
+  /* Modo projeção (telão, leitura a 6 m): tema de alto contraste próprio — fundo neutral.0, texto neutral.950
+     (≈18:1), secundário neutral.800 (≈11:1), separadores neutral.700 e o nível registrado em action.primary. */
+  --sds-projecao-bg: var(--sds-background-surface);
+  --sds-projecao-fg: var(--sds-text-strong);
+  --sds-projecao-fg-secundario: var(--sds-text-emphasis);
+  --sds-projecao-borda: var(--sds-border-contrast);
+  --sds-projecao-destaque-bg: var(--sds-action-primary);
+  --sds-projecao-destaque-fg: var(--sds-text-inverse);
+  --sds-projecao-positivo: var(--sds-status-success-text);
+  --sds-projecao-negativo: var(--sds-status-error-text);
+  --sds-projecao-atencao: var(--sds-status-warning-text);
+  --sds-projecao-atencao-bg: var(--sds-status-warning-surface);
 
   /* Card (§13): fundo branco, raio 12, padding 24, borda 1 px #E2E2E2, elevação 0–1. */
   --sds-card-bg: var(--sds-background-surface);

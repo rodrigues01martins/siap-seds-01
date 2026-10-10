@@ -185,7 +185,7 @@ export function quadroPdf(cabecalho: CabecalhoQuadro, quadro: Quadro, rodape: Ro
     rodape,
     minuta,
     conteudo: [
-      ...(quadro.aviso ? [{ text: quadro.aviso, bold: true, color: '#92400e', margin: [0, 0, 0, 6] as [number, number, number, number] }] : []),
+      ...(quadro.aviso ? [{ text: quadro.aviso, style: 'aviso', margin: [0, 0, 0, 6] as [number, number, number, number] }] : []),
       tabela(
         COLUNAS_QUADRO,
         quadro.linhas.map((l) => [

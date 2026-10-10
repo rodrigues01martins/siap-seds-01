@@ -146,7 +146,7 @@ describe('/projecao — nenhum controle de escrita, para ninguém', () => {
     estado.acesso = ACESSOS[quem]!
     semear(foco)
     const { container } = montar()
-    expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual(['Tela cheia'])
+    expect(screen.queryAllByRole('button')).toHaveLength(0)
     for (const papel of ['textbox', 'checkbox', 'radio', 'combobox', 'spinbutton', 'link'] as const) {
       expect(screen.queryAllByRole(papel)).toHaveLength(0)
     }

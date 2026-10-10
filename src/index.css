@@ -150,6 +150,16 @@
   --color-input-border-focus: var(--sds-input-border-focus);
   --color-input-border-error: var(--sds-input-border-error);
   --color-input-border-success: var(--sds-input-border-success);
+  --color-projecao-bg: var(--sds-projecao-bg);
+  --color-projecao-fg: var(--sds-projecao-fg);
+  --color-projecao-fg-secundario: var(--sds-projecao-fg-secundario);
+  --color-projecao-borda: var(--sds-projecao-borda);
+  --color-projecao-destaque-bg: var(--sds-projecao-destaque-bg);
+  --color-projecao-destaque-fg: var(--sds-projecao-destaque-fg);
+  --color-projecao-positivo: var(--sds-projecao-positivo);
+  --color-projecao-negativo: var(--sds-projecao-negativo);
+  --color-projecao-atencao: var(--sds-projecao-atencao);
+  --color-projecao-atencao-bg: var(--sds-projecao-atencao-bg);
   --color-sidebar-bg: var(--sds-sidebar-bg);
   --color-sidebar-fg: var(--sds-sidebar-fg);
   --color-sidebar-fg-muted: var(--sds-sidebar-fg-muted);
@@ -212,6 +222,20 @@
   }
 }
 
+/* Projeção: o conteúdo novo entra com um fade curto quando a Comissão troca o foco (explica a mudança, §11). */
+@keyframes sds-projecao-entrada {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.projecao-entrada {
+  animation: sds-projecao-entrada var(--sds-motion-moderate) var(--sds-motion-easing) both;
+}
 /* Movimento reduzido (§11): zera as durações dos tokens e neutraliza animações e transições. */
 @media (prefers-reduced-motion: reduce) {
   :root {
@@ -226,5 +250,8 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+  .projecao-entrada {
+    animation: none;
   }
 }

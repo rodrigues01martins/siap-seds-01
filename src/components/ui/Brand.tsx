@@ -16,8 +16,8 @@ export const MARCAS: Record<VarianteMarca, string | null> = {
   monochrome: null,
 }
 
-export const SECRETARIA = 'Secretaria de Estado de Desenvolvimento Social'
-export const GOVERNO = 'Governo de Goiás'
+export { GOVERNO, SECRETARIA } from '../../lib/marca'
+import { GOVERNO, SECRETARIA } from '../../lib/marca'
 const NOME_ACESSIVEL = `${SECRETARIA} — ${GOVERNO}`
 
 const CORES: Record<VarianteMarca, { base: string; secundaria: string; divisor: string }> = {

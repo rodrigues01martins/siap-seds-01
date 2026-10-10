@@ -1,5 +1,6 @@
-// Conteúdo do telão por tipo de foco — só leitura, fonte grande e alto contraste.
-// Nada aqui grava ou oferece controle de escrita (nem checkbox: o checklist vira ✓/✗).
+// Conteúdo do telão por tipo de foco — só leitura, tema de projeção (fundo neutral.0, texto neutral.950,
+// nível registrado em action.primary) e tipografia display-lg/display-md para leitura a 6 m.
+// Nada aqui grava ou oferece controle de escrita (nem checkbox: o checklist vira ✓/✗ com texto).
 
 import type { Admissibilidade } from '../../domain/admissibilidade'
 import type { ResultadoCriterio, ResultadoD2 } from '../../domain/d2'
@@ -11,11 +12,11 @@ import { ROTULO_STATUS, type StatusPainel } from '../../domain/statusProposta'
 const ROTULO_SITUACAO = { admitida: 'Admitida', nao_admitida: 'Não admitida', desclassificada: 'Desclassificada (28.2)' }
 
 function Titulo({ children }: { children: React.ReactNode }) {
-  return <h2 className="text-4xl font-bold leading-tight text-white">{children}</h2>
+  return <h2 className="text-display-lg text-projecao-fg">{children}</h2>
 }
 
 function Aviso({ children }: { children: React.ReactNode }) {
-  return <p className="mt-6 text-3xl text-amber-300">{children}</p>
+  return <p className="mt-6 inline-block rounded-card border-l-8 border-status-warning bg-projecao-atencao-bg px-6 py-4 text-display-md text-projecao-atencao">{children}</p>
 }
 
 // ---------- Admissibilidade ----------
@@ -33,19 +34,19 @@ export function ProjecaoAdmissibilidade({ admissibilidade }: { admissibilidade: 
   return (
     <section className="space-y-6">
       <Titulo>Admissibilidade (Anexo III, item 28)</Titulo>
-      <p className="text-3xl">
+      <p className="text-display-md">
         Situação:{' '}
-        <strong className={admissibilidade.situacao === 'admitida' ? 'text-emerald-300' : 'text-red-300'}>
+        <strong className={admissibilidade.situacao === 'admitida' ? 'text-projecao-positivo' : 'text-projecao-negativo'}>
           {ROTULO_SITUACAO[admissibilidade.situacao]}
         </strong>
       </p>
       <div className="grid gap-8 xl:grid-cols-2">
-        <ul className="space-y-1 text-xl">
+        <ul className="space-y-2 text-heading-2 font-normal">
           {regras.requisitosEssenciais.map((r) => {
             const ok = admissibilidade.requisitos[r.codigo] !== false
             return (
               <li key={r.codigo} aria-label={`${r.codigo}: ${ok ? 'atendido' : 'não atendido'}`} className="flex gap-3">
-                <span aria-hidden className={ok ? 'text-emerald-300' : 'text-red-400'}>
+                <span aria-hidden className={`font-bold ${ok ? 'text-projecao-positivo' : 'text-projecao-negativo'}`}>
                   {ok ? '✓' : '✗'}
                 </span>
                 <span>
@@ -56,8 +57,8 @@ export function ProjecaoAdmissibilidade({ admissibilidade }: { admissibilidade: 
             )
           })}
         </ul>
-        <table aria-label="Páginas por Plano de Ação" className="w-full text-xl">
-          <thead className="text-left text-slate-300">
+        <table aria-label="Páginas por Plano de Ação" className="w-full text-heading-2 font-normal">
+          <thead className="text-left text-projecao-fg-secundario">
             <tr>
               <th className="py-1 pr-3">PA</th>
               <th className="py-1 pr-3">Páginas</th>
@@ -75,7 +76,7 @@ export function ProjecaoAdmissibilidade({ admissibilidade }: { admissibilidade: 
                   key={p.codigo}
                   aria-label={p.codigo}
                   data-excede={excede ? 'true' : 'false'}
-                  className={`border-t border-slate-700 ${excede || p.ausente ? 'bg-red-900/60 font-semibold' : ''}`}
+                  className={`border-t-2 border-projecao-borda ${excede || p.ausente ? 'bg-projecao-atencao-bg font-bold text-projecao-negativo' : ''}`}
                 >
                   <td className="py-1 pr-3">{p.codigo}</td>
                   <td className="py-1 pr-3">{p.ausente ? '—' : `${p.paginaInicial}–${p.paginaFinal}`}</td>
@@ -83,7 +84,7 @@ export function ProjecaoAdmissibilidade({ admissibilidade }: { admissibilidade: 
                   <td className="py-1 pr-3 text-right">{p.limite}</td>
                   <td className="py-1 pr-3 text-right">{p.paginaCorte ?? '—'}</td>
                   <td className="py-1">
-                    {p.ausente ? 'Ausente' : excede ? `Excede em ${p.excede} página(s)` : 'Dentro do limite'}
+                    {p.ausente ? '✗ Ausente' : excede ? `⚠ Excede em ${p.excede} página(s)` : '✓ Dentro do limite'}
                   </td>
                 </tr>
               )
@@ -113,7 +114,7 @@ export function ProjecaoSubcriterio({ codigo, registro }: { codigo: string; regi
   return (
     <section className="space-y-6">
       <div>
-        <p className="text-xl uppercase tracking-wide text-slate-400">
+        <p className="text-heading-2 font-normal text-projecao-fg-secundario">
           {plano.codigo} — {plano.titulo}
         </p>
         <Titulo>
@@ -122,14 +123,14 @@ export function ProjecaoSubcriterio({ codigo, registro }: { codigo: string; regi
       </div>
       <div className="grid gap-8 xl:grid-cols-[2fr_3fr]">
         <div>
-          <h3 className="text-2xl font-semibold text-slate-300">Elementos de avaliação</h3>
-          <ul className="mt-2 list-inside list-disc space-y-1 text-xl">
+          <h3 className="text-heading-1 text-projecao-fg">Elementos de avaliação</h3>
+          <ul className="mt-3 list-inside list-disc space-y-2 text-heading-2 font-normal">
             {subcriterio.elementos.map((e) => (
               <li key={e}>{e}</li>
             ))}
           </ul>
         </div>
-        <ul className="space-y-2">
+        <ul className="space-y-3">
           {MATRIZ_2026.dimensao1.escala.map(({ nivel, descritor }) => {
             const atual = registro?.nivel === nivel
             return (
@@ -137,10 +138,10 @@ export function ProjecaoSubcriterio({ codigo, registro }: { codigo: string; regi
                 key={nivel}
                 aria-label={`Nível ${nivel}`}
                 aria-current={atual ? 'true' : undefined}
-                className={`rounded-lg border-2 p-3 text-xl ${atual ? 'border-yellow-300 bg-yellow-300 text-black' : 'border-slate-700 text-slate-300'}`}
+                className={`rounded-card border-4 p-4 text-heading-2 font-normal ${atual ? 'border-projecao-destaque-bg bg-projecao-destaque-bg text-projecao-destaque-fg' : 'border-projecao-borda text-projecao-fg'}`}
               >
-                <strong className="mr-3 text-2xl">Nível {nivel}</strong>
-                {atual && <span className="mr-3 rounded bg-black px-2 py-0.5 text-base font-bold text-yellow-300">Nível registrado</span>}
+                <strong className="mr-3 text-display-md">Nível {nivel}</strong>
+                {atual && <span className="mr-3 rounded-badge bg-projecao-destaque-fg px-3 py-1 text-heading-3 text-projecao-destaque-bg"><span aria-hidden="true">✓ </span>Nível registrado</span>}
                 <span>{descritor}</span>
               </li>
             )
@@ -148,7 +149,7 @@ export function ProjecaoSubcriterio({ codigo, registro }: { codigo: string; regi
         </ul>
       </div>
       {registro ? (
-        <div className="space-y-2 text-2xl">
+        <div className="space-y-3 text-heading-1 font-normal">
           <p>
             Decisão: <strong>{registro.decisao === 'maioria' ? 'Maioria' : 'Unanimidade'}</strong>
           </p>
@@ -157,8 +158,8 @@ export function ProjecaoSubcriterio({ codigo, registro }: { codigo: string; regi
               Voto divergente: <span>{registro.votoDivergente}</span>
             </p>
           )}
-          <p className="text-slate-300">Justificativa:</p>
-          <p className="text-3xl leading-snug">{registro.justificativa}</p>
+          <p className="text-projecao-fg-secundario">Justificativa:</p>
+          <p className="text-display-md font-normal">{registro.justificativa}</p>
           <p>Páginas citadas: {registro.paginas.length > 0 ? registro.paginas.join(', ') : '—'}</p>
         </div>
       ) : (
@@ -197,11 +198,11 @@ export function ProjecaoD2({ resultado, nomes }: { resultado: ResultadoD2 | null
   return (
     <section className="space-y-6">
       <Titulo>Dimensão 2 — Experiência da OSC</Titulo>
-      <p className="text-4xl font-bold text-yellow-300">
+      <p className="inline-block rounded-card bg-projecao-destaque-bg px-6 py-3 text-display-lg text-projecao-destaque-fg">
         D2 = {formatarNumero(resultado.total)} / {formatarNumero(resultado.maximo)}
       </p>
-      <table aria-label="Pontos por critério da D2" className="w-full text-xl">
-        <thead className="text-left text-slate-300">
+      <table aria-label="Pontos por critério da D2" className="w-full text-heading-2 font-normal">
+        <thead className="text-left text-projecao-fg-secundario">
           <tr>
             <th className="py-1 pr-4">Critério</th>
             <th className="py-1 pr-4 text-right">Pontos</th>
@@ -212,16 +213,16 @@ export function ProjecaoD2({ resultado, nomes }: { resultado: ResultadoD2 | null
           {linhas.map(([rotulo, r]) => {
             const usadas = (r.usadas ?? []).map((id) => nomes[id] ?? id)
             return (
-              <tr key={rotulo} aria-label={`${rotulo} — ${r.titulo}`} className="border-t border-slate-700 align-top">
+              <tr key={rotulo} aria-label={`${rotulo} — ${r.titulo}`} className="border-t-2 border-projecao-borda align-top">
                 <td className="py-2 pr-4">
-                  <strong>{rotulo}</strong> <span className="text-slate-300">{r.titulo}</span>
+                  <strong>{rotulo}</strong> <span className="text-projecao-fg-secundario">{r.titulo}</span>
                 </td>
-                <td className="whitespace-nowrap py-2 pr-4 text-right text-2xl font-bold">
+                <td className="whitespace-nowrap py-2 pr-4 text-right text-heading-1">
                   {formatarNumero(r.pontos)} / {formatarNumero(r.maximo)}
                 </td>
                 <td className="py-2">
                   <p>{legivel(r.memoria.at(-1) ?? '', nomes)}</p>
-                  <p className="text-slate-400">Experiências: {usadas.length ? usadas.join('; ') : 'nenhuma'}</p>
+                  <p className="text-projecao-fg-secundario">Experiências: {usadas.length ? usadas.join('; ') : 'nenhuma'}</p>
                 </td>
               </tr>
             )
@@ -236,9 +237,9 @@ export function ProjecaoD2({ resultado, nomes }: { resultado: ResultadoD2 | null
 
 function Bloco({ rotulo, valor }: { rotulo: string; valor: string }) {
   return (
-    <div role="group" aria-label={rotulo} className="rounded-xl border-2 border-slate-600 p-4 text-center">
-      <p className="text-2xl text-slate-300">{rotulo}</p>
-      <p className="break-words text-4xl font-bold leading-tight">{valor}</p>
+    <div role="group" aria-label={rotulo} className="rounded-card border-4 border-projecao-borda p-4 text-center">
+      <p className="text-heading-1 text-projecao-fg-secundario">{rotulo}</p>
+      <p className="break-words text-display-lg">{valor}</p>
     </div>
   )
 }
@@ -254,12 +255,12 @@ export function ProjecaoResumo({ totais, status }: { totais: TotaisProposta | nu
         </>
       ) : (
         <div className="grid gap-8 xl:grid-cols-[3fr_2fr]">
-          <table aria-label="Pontos por Plano de Ação" className="w-full text-2xl">
+          <table aria-label="Pontos por Plano de Ação" className="w-full text-heading-1 font-normal">
             <tbody>
               {totais.totaisPorPA.map((pa) => (
-                <tr key={pa.codigo} aria-label={`${pa.codigo} — ${pa.titulo}`} className="border-t border-slate-700">
+                <tr key={pa.codigo} aria-label={`${pa.codigo} — ${pa.titulo}`} className="border-t-2 border-projecao-borda">
                   <td className="py-2 pr-4 font-bold">{pa.codigo}</td>
-                  <td className="py-2 pr-4 text-slate-300">{pa.titulo}</td>
+                  <td className="py-2 pr-4 text-projecao-fg-secundario">{pa.titulo}</td>
                   <td className="whitespace-nowrap py-2 text-right font-bold">
                     {formatarNumero(pa.pontos)} / {formatarNumero(pa.maximo)}
                   </td>
@@ -284,10 +285,10 @@ export function ProjecaoResumo({ totais, status }: { totais: TotaisProposta | nu
 export function TelaEspera({ chamamento }: { chamamento: { numero: string; titulo: string } | null }) {
   return (
     <section className="flex min-h-[60vh] flex-col items-center justify-center text-center">
-      <h1 className="text-5xl font-bold">
+      <h1 className="text-display-lg text-projecao-fg">
         {chamamento ? `Chamamento ${chamamento.numero} — ${chamamento.titulo}` : 'Comissão de Seleção'}
       </h1>
-      <p className="mt-6 text-3xl text-slate-300">Aguardando a Comissão definir o item em discussão</p>
+      <p className="mt-6 text-display-md font-normal text-projecao-fg-secundario">Aguardando a Comissão definir o item em discussão</p>
     </section>
   )
 }
