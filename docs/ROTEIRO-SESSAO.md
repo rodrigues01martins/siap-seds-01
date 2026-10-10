@@ -7,9 +7,9 @@ Quem faz cada passo está entre colchetes: **[presidente]**, **[relator]**, **[a
 
 ## Véspera (D-1)
 
-1. **[admin]** Rode o **backup antes da sessão**: GitHub → *Actions* → **Backup do Firestore (prod)** →
-   *Run workflow* → momento `antes-da-sessao`. Confira que terminou em verde e que o artifact aparece
-   na execução (seção 6 do [checklist](CHECKLIST-PRODUCAO.md)).
+1. **[admin]** Rode o **backup antes da sessão** pelo terminal (`npm run backup -- --projeto prod --confirmar`,
+   com `BACKUP_SENHA` definida). Confira a contagem e o SHA-256 na saída e guarde o arquivo na rede da SEDS
+   (seção 7 do [checklist](CHECKLIST-PRODUCAO.md)).
 2. **[admin]** Confira os perfis: em **Perfis de acesso** (`/perfis`), cada membro com o perfil certo
    (presidente, relator, membro) e o usuário do telão (ver passo 4).
 3. **[admin]** Confira no painel do chamamento que todas as propostas da pauta existem, com **nº SEI** e
@@ -69,8 +69,7 @@ O status oficial é o calculado pelo servidor.
    propostas, decisões por maioria, desempates e diligências). Ajuste o texto e **Exportar PDF**.
    A edição não fica gravada no sistema: exporte antes de sair da página.
 2. **[presidente]** **Encerrar sessão** (depois disso não se registram avaliações nela).
-3. **[admin]** Rode o **backup depois da sessão** (Actions → *Backup do Firestore (prod)* → momento
-   `depois-da-sessao`).
+3. **[admin]** Rode o **backup depois da sessão** (o mesmo comando) e guarde o arquivo na rede da SEDS.
 4. Guarde os PDFs (ata, espelhos, quadro) no processo SEI do chamamento.
 
 ---
@@ -112,5 +111,5 @@ O status oficial é o calculado pelo servidor.
 - Depois da homologação: **Reabrir** (presidente, com motivo), corrigir, homologar de novo.
 
 ### Algo grave (dados apagados ou corrompidos)
-- Pare a sessão e chame o admin. Os backups ficam em *Actions* → *Backup do Firestore (prod)*.
+- Pare a sessão e chame o admin. Os backups ficam na rede da SEDS (arquivos `.json.cifrado`).
   A restauração é feita **primeiro no dev** para conferência (README, seção "Backup e restauração").
