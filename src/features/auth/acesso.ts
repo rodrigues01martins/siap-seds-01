@@ -8,6 +8,8 @@ export interface Usuario {
   nome: string | null
   /** Cadastro em usuarios/{uid}; null = autenticado, mas sem cadastro (sem acesso). */
   acesso: Acesso | null
+  /** Por que o acesso não foi carregado (servidor ou Firestore sem resposta, recusa...), para a tela mostrar. */
+  erro?: string | null
 }
 
 export interface EstadoUsuario {

@@ -22,11 +22,20 @@ export function AcessoNaoAutorizado() {
       <p className="mt-3 text-slate-600">
         Conta <strong>{usuario?.email}</strong>. {mensagem}
       </p>
+      {!temApp && usuario?.erro && (
+        <p role="alert" className="mt-3 rounded-md bg-amber-50 p-3 text-sm text-amber-900">
+          Detalhe: {usuario.erro}
+        </p>
+      )}
       <div className="mt-6 flex gap-3">
-        {temApp && (
+        {temApp ? (
           <Link to="/" className="rounded-md bg-slate-900 px-4 py-2 text-white">
             Voltar ao início
           </Link>
+        ) : (
+          <button type="button" onClick={() => window.location.reload()} className="rounded-md bg-slate-900 px-4 py-2 text-white">
+            Recarregar
+          </button>
         )}
         <button type="button" onClick={() => sair()} className="rounded-md border border-slate-300 px-4 py-2">
           Sair

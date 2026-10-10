@@ -1,15 +1,15 @@
 // Sessão do usuário: login (Firebase Auth) + cadastro em usuarios/{uid}, ouvido em tempo real.
 // Quando o administrador libera ou retira uma permissão, a tela muda sozinha (sem sair e entrar).
-// Conta sem acesso (sem cadastro ou cadastro antigo): pede uma vez ao servidor (PUT /api/usuarios), que só
-// dá acesso a um administrador inicial (api/_lib/adminsIniciais.ts) enquanto o projeto não tiver administrador.
+// A leitura do cadastro (e o primeiro acesso do administrador inicial) fica em ./cadastro.ts, com limite de
+// tempo: a tela nunca fica em "Carregando…" para sempre.
 
 import { onAuthStateChanged, signOut } from 'firebase/auth'
-import { doc, onSnapshot } from 'firebase/firestore'
+import { doc, getDocFromServer, onSnapshot } from 'firebase/firestore'
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { lerAcesso, podeLer } from '../../domain/permissoes'
 import { chamarApi } from '../../lib/api'
 import { obterAuth, obterDb } from '../../lib/firebase'
 import type { EstadoUsuario } from './acesso'
+import { acompanharCadastro } from './cadastro'
 
 interface ValorUsuario extends EstadoUsuario {
   sair: () => Promise<void>
@@ -34,27 +34,28 @@ export function UsuarioProvider({ children }: { children: ReactNode }) {
         atualizar({ carregando: false, usuario: null })
         return
       }
-      atualizar({ carregando: true, usuario: null })
-      const base = { uid: user.uid, email: user.email, nome: user.displayName }
-      let pediuPrimeiroAcesso = false
-
-      pararCadastro = onSnapshot(
-        doc(obterDb(), 'usuarios', user.uid),
-        (documento) => {
-          const dados = documento.data()
-          const acesso = lerAcesso(dados)
-          if (!podeLer(acesso) && !pediuPrimeiroAcesso) {
-            // Continua "carregando" até o servidor responder; se criar o cadastro, este listener dispara de novo.
-            pediuPrimeiroAcesso = true
-            chamarApi('/api/usuarios', { metodo: 'PUT' }).catch(() =>
-              atualizar({ carregando: false, usuario: { ...base, acesso } }),
-            )
-            return
-          }
-          const nome = typeof dados?.nome === 'string' ? dados.nome : base.nome
-          atualizar({ carregando: false, usuario: { ...base, nome, acesso } })
+      const referencia = doc(obterDb(), 'usuarios', user.uid)
+      pararCadastro = acompanharCadastro(
+        {
+          ouvir: (aoReceber, aoFalhar) => onSnapshot(referencia, (d) => aoReceber(d.data()), aoFalhar),
+          pedirPrimeiroAcesso: async () => {
+            await chamarApi('/api/usuarios', { metodo: 'PUT' })
+          },
+          lerDoServidor: async () => (await getDocFromServer(referencia)).data(),
         },
-        () => atualizar({ carregando: false, usuario: { ...base, acesso: null } }),
+        (cadastro) => {
+          if (cadastro.carregando) return atualizar({ carregando: true, usuario: null })
+          atualizar({
+            carregando: false,
+            usuario: {
+              uid: user.uid,
+              email: user.email,
+              nome: cadastro.nome ?? user.displayName,
+              acesso: cadastro.acesso,
+              erro: cadastro.erro,
+            },
+          })
+        },
       )
     })
 
