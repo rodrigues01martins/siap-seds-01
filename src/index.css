@@ -203,6 +203,13 @@
     outline: var(--sds-border-medium) solid var(--sds-focus-ring);
     outline-offset: 2px;
   }
+
+  /* Data e hora: o foco fica nas partes internas (dia/mês/ano e botão do calendário), onde o Chrome não aplica
+     :focus-visible (no botão do calendário, nem :focus); :focus-within cobre todas. */
+  input:is([type='date'], [type='time'], [type='datetime-local'], [type='month']):focus-within {
+    outline: var(--sds-border-medium) solid var(--sds-focus-ring);
+    outline-offset: 2px;
+  }
 }
 
 /* Movimento reduzido (§11): zera as durações dos tokens e neutraliza animações e transições. */

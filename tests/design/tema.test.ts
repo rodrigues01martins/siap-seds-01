@@ -42,6 +42,10 @@ describe('base global', () => {
     expect(CSS).toMatch(/:focus-visible\s*\{[^}]*outline:\s*var\(--sds-border-medium\) solid var\(--sds-focus-ring\);[^}]*outline-offset:\s*2px/)
   })
 
+  it('campos de data e hora também mostram o anel (o Chrome não aplica :focus-visible nas partes dia/mês/ano)', () => {
+    expect(CSS).toMatch(/input:is\(\[type='date'\], \[type='time'\], \[type='datetime-local'\], \[type='month'\]\):focus-within\s*\{[^}]*outline:\s*var\(--sds-border-medium\) solid var\(--sds-focus-ring\);/)
+  })
+
   it('movimento: 100/150/250 ms com a curva do DS e transição padrão do Tailwind ligada a eles', () => {
     expect(TEMA.get('default-transition-duration')).toBe('var(--sds-motion-default)')
     expect(TEMA.get('default-transition-timing-function')).toBe('var(--sds-motion-easing)')
