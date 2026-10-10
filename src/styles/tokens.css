@@ -1,0 +1,268 @@
+/*
+ * Tokens de design — Sistema de Design SEDS, Web Corporativo 1.0 (docs/DESIGN-SYSTEM-SEDS.md).
+ * Três níveis: 1) primitivos (os únicos com valores HEX), 2) semânticos (o que cada cor SIGNIFICA) e
+ * 3) componentes (como cada componente usa os semânticos). Telas e componentes só consomem os níveis 2 e 3
+ * (pelas classes do Tailwind definidas em src/index.css); nunca HEX direto (CLAUDE.md, regra 6).
+ * Prefixo --sds- para não colidir com as variáveis do próprio Tailwind (ex.: --radius-md).
+ * Conferido por tests/design/tokens.test.ts (fidelidade ao DS) e tests/design/contraste.test.ts (WCAG AA).
+ */
+
+/* ========================= Nível 1 — Primitivos ========================= */
+:root {
+  /* Cores de marca (§3, derivadas; aguardam validação da Comunicação). */
+  --sds-brand-blue: #005faa;
+  --sds-brand-green: #1d9531;
+  --sds-brand-teal: #007770;
+  --sds-brand-yellow: #ffda00;
+  --sds-brand-white: #ffffff;
+  --sds-brand-black: #030505;
+
+  /* Escalas (§5). */
+  --sds-primary-50: #f1f8fc;
+  --sds-primary-100: #dfeff9;
+  --sds-primary-200: #b1d1eb;
+  --sds-primary-300: #78adda;
+  --sds-primary-400: #468dca;
+  --sds-primary-500: #1973b9;
+  --sds-primary-600: #005faa;
+  --sds-primary-700: #00539a;
+  --sds-primary-800: #004b87;
+  --sds-primary-900: #003d6e;
+
+  --sds-green-100: #e5f4e7;
+  --sds-green-200: #b5dfbb;
+  --sds-green-300: #7bc587;
+  --sds-green-400: #49ab59;
+  --sds-green-500: #1d9531;
+  --sds-green-600: #187d29;
+  --sds-green-700: #146b23;
+
+  --sds-teal-100: #dcebea;
+  --sds-teal-200: #a5d0cd;
+  --sds-teal-300: #60aca7;
+  --sds-teal-400: #278e88;
+  --sds-teal-500: #007770;
+  --sds-teal-600: #00615b;
+  --sds-teal-700: #004d49;
+
+  --sds-neutral-0: #ffffff;
+  --sds-neutral-50: #f7f7f7;
+  --sds-neutral-100: #eeeeee;
+  --sds-neutral-200: #e2e2e2;
+  --sds-neutral-300: #cccccc;
+  --sds-neutral-400: #a3a3a3;
+  --sds-neutral-500: #858585;
+  --sds-neutral-600: #666666;
+  --sds-neutral-700: #4a4a4a;
+  --sds-neutral-800: #363636;
+  --sds-neutral-900: #242424;
+  --sds-neutral-950: #171717;
+
+  /* Cores funcionais (§7) e ajustes de contraste (§8). */
+  --sds-functional-success: #1d7a35;
+  --sds-functional-error: #b42318;
+  --sds-functional-warning: #b77900;
+  --sds-functional-warning-text: #8f5f00;
+  --sds-functional-muted: #707070;
+
+  /* Espaço (§10): grid de 4 px; o mesmo número do Tailwind (p-4 = 16 px = space-4). */
+  --sds-space-0: 0px;
+  --sds-space-1: 4px;
+  --sds-space-2: 8px;
+  --sds-space-3: 12px;
+  --sds-space-4: 16px;
+  --sds-space-5: 20px;
+  --sds-space-6: 24px;
+  --sds-space-8: 32px;
+  --sds-space-10: 40px;
+  --sds-space-12: 48px;
+  --sds-space-16: 64px;
+  --sds-space-20: 80px;
+
+  /* Raio, bordas, elevação e movimento (§11). */
+  --sds-radius-xs: 2px;
+  --sds-radius-sm: 4px;
+  --sds-radius-md: 8px;
+  --sds-radius-lg: 12px;
+  --sds-radius-xl: 16px;
+  --sds-radius-full: 9999px;
+  --sds-border-thin: 1px;
+  --sds-border-medium: 2px;
+  --sds-elevation-0: none;
+  --sds-elevation-1: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --sds-elevation-2: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --sds-elevation-3: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --sds-motion-fast: 100ms;
+  --sds-motion-default: 150ms;
+  --sds-motion-moderate: 250ms;
+  --sds-motion-easing: cubic-bezier(0.2, 0, 0, 1);
+
+  /* Tipografia (§9). Gotham só com arquivos oficiais em public/fonts/ (@font-face em src/index.css). */
+  --sds-font-family: 'Gotham', 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* ========================= Nível 2 — Semânticos ========================= */
+:root {
+  /* Fundo, superfície e texto (§6). */
+  --sds-background-default: var(--sds-neutral-50);
+  --sds-background-surface: var(--sds-neutral-0);
+  --sds-background-disabled: var(--sds-neutral-100);
+  --sds-text-primary: var(--sds-neutral-900);
+  --sds-text-secondary: var(--sds-neutral-600);
+  --sds-text-muted: var(--sds-functional-muted); /* §8: #858585 reprova AA; usar #707070 */
+  --sds-text-inverse: var(--sds-neutral-0);
+  --sds-text-link: var(--sds-primary-600);
+  --sds-text-positive: var(--sds-green-700); /* §8: texto verde só em Green 700 */
+
+  /* Bordas (§6). border-input: decisão de contraste do app (WCAG 1.4.11 exige 3:1 na borda que identifica
+     o campo; #E2E2E2 e #CCCCCC ficam abaixo disso), por isso Neutral 500. */
+  --sds-border-default: var(--sds-neutral-200);
+  --sds-border-strong: var(--sds-neutral-300);
+  --sds-border-focus: var(--sds-primary-600);
+  --sds-border-input: var(--sds-neutral-500);
+  --sds-border-input-hover: var(--sds-neutral-700);
+
+  /* Ação (azul = interação, §4 e §6). */
+  --sds-action-primary: var(--sds-primary-600);
+  --sds-action-primary-hover: var(--sds-primary-800);
+  --sds-action-primary-active: var(--sds-primary-900);
+  --sds-action-subtle: var(--sds-primary-50);
+  --sds-action-subtle-strong: var(--sds-primary-100);
+  --sds-focus-ring: var(--sds-primary-600);
+  --sds-focus-ring-inverse: var(--sds-neutral-0); /* foco sobre fundos escuros (sidebar) */
+
+  /* Status (§7 e §8): cor (ícone/borda), texto e superfície (fundo de alerta e badge). */
+  --sds-status-success: var(--sds-functional-success);
+  --sds-status-success-text: var(--sds-functional-success);
+  --sds-status-success-surface: var(--sds-green-100);
+  --sds-status-info: var(--sds-primary-600);
+  --sds-status-info-text: var(--sds-primary-600);
+  --sds-status-info-surface: var(--sds-primary-50);
+  --sds-status-warning: var(--sds-functional-warning); /* só ícone/borda */
+  --sds-status-warning-text: var(--sds-functional-warning-text);
+  --sds-status-warning-surface: color-mix(in srgb, var(--sds-functional-warning) 12%, var(--sds-neutral-0));
+  --sds-status-error: var(--sds-functional-error);
+  --sds-status-error-text: var(--sds-functional-error);
+  --sds-status-error-surface: color-mix(in srgb, var(--sds-functional-error) 8%, var(--sds-neutral-0));
+  --sds-status-error-hover: color-mix(in srgb, var(--sds-functional-error) 85%, var(--sds-brand-black));
+  --sds-status-error-active: color-mix(in srgb, var(--sds-functional-error) 70%, var(--sds-brand-black));
+  --sds-status-neutral: var(--sds-neutral-500);
+  --sds-status-neutral-text: var(--sds-neutral-600);
+  --sds-status-neutral-surface: var(--sds-neutral-100);
+
+  /* Destaque (amarelo só como acento; texto sempre #030505 sobre ele, §5 e §8). */
+  --sds-accent: var(--sds-brand-yellow);
+  --sds-on-accent: var(--sds-brand-black);
+
+  /* Navegação (teal, §4 e §5). */
+  --sds-navigation-background: var(--sds-teal-700);
+  --sds-navigation-hover: var(--sds-teal-600);
+  --sds-navigation-selected: var(--sds-teal-500);
+  --sds-navigation-text: var(--sds-neutral-0);
+  --sds-navigation-text-muted: var(--sds-teal-100);
+
+  /* Dados e gráficos (teal e verde para dados, §4; Green 500 só em gráficos, §8). */
+  --sds-data-1: var(--sds-teal-500);
+  --sds-data-2: var(--sds-primary-600);
+  --sds-data-3: var(--sds-green-500);
+  --sds-data-accent: var(--sds-brand-yellow);
+  --sds-data-grid: var(--sds-neutral-200);
+  --sds-data-label: var(--sds-neutral-600);
+
+  /* Superfícies elevadas (§11). */
+  --sds-shadow-card: var(--sds-elevation-0);
+  --sds-shadow-dropdown: var(--sds-elevation-2);
+  --sds-shadow-tooltip: var(--sds-elevation-2);
+  --sds-shadow-modal: var(--sds-elevation-3);
+}
+
+/* ========================= Nível 3 — Componentes ========================= */
+:root {
+  /* Button (§13): primary, secondary, tertiary, destructive; 32/40/48; raio 8. */
+  --sds-button-height-sm: 32px;
+  --sds-button-height-md: 40px;
+  --sds-button-height-lg: 48px;
+  --sds-button-padding-x-sm: var(--sds-space-3);
+  --sds-button-padding-x-md: var(--sds-space-4);
+  --sds-button-padding-x-lg: var(--sds-space-5);
+  --sds-button-radius: var(--sds-radius-md);
+  --sds-button-primary-bg: var(--sds-action-primary);
+  --sds-button-primary-bg-hover: var(--sds-action-primary-hover);
+  --sds-button-primary-bg-active: var(--sds-action-primary-active);
+  --sds-button-primary-fg: var(--sds-text-inverse);
+  --sds-button-secondary-bg: var(--sds-background-surface);
+  --sds-button-secondary-bg-hover: var(--sds-action-subtle);
+  --sds-button-secondary-fg: var(--sds-action-primary);
+  --sds-button-secondary-border: var(--sds-action-primary);
+  --sds-button-tertiary-fg: var(--sds-action-primary);
+  --sds-button-tertiary-bg-hover: var(--sds-action-subtle);
+  --sds-button-destructive-bg: var(--sds-status-error);
+  --sds-button-destructive-bg-hover: var(--sds-status-error-hover);
+  --sds-button-destructive-bg-active: var(--sds-status-error-active);
+  --sds-button-destructive-fg: var(--sds-text-inverse);
+  --sds-button-disabled-bg: var(--sds-background-disabled);
+  --sds-button-disabled-fg: var(--sds-text-muted);
+
+  /* Input (§13): raio 8, altura 40; estados default, hover, focus, error, success, disabled, readonly. */
+  --sds-input-height: var(--sds-button-height-md);
+  --sds-input-padding-x: var(--sds-space-3);
+  --sds-input-radius: var(--sds-radius-md);
+  --sds-input-bg: var(--sds-background-surface);
+  --sds-input-bg-disabled: var(--sds-background-disabled);
+  --sds-input-bg-readonly: var(--sds-background-default);
+  --sds-input-fg: var(--sds-text-primary);
+  --sds-input-fg-disabled: var(--sds-text-muted);
+  --sds-input-placeholder: var(--sds-text-muted);
+  --sds-input-border: var(--sds-border-input);
+  --sds-input-border-hover: var(--sds-border-input-hover);
+  --sds-input-border-focus: var(--sds-border-focus);
+  --sds-input-border-error: var(--sds-status-error);
+  --sds-input-border-success: var(--sds-status-success);
+
+  /* Sidebar (§12): 240 px, recolhida 72 px; teal = navegação. */
+  --sds-sidebar-width: 240px;
+  --sds-sidebar-width-collapsed: 72px;
+  --sds-sidebar-bg: var(--sds-navigation-background);
+  --sds-sidebar-fg: var(--sds-navigation-text);
+  --sds-sidebar-fg-muted: var(--sds-navigation-text-muted);
+  --sds-sidebar-item-bg-hover: var(--sds-navigation-hover);
+  --sds-sidebar-item-bg-active: var(--sds-navigation-selected);
+  --sds-sidebar-item-fg-active: var(--sds-navigation-text);
+  --sds-sidebar-item-indicator: var(--sds-accent);
+
+  /* Card (§13): fundo branco, raio 12, padding 24, borda 1 px #E2E2E2, elevação 0–1. */
+  --sds-card-bg: var(--sds-background-surface);
+  --sds-card-border: var(--sds-border-default);
+  --sds-card-radius: var(--sds-radius-lg);
+  --sds-card-padding: var(--sds-space-6);
+  --sds-card-shadow: var(--sds-shadow-card);
+
+  /* Badge (§13): ponto + texto, raio total. */
+  --sds-badge-radius: var(--sds-radius-full);
+  --sds-badge-success-bg: var(--sds-status-success-surface);
+  --sds-badge-success-fg: var(--sds-status-success-text);
+  --sds-badge-success-dot: var(--sds-status-success);
+  --sds-badge-info-bg: var(--sds-status-info-surface);
+  --sds-badge-info-fg: var(--sds-status-info-text);
+  --sds-badge-info-dot: var(--sds-status-info);
+  --sds-badge-warning-bg: var(--sds-status-warning-surface);
+  --sds-badge-warning-fg: var(--sds-status-warning-text);
+  --sds-badge-warning-dot: var(--sds-status-warning);
+  --sds-badge-error-bg: var(--sds-status-error-surface);
+  --sds-badge-error-fg: var(--sds-status-error-text);
+  --sds-badge-error-dot: var(--sds-status-error);
+  --sds-badge-neutral-bg: var(--sds-status-neutral-surface);
+  --sds-badge-neutral-fg: var(--sds-status-neutral-text);
+  --sds-badge-neutral-dot: var(--sds-status-neutral);
+
+  /* Table (§13): cabeçalho 48 px; linha 48 (compacta) a 56 px (confortável). */
+  --sds-table-header-height: 48px;
+  --sds-table-row-height-compact: 48px;
+  --sds-table-row-height-comfortable: 56px;
+  --sds-table-header-bg: var(--sds-background-default);
+  --sds-table-header-fg: var(--sds-text-secondary);
+  --sds-table-row-bg: var(--sds-background-surface);
+  --sds-table-row-bg-hover: var(--sds-action-subtle);
+  --sds-table-row-bg-selected: var(--sds-action-subtle-strong);
+  --sds-table-border: var(--sds-border-default);
+}

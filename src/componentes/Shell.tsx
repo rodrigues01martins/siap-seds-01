@@ -9,7 +9,7 @@ export function Shell() {
   const itens = itensDoMenu(usuario?.acesso ?? null)
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 md:flex">
+    <div className="min-h-screen bg-background-default text-slate-900 md:flex">
       <aside className="bg-slate-900 px-4 py-4 text-slate-100 md:w-56 md:shrink-0">
         <p className="font-semibold">SIAP · SEDS/GO</p>
         <p className="text-xs text-slate-400">Chamamento 2026</p>
