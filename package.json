@@ -20,7 +20,8 @@
     "test:api": "firebase emulators:exec --only auth,firestore --project demo-siap-seds \"vitest run --config vitest.api.config.ts\"",
     "backup": "tsx scripts/backup-firestore.ts",
     "restaurar": "tsx scripts/restaurar-firestore.ts",
-    "ensaio": "tsx scripts/ensaio.ts"
+    "ensaio": "tsx scripts/ensaio.ts",
+    "test:e2e:baseline": "firebase emulators:exec --only auth,firestore --project demo-siap-seds \"playwright test tests/e2e/baseline.spec.ts\""
   },
   "dependencies": {
     "exceljs": "^4.4.0",
@@ -34,7 +35,9 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@firebase/rules-unit-testing": "^3.0.4",
+    "@playwright/test": "1.56.1",
     "@tailwindcss/vite": "^4.3.3",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/jest-dom": "^7.0.1",

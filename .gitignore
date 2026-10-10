@@ -19,3 +19,7 @@ ui-debug.log
 # Backups do Firestore (dados das propostas): nunca versionar
 backups/
 *.json.cifrado
+
+# Playwright (saídas locais)
+test-results/
+playwright-report/
