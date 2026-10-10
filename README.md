@@ -289,10 +289,14 @@ O componente `Formulario` valida com o mesmo esquema da `/api` e põe os erros 4
   aplica `classificar()` aos totais gravados. Ranking por NF entre aptas e completas, com PA1…PA6, D1, D2, NF e
   status; inaptas, desclassificadas, não admitidas e pendentes ficam abaixo, sem posição, com o motivo do domínio.
   Selo **"classificação não definitiva"** enquanto houver pendente ou empate sem decisão.
-- **Desempate (RF-27)**: o sistema não calcula desempate. O presidente registra a ordem decidida pela Comissão,
-  com justificativa (mín. 20 caracteres), em `chamamentos/{ch}/desempates/{id}`. A /api confere que as propostas
-  formam exatamente um empate atual do lote (senão **409**); se o grupo ou a NF mudar depois, a decisão deixa de
-  valer e o empate volta a aparecer.
+- **Desempate (RF-27)**: empates de NF no mesmo lote são resolvidos pelos critérios do Edital, aplicados
+  sucessivamente (maior valor vence): **I** D1 · **II** PA1 · **III** PA2 · **IV** PA5 · **V** Critério 2.1 ·
+  **VI** Critério 2.3. A ordem e a fonte ficam em `matriz_2026.json` (`desempate`, `fonteDesempate`). A tela e o
+  quadro-resumo mostram o selo **"Desempate pelo Edital (critério N)"**. Os totais gravados trazem `d2PorCriterio`
+  (pontos de C2.1…C2.4); proposta com totais anteriores ao RF-27 não usa os critérios V e VI até o próximo recálculo.
+- **Decisão da Comissão**: só quando os seis critérios não resolvem. O presidente registra a ordem com justificativa
+  (mín. 20 caracteres) em `chamamentos/{ch}/desempates/{id}`. A /api confere que as propostas formam exatamente um
+  empate **residual** do lote (senão **409**); se o grupo ou a NF mudar depois, a decisão deixa de valer.
 - **Homologação na tela**: botão do presidente com confirmação dupla (mostra NF e status e pede "conferi").
   Proposta com **diligência em aberto** (aberta ou respondida) não é homologada (**409**).
 - **Reabertura (RF-18)**: só proposta homologada (senão **409**); motivo obrigatório (mín. 20); grava

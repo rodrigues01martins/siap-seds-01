@@ -48,8 +48,9 @@ Fonte no código: src/domain/permissoes.ts (teste garante que bate com esta tabe
 | Reabrir proposta homologada (RF-18) | presidente |
 | Diligências (RF-28) | presidente, relator |
 | Leitura da auditoria | admin, presidente, controle |
-Empate de NF: o sistema só sinaliza (empatada) e não calcula desempate. Enquanto o Edital não parametrizar
-o critério (RF-27), o presidente registra a decisão da Comissão com justificativa (api/desempate.ts, auditado).
+Empate de NF (RF-27): aplicam-se, em ordem, os critérios do Edital da matriz (matriz_2026.json: desempate e
+fonteDesempate; src/domain/classificacao.ts). Só se persistir o empate a Comissão decide e o presidente registra
+a ordem com justificativa (api/desempate.ts, auditado; 409 para grupo que o Edital já resolveu).
 
 ## Fluxo de trabalho (obrigatório)
 - Existem só duas branches: dev e main. Nunca crie outras branches nem Pull Requests.

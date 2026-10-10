@@ -57,8 +57,9 @@ O status oficial é o calculado pelo servidor.
 ### 5. Fechar o lote — [presidente]
 1. Painel do chamamento → **Classificação do lote**.
 2. Enquanto houver selo **"Classificação não definitiva"**, há proposta pendente ou empate sem decisão.
-3. **Empate**: o sistema não desempata. A Comissão decide e o presidente registra a ordem e a
-   **justificativa** em **Registrar desempate** (RF-27).
+3. **Empate de NF**: o sistema aplica os critérios do Edital (I D1, II PA1, III PA2, IV PA5, V C2.1, VI C2.3)
+   e mostra o selo **"Desempate pelo Edital (critério N)"**. Só se o empate persistir em todos eles a Comissão
+   decide e o presidente registra a ordem e a **justificativa** em **Registrar desempate** (RF-27).
 4. **Homologar** cada proposta (confirmação dupla: conferir NF e status). Homologada fica **somente leitura**.
    Erro material depois da homologação: **Reabrir** com o motivo (RF-18), corrigir e homologar de novo.
 5. **Quadro-resumo (PDF/XLSX)** do lote e **Espelho (PDF)** de cada proposta (botão no cabeçalho da proposta).
