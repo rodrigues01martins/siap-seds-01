@@ -37,6 +37,16 @@ describe('Field / TextField', () => {
     expect(mensagem).toHaveClass('text-status-error-text')
   })
 
+  it('mensagem de erro anunciada: região aria-live já presente antes do erro, que recebe a mensagem', () => {
+    const { rerender } = render(<TextField rotulo="Nome" />)
+    const regiao = document.querySelector('[aria-live="polite"]')
+    expect(regiao).not.toBeNull()
+    expect(regiao).toBeEmptyDOMElement()
+    rerender(<TextField rotulo="Nome" erro="Informe o nome." />)
+    expect(document.querySelector('[aria-live="polite"]')).toBe(regiao)
+    expect(regiao).toHaveTextContent('Erro: Informe o nome.')
+  })
+
   it('sucesso: borda de sucesso e mensagem com ícone e texto', () => {
     render(<TextField rotulo="E-mail" sucesso="E-mail disponível." />)
     expect(screen.getByRole('textbox')).toHaveClass('border-input-border-success')

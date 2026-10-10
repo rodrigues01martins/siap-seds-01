@@ -10,7 +10,7 @@ import { Alert } from '../../components/ui/Alert'
 import { Card } from '../../components/ui/Card'
 import { Checkbox } from '../../components/ui/Checkbox'
 import { cx } from '../../components/ui/cx'
-import { classeEntrada } from '../../components/ui/Field'
+import { classeEntrada, MensagemErro } from '../../components/ui/Field'
 import { CampoTexto, FormularioApi } from '../../components/ui/FormularioApi'
 import { Icone } from '../../components/ui/Icone'
 import { RadioGroup } from '../../components/ui/RadioGroup'
@@ -40,15 +40,7 @@ const comoPlano = (linha: LinhaPlano | undefined, codigo: string): PaginasPlano 
 })
 
 function ErroDoGrupo({ id, mensagem }: { id?: string; mensagem?: string }) {
-  if (!mensagem) return null
-  return (
-    <p id={id} className="mt-2 flex items-start gap-1 text-body-sm text-status-error-text">
-      <Icone icone={TriangleAlert} tamanho={16} className="mt-0.5 shrink-0" />
-      <span>
-        <span className="sr-only">Erro:</span> {mensagem}
-      </span>
-    </p>
-  )
+  return <MensagemErro id={id} erro={mensagem} className="mt-2" />
 }
 
 function Requisitos() {

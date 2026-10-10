@@ -10,6 +10,7 @@ import { useFormContext, useWatch, type FieldValues } from 'react-hook-form'
 import { mensagemDoCampo } from '../../components/ui/form'
 import { Alert } from '../../components/ui/Alert'
 import { Card } from '../../components/ui/Card'
+import { MensagemErro } from '../../components/ui/Field'
 import { cx } from '../../components/ui/cx'
 import { CampoTexto, FormularioApi } from '../../components/ui/FormularioApi'
 import { Icone } from '../../components/ui/Icone'
@@ -127,14 +128,7 @@ function Escala() {
             </label>
           ))}
         </div>
-        {erro && (
-          <p id="erro-nivel" className="mt-2 flex items-start gap-1 text-body-sm text-status-error-text">
-            <Icone icone={TriangleAlert} tamanho={16} className="mt-0.5 shrink-0" />
-            <span>
-              <span className="sr-only">Erro:</span> {erro}
-            </span>
-          </p>
-        )}
+        <MensagemErro id="erro-nivel" erro={erro} className="mt-2" />
       </fieldset>
     </Secao>
   )

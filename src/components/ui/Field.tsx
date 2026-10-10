@@ -76,7 +76,25 @@ export function Rotulo({ htmlFor, children, obrigatorio }: { htmlFor: string; ch
   )
 }
 
-/** Ajuda e mensagem (erro tem prioridade sobre sucesso). O prefixo "Erro:"/"Sucesso:" é lido pelo leitor de tela. */
+/** Mensagem de erro (ícone ⚠ + texto) numa região aria-live que já existe antes do erro aparecer: o leitor de
+ *  tela anuncia a mensagem quando ela surge (WCAG 4.1.3). Use também em erros de grupo fora do Field. */
+export function MensagemErro({ id, erro, className }: { id?: string; erro?: string; className?: string }) {
+  return (
+    <div aria-live="polite">
+      {erro && (
+        <p id={id} className={cx('mt-1 flex items-start gap-1 text-body-sm text-status-error-text', className)}>
+          <Icone icone={TriangleAlert} tamanho={16} className="mt-0.5 shrink-0" />
+          <span>
+            <span className="sr-only">Erro:</span> {erro}
+          </span>
+        </p>
+      )}
+    </div>
+  )
+}
+
+/** Ajuda e mensagem (erro tem prioridade sobre sucesso). O prefixo "Erro:"/"Sucesso:" é lido pelo leitor de tela;
+ *  a mensagem fica numa região aria-live, anunciada quando aparece. */
 export function MensagensCampo({ ids, ajuda, erro, sucesso }: { ids: ReturnType<typeof useIdsCampo> } & Pick<PropsCampoBase, 'ajuda' | 'erro' | 'sucesso'>) {
   return (
     <>
@@ -85,22 +103,17 @@ export function MensagensCampo({ ids, ajuda, erro, sucesso }: { ids: ReturnType<
           {ajuda}
         </p>
       )}
-      {erro ? (
-        <p id={ids.mensagem} className="mt-1 flex items-start gap-1 text-body-sm text-status-error-text">
-          <Icone icone={TriangleAlert} tamanho={16} className="mt-0.5 shrink-0" />
-          <span>
-            <span className="sr-only">Erro:</span> {erro}
-          </span>
-        </p>
+      {erro || !sucesso ? (
+        <MensagemErro id={ids.mensagem} erro={erro} />
       ) : (
-        sucesso && (
+        <div aria-live="polite">
           <p id={ids.mensagem} className="mt-1 flex items-start gap-1 text-body-sm text-status-success-text">
             <Icone icone={CircleCheck} tamanho={16} className="mt-0.5 shrink-0" />
             <span>
               <span className="sr-only">Sucesso:</span> {sucesso}
             </span>
           </p>
-        )
+        </div>
       )}
     </>
   )

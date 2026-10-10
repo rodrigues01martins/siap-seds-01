@@ -2,14 +2,14 @@
 // Seções: Identificação | Parceria | Porte | Documentos. Valida no navegador com o esquema da /api + as
 // regras do domínio; o valor anual é digitado em reais.
 
-import { Plus, Trash2, TriangleAlert } from 'lucide-react'
+import { Plus, Trash2 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useFieldArray, useFormContext, type FieldValues } from 'react-hook-form'
 import { mensagemDoCampo } from '../../components/ui/form'
 import { Button } from '../../components/ui/Button'
 import { Checkbox } from '../../components/ui/Checkbox'
 import { CampoLista, CampoTexto, FormularioApi } from '../../components/ui/FormularioApi'
-import { Icone } from '../../components/ui/Icone'
+import { MensagemErro } from '../../components/ui/Field'
 import { centavosParaReais, reaisParaCentavos } from '../../domain/formatacao'
 import { MATRIZ_2026 } from '../../domain/matriz'
 import { MODALIDADES, ROTULO_MODALIDADE, esquemaCamposExperienciaComRegras, type CamposExperiencia } from '../../esquemas/experiencia'
@@ -40,14 +40,7 @@ function Categorias() {
           </li>
         ))}
       </ul>
-      {erro && (
-        <p className="mt-2 flex items-start gap-1 text-body-sm text-status-error-text">
-          <Icone icone={TriangleAlert} tamanho={16} className="mt-0.5 shrink-0" />
-          <span>
-            <span className="sr-only">Erro:</span> {erro}
-          </span>
-        </p>
-      )}
+      <MensagemErro erro={erro} className="mt-2" />
     </div>
   )
 }
