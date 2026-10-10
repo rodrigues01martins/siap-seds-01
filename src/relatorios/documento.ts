@@ -5,18 +5,22 @@
 
 import type { Content, ContentTable, PageOrientation, TDocumentDefinitions } from 'pdfmake/interfaces'
 import { CONTEXTO, GOVERNO, SECRETARIA, SIGLA, SISTEMA } from '../lib/marca.js'
+import { corDoToken, variaveisCss } from '../styles/lerTokens.js'
+import tokensCss from '../styles/tokens.css?raw'
 
-/** Cores dos documentos: pdfmake e exceljs só aceitam HEX; os valores são os dos tokens do DS
- *  (tests/design/relatorios.test.ts garante que batem com src/styles/tokens.css). */
+/** Cores dos documentos: pdfmake e exceljs só aceitam HEX, então elas são LIDAS de src/styles/tokens.css
+ *  (nenhum HEX fora dos tokens). Cada uma aponta para o token do DS. */
+const TOKENS = variaveisCss(tokensCss)
+const token = (nome: string) => corDoToken(nome, TOKENS)
 export const CORES_DOCUMENTO = {
-  azulInstitucional: '#005FAA', // action.primary (Primary 600)
-  zebra: '#EEEEEE', // neutral.100
-  cabecalhoTabela: '#E2E2E2', // neutral.200
-  texto: '#242424', // text.primary
-  textoSecundario: '#666666', // text.secondary
-  borda: '#E2E2E2', // border.default
-  atencao: '#8F5F00', // status.warning-text
-  erro: '#B42318', // status.error
+  azulInstitucional: token('sds-action-primary'),
+  zebra: token('sds-neutral-100'),
+  cabecalhoTabela: token('sds-neutral-200'),
+  texto: token('sds-text-primary'),
+  textoSecundario: token('sds-text-secondary'),
+  borda: token('sds-border-default'),
+  atencao: token('sds-status-warning-text'),
+  erro: token('sds-status-error'),
 } as const
 
 /** Fonte dos PDFs. Gotham é licenciada: só entra com os arquivos oficiais (public/fonts/) registrados no

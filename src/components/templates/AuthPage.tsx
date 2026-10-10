@@ -8,7 +8,7 @@ import { RodapeInstitucional } from './RodapeInstitucional'
 
 export function AuthPage({ titulo, subtitulo, children }: { titulo: string; subtitulo?: string; children: ReactNode }) {
   return (
-    <div className="flex min-h-screen flex-col bg-background-default text-text-primary">
+    <div data-template="AuthPage" className="flex min-h-screen flex-col bg-background-default text-text-primary">
       <LinkPularConteudo />
       <header className="flex h-16 items-center border-b border-border-default bg-background-surface px-4 md:px-6">
         <Brand variante="light" />

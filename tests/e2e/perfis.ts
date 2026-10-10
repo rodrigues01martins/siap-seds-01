@@ -30,6 +30,36 @@ export const PERFIS_E2E: PerfilE2E[] = [
   { id: 'consulta', nome: 'Consulta E2E', email: 'consulta@e2e.go.gov.br', admin: false, permissoes: ['consultar'], comissao: null },
 ]
 
+/**
+ * Perfis dos testes de uso (tests/e2e/uso.spec.ts), como a Comissão trabalha: presidente, relator e membro
+ * (papéis na Comissão + as permissões de cada um), controle (só leitura) e o telão (o perfil "consulta").
+ * Ficam fora de PERFIS_E2E para a medição de design (baseline) continuar com os mesmos perfis do "antes".
+ */
+export const PERFIS_USO: PerfilE2E[] = [
+  {
+    id: 'presidente',
+    nome: 'Presidência E2E',
+    email: 'presidente@e2e.go.gov.br',
+    admin: false,
+    permissoes: ['consultar', 'sessaoAbrirEncerrar', 'sessaoConduzir', 'homologar', 'reabrir', 'desempate'],
+    comissao: 'presidente',
+  },
+  {
+    id: 'relator',
+    nome: 'Relatoria E2E',
+    email: 'relator@e2e.go.gov.br',
+    admin: false,
+    permissoes: ['consultar', 'sessaoAbrirEncerrar', 'sessaoConduzir', 'admissibilidade', 'nivelD1', 'experienciasD2', 'diligencias'],
+    comissao: 'relator',
+  },
+  { id: 'membro', nome: 'Membro E2E', email: 'membro@e2e.go.gov.br', admin: false, permissoes: ['consultar', 'nivelD1'], comissao: 'membro' },
+  { id: 'controle', nome: 'Controle E2E', email: 'controle@e2e.go.gov.br', admin: false, permissoes: ['consultar'], comissao: null },
+]
+
+/** Chamamentos dos testes de uso: um por fluxo, para os fluxos não interferirem entre si. */
+export const CHAMAMENTOS_USO = { relator: 'uso-relator', membro: 'uso-membro', presidente: 'uso-presidente', telao: 'uso-telao' } as const
+export const PROPOSTA_USO = 'uso-p1'
+
 /** Primeira proposta avaliada do ensaio (a mais completa: apta). */
 export const propostaE2E = (propostas: { id: string; esperado: string }[]) => propostas.find((p) => p.esperado === 'apta')!.id
 

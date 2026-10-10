@@ -5,6 +5,7 @@
 // - DetailPage: resumo (termos e valores) e seções de detalhe.
 // - WizardPage: etapas numeradas (aria-current="step") e conteúdo da etapa.
 // - DashboardPage: indicadores e painéis.
+// Cada um se identifica com data-template (a medição de design, tests/e2e/baseline.spec.ts, conta as telas sem template).
 
 import { Check } from 'lucide-react'
 import type { ReactNode } from 'react'
@@ -16,19 +17,19 @@ import { PageHeader, type PropsPageHeader } from '../ui/PageHeader'
 
 export function ListPage({ cabecalho, children }: { cabecalho: PropsPageHeader; children: ReactNode }) {
   return (
-    <>
+    <div data-template="ListPage">
       <PageHeader {...cabecalho} />
       <div className="space-y-6">{children}</div>
-    </>
+    </div>
   )
 }
 
 export function FormPage({ cabecalho, children }: { cabecalho: PropsPageHeader; children: ReactNode }) {
   return (
-    <>
+    <div data-template="FormPage">
       <PageHeader {...cabecalho} />
       <div className="max-w-4xl space-y-6">{children}</div>
-    </>
+    </div>
   )
 }
 
@@ -42,7 +43,7 @@ export function DetailPage({
   children: ReactNode
 }) {
   return (
-    <>
+    <div data-template="DetailPage">
       <PageHeader {...cabecalho} />
       <div className="space-y-6">
         {resumo && (
@@ -52,7 +53,7 @@ export function DetailPage({
         )}
         {children}
       </div>
-    </>
+    </div>
   )
 }
 
@@ -71,7 +72,7 @@ export function WizardPage({
   rodape?: ReactNode
 }) {
   return (
-    <>
+    <div data-template="WizardPage">
       <PageHeader {...cabecalho} />
       <ol aria-label="Etapas" className="mb-6 flex flex-wrap gap-2">
         {passos.map((passo, i) => {
@@ -99,7 +100,7 @@ export function WizardPage({
         {children}
         {rodape && <div className="flex flex-wrap justify-between gap-3">{rodape}</div>}
       </div>
-    </>
+    </div>
   )
 }
 
@@ -111,7 +112,7 @@ export interface Indicador {
 
 export function DashboardPage({ cabecalho, indicadores, children }: { cabecalho: PropsPageHeader; indicadores: Indicador[]; children?: ReactNode }) {
   return (
-    <>
+    <div data-template="DashboardPage">
       <PageHeader {...cabecalho} />
       <ul aria-label="Indicadores" className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {indicadores.map((i) => (
@@ -123,6 +124,6 @@ export function DashboardPage({ cabecalho, indicadores, children }: { cabecalho:
         ))}
       </ul>
       {children && <div className="space-y-6">{children}</div>}
-    </>
+    </div>
   )
 }

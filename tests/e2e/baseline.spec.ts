@@ -1,10 +1,12 @@
 // Medição de design e acessibilidade (baseline): login com cada perfil de acesso, screenshots de todas
 // as rotas em 1280px e 768px e axe (WCAG 2.2 AA). Grava em docs/auditoria-design/<fase>/ as imagens e
 // o relatorio.md (violações por rota, HEX soltos, classes de paleta e fontes).
-// Uso: npm run test:e2e:baseline (fase "antes"); FASE_AUDITORIA=depois para medir de novo.
+// Uso: npm run test:e2e:baseline (fase "antes"); FASE_AUDITORIA=depois para medir de novo — aí o relatório
+// também compara com docs/auditoria-design/antes/ (axe por rota, HEX soltos, classes de paleta, telas sem
+// template) e mede rotas novas (catálogo /ui, nova diligência).
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { montarEnsaio } from '../../scripts/lib/ensaio'
 import { classesDePaleta, declaracoesDeFonte, hexSoltos } from './inventario'
@@ -14,7 +16,16 @@ const FASE = process.env.FASE_AUDITORIA ?? 'antes'
 const PASTA = join('docs', 'auditoria-design', FASE)
 const LARGURAS = [1280, 768] as const
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']
-const ROTAS = rotasE2E(propostaE2E(montarEnsaio('2026-11-10').propostas))
+const PROPOSTA = propostaE2E(montarEnsaio('2026-11-10').propostas)
+const ROTAS = rotasE2E(PROPOSTA)
+/** Rotas criadas depois do "antes" (só na medição depois; ficam fora do comparativo). */
+const ROTAS_NOVAS: RotaE2E[] =
+  FASE === 'antes'
+    ? []
+    : [
+        { slug: 'catalogo-ui', caminho: '/ui', exige: 'admin' },
+        { slug: 'diligencia-nova', caminho: `/chamamentos/ensaio-2026/propostas/${PROPOSTA}/diligencias/nova`, exige: 'diligencias' },
+      ]
 
 interface Violacao {
   id: string
@@ -34,6 +45,8 @@ interface Medicao {
   revisar: { id: string; descricao: string; nos: number }[]
   fonteBody: string
   fontesCarregadas: string[]
+  /** Template da tela (data-template) — null se a tela não usa nenhum (ausente nas medições antigas). */
+  template?: string | null
 }
 const medicoes: Medicao[] = []
 
@@ -54,6 +67,7 @@ async function medir(pagina: Page, perfil: string, rota: Pick<RotaE2E, 'slug' | 
   await pagina.setViewportSize({ width: 1280, height: 900 })
   const axe = await new AxeBuilder({ page: pagina }).withTags(TAGS).analyze()
   const fontes = await pagina.evaluate(() => ({
+    template: document.querySelector('[data-template]')?.getAttribute('data-template') ?? null,
     body: getComputedStyle(document.body).fontFamily,
     carregadas: [...document.fonts].filter((f) => f.status === 'loaded').map((f) => `${f.family} ${f.weight}`),
   }))
@@ -73,6 +87,7 @@ async function medir(pagina: Page, perfil: string, rota: Pick<RotaE2E, 'slug' | 
     revisar: axe.incomplete.map((v) => ({ id: v.id, descricao: v.help, nos: v.nodes.length })),
     fonteBody: fontes.body,
     fontesCarregadas: fontes.carregadas,
+    template: fontes.template,
   })
 }
 
@@ -92,7 +107,7 @@ for (const perfil of PERFIS_E2E) {
     await page.getByRole('button', { name: 'Entrar' }).click()
     await expect(page.getByText(perfil.nome)).toBeVisible({ timeout: 30_000 })
 
-    for (const rota of ROTAS) {
+    for (const rota of [...ROTAS, ...ROTAS_NOVAS]) {
       const acessivel = podeAcessar(perfil, rota)
       // Rota sem permissão: só o administrador percorre todas; os demais registram só as que acessam.
       if (!acessivel && perfil.id !== 'administrador') continue
@@ -105,8 +120,58 @@ for (const perfil of PERFIS_E2E) {
 
 test.afterAll(() => {
   writeFileSync(join(PASTA, 'medicoes.json'), JSON.stringify(medicoes, null, 2))
-  writeFileSync(join(PASTA, 'relatorio.md'), relatorio())
+  writeFileSync(join(PASTA, 'relatorio.md'), relatorio() + (FASE === 'antes' ? '' : comparativo()))
 })
+
+/** Números do relatório do "antes" que não estão no medicoes.json (inventário do código). */
+function totalDoAntes(secao: string): number | null {
+  const arquivo = join('docs', 'auditoria-design', 'antes', 'relatorio.md')
+  if (!existsSync(arquivo)) return null
+  const texto = readFileSync(arquivo, 'utf8')
+  const i = texto.indexOf(secao)
+  const m = i < 0 ? null : /Total: (\d+)/.exec(texto.slice(i))
+  return m ? Number(m[1]) : null
+}
+
+/** Telas que não usam template: a projeção (telão) tem layout próprio por desenho. */
+const POR_DESENHO: Record<string, string> = { projecao: 'layout próprio do telão (sem AppShell, por desenho)' }
+
+function comparativo(): string {
+  const arquivoAntes = join('docs', 'auditoria-design', 'antes', 'medicoes.json')
+  const antes: Medicao[] = existsSync(arquivoAntes) ? JSON.parse(readFileSync(arquivoAntes, 'utf8')) : []
+  const chave = (m: Pick<Medicao, 'perfil' | 'rota'>) => `${m.perfil}·${m.rota}`
+  const mapaAntes = new Map(antes.map((m) => [chave(m), m]))
+  const novas = new Set(ROTAS_NOVAS.map((r) => r.slug))
+  const comuns = medicoes.filter((m) => !novas.has(m.rota))
+  const soma = (lista: Medicao[]) => lista.reduce((s, m) => s + m.violacoes.length, 0)
+  const revisar = (lista: Medicao[]) => lista.reduce((s, m) => s + m.revisar.reduce((t, r) => t + r.nos, 0), 0)
+  const semTemplate = medicoes.filter((m) => m.acessivel && !m.template)
+  const semTemplateIndevidas = semTemplate.filter((m) => !POR_DESENHO[m.rota])
+  const hexAntes = totalDoAntes('## Cores HEX soltas')
+  const paletaAntes = totalDoAntes('## Classes de cor da paleta')
+  const hexDepois = hexSoltos().filter((o) => o.arquivo !== 'src/styles/tokens.css').length
+  const paletaDepois = classesDePaleta().length
+
+  const l: string[] = ['', '## Comparativo com o "antes"', '']
+  l.push('| Indicador | Antes | Depois | Meta |', '|---|---|---|---|')
+  l.push(`| Telas medidas (mesmas rotas, perfis e larguras) | ${antes.length} | ${comuns.length} | — |`)
+  l.push(`| Violações axe (regra × tela) | ${soma(antes)} | ${soma(comuns)} | 0 |`)
+  l.push(`| Elementos que o axe não decidiu (contraste a revisar) | ${revisar(antes)} | ${revisar(comuns)} | o menor possível |`)
+  l.push(`| HEX soltos fora de \`tokens.css\` | ${hexAntes ?? '—'} | ${hexDepois} | 0 |`)
+  l.push(`| Classes da paleta padrão do Tailwind | ${paletaAntes ?? '—'} | ${paletaDepois} | 0 |`)
+  l.push(`| Telas sem template (exceto por desenho) | ${antes.filter((m) => m.acessivel).length} (não havia templates) | ${semTemplateIndevidas.length} | 0 |`)
+  l.push('', '### Violações axe por rota', '', '| Perfil | Rota | Antes | Depois | Template (depois) |', '|---|---|---|---|---|')
+  for (const m of medicoes) {
+    const a = mapaAntes.get(chave(m))
+    const template = m.template ?? (POR_DESENHO[m.rota] ? `— (${POR_DESENHO[m.rota]})` : m.acessivel ? '**sem template**' : '— (sem permissão)')
+    l.push(`| ${m.perfil} | ${m.rota}${novas.has(m.rota) ? ' (nova)' : ''} | ${a ? a.violacoes.length : '—'} | ${m.violacoes.length} | ${template} |`)
+  }
+  l.push('', '### Telas sem template', '')
+  if (semTemplate.length === 0) l.push('Nenhuma.')
+  for (const m of semTemplate) l.push(`- ${m.perfil} · ${m.rota} (\`${m.caminho}\`)${POR_DESENHO[m.rota] ? ` — ${POR_DESENHO[m.rota]}` : ''}`)
+  l.push('')
+  return l.join('\n')
+}
 
 function relatorio(): string {
   const linhas: string[] = []

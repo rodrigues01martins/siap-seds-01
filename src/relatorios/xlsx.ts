@@ -15,7 +15,7 @@ function novoLivro(): ExcelJS.Workbook {
   return livro
 }
 
-/** '#005FAA' → 'FF005FAA' (ARGB do exceljs), a partir das cores do DS usadas nos PDFs. */
+/** Cor HEX do DS → ARGB do exceljs (opaca), a partir das cores usadas nos PDFs. */
 const argb = (hex: string) => `FF${hex.slice(1).toUpperCase()}`
 const preencher = (linha: ExcelJS.Row, hex: string) =>
   linha.eachCell((celula) => {

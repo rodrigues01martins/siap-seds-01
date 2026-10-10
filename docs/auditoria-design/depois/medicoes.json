@@ -1,0 +1,578 @@
+[
+  {
+    "perfil": "anonimo",
+    "rota": "login",
+    "caminho": "/login",
+    "acessivel": true,
+    "violacoes": [],
+    "aprovadas": 26,
+    "revisar": [],
+    "fonteBody": "Gotham, \"Helvetica Neue\", Arial, sans-serif",
+    "fontesCarregadas": [],
+    "template": "AuthPage"
+  },
+  {
+    "perfil": "administrador",
+    "rota": "inicio",
+    "caminho": "/",
+    "acessivel": true,
+    "violacoes": [],
+    "aprovadas": 29,
+    "revisar": [],
+    "fonteBody": "Gotham, \"Helvetica Neue\", Arial, sans-serif",
+    "fontesCarregadas": [],
+    "template": "ListPage"
+  },
+  {
+    "perfil": "administrador",
+    "rota": "painel-chamamento",
+    "caminho": "/chamamentos/ensaio-2026",
+    "acessivel": true,
+    "violacoes": [],
+    "aprovadas": 28,
+    "revisar": [],
+    "fonteBody": "Gotham, \"Helvetica Neue\", Arial, sans-serif",
+    "fontesCarregadas": [],
+    "template": "DetailPage"
+  },
+  {
+    "perfil": "administrador",
+    "rota": "chamamento-novo",
+    "caminho": "/chamamentos/novo",
+    "acessivel": true,
+    "violacoes": [],
+    "aprovadas": 27,
+    "revisar": [],
+    "fonteBody": "Gotham, \"Helvetica Neue\", Arial, sans-serif",
+    "fontesCarregadas": [],
+    "template": "FormPage"
+  },
+  {
+    "perfil": "administrador",
+    "rota": "chamamento-editar",
+    "caminho": "/chamamentos/ensaio-2026/editar",
+    "acessivel": true,
+    "violacoes": [],
+    "aprovadas": 27,
+    "revisar": [],
+    "fonteBody": "Gotham, \"Helvetica Neue\", Arial, sans-serif",
+    "fontesCarregadas": [],
+    "template": "FormPage"
+  },
+  {
+    "perfil": "administrador",
+    "rota": "proposta-nova",
+    "caminho": "/chamamentos/ensaio-2026/propostas/nova",
+    "acessivel": true,
+    "violacoes": [],
+    "aprovadas": 28,
+    "revisar": [],
+    "fonteBody": "Gotham, \"Helvetica Neue\", Arial, sans-serif",
+    "fontesCarregadas": [],
+    "template": "FormPage"
+  },
+  {
+    "perfil": "administrador",
+    "rota": "proposta-editar",
+    "caminho": "/chamamentos/ensaio-2026/propostas/ensaio-l1-beta/editar",
+    "acessivel": true,
+    "violacoes": [],
+    "aprovadas": 28,
+    "revisar": [],
+    "fonteBody": "Gotham, \"Helvetica Neue\", Arial, sans-serif",
+    "fontesCarregadas": [],
+    "template": "FormPage"
+  },
+  {
+    "perfil": "administrador",
+    "rota": "sessao-nova",
+    "caminho": "/chamamentos/ensaio-2026/sessoes/nova",
+    "acessivel": true,
+    "violacoes": [],
+    "aprovadas": 27,
+    "revisar": [],
+    "fonteBody": "Gotham, \"Helvetica Neue\", Arial, sans-serif",
+    "fontesCarregadas": [],
+    "template": "WizardPage"
+  },
+  {
+    "perfil": "administrador",
+    "rota": "sessao",
+    "caminho": "/chamamentos/ensaio-2026/sessoes/e2e-sessao-aberta",
+    "acessivel": true,
+    "violacoes": [],
+    "aprovadas": 30,
+    "revisar": [],
+    "fonteBody": "Gotham, \"Helvetica Neue\", Arial, sans-serif",
+    "fontesCarregadas": [],
+    "template": "DetailPage"
+  },
+  {
+    "perfil": "administrador",
+    "rota": "ata",
+    "caminho": "/chamamentos/ensaio-2026/sessoes/e2e-sessao-aberta/ata",
+    "acessivel": true,
+    "violacoes": [],
+    "aprovadas": 27,
+    "revisar": [],
+    "fonteBody": "Gotham, \"Helvetica Neue\", Arial, sans-serif",
+    "fontesCarregadas": [],
+    "template": "FormPage"
+  },
+  {
+    "perfil": "administrador",
+    "rota": "admissibilidade",
+    "caminho": "/chamamentos/ensaio-2026/propostas/ensaio-l1-beta/admissibilidade",
+    "acessivel": true,
+    "violacoes": [],
+    "aprovadas": 31,
+    "revisar": [],
+    "fonteBody": "Gotham, \"Helvetica Neue\", Arial, sans-serif",
+    "fontesCarregadas": [],
+    "template": "FormPage"
+  },
+  {
+    "perfil": "administrador",
+    "rota": "d1",
+    "caminho": "/chamamentos/ensaio-2026/propostas/ensaio-l1-beta/d1",
+    "acessivel": true,
+    "violacoes": [],
+    "aprovadas": 30,
+    "revisar": [
+      {
+        "id": "color-contrast",
+        "descricao": "Elements must meet minimum color contrast ratio thresholds",
+        "nos": 1
+      }
+    ],
+    "fonteBody": "Gotham, \"Helvetica Neue\", Arial, sans-serif",
+    "fontesCarregadas": [],
+    "template": "DetailPage"
+  },
+  {
+    "perfil": "administrador",
+    "rota": "d2",
+    "caminho": "/chamamentos/ensaio-2026/propostas/ensaio-l1-beta/d2",
+    "acessivel": true,
+    "violacoes": [],
+    "aprovadas": 34,
+    "revisar": [
+      {
+        "id": "color-contrast",
+        "descricao": "Elements must meet minimum color contrast ratio thresholds",
+        "nos": 9
+      }
+    ],
+    "fonteBody": "Gotham, \"Helvetica Neue\", Arial, sans-serif",
+    "fontesCarregadas": [],
+    "template": "ListPage"
+  },
+  {
+    "perfil": "administrador",
+    "rota": "d2-memoria",
+    "caminho": "/chamamentos/ensaio-2026/propostas/ensaio-l1-beta/d2/memoria",
+    "acessivel": true,
+    "violacoes": [],
+    "aprovadas": 28,
+    "revisar": [],
+    "fonteBody": "Gotham, \"Helvetica Neue\", Arial, sans-serif",
+    "fontesCarregadas": [],
+    "template": "DetailPage"
+  },
+  {
+    "perfil": "administrador",
+    "rota": "diligencias",
+    "caminho": "/chamamentos/ensaio-2026/propostas/ensaio-l1-beta/diligencias",
+    "acessivel": true,
+    "violacoes": [],
+    "aprovadas": 32,
+    "revisar": [],
+    "fonteBody": "Gotham, \"Helvetica Neue\", Arial, sans-serif",
+    "fontesCarregadas": [],
+    "template": "ListPage"
+  },
+  {
+    "perfil": "administrador",
+    "rota": "classificacao",
+    "caminho": "/chamamentos/ensaio-2026/lotes/L1/classificacao",
+    "acessivel": true,
+    "violacoes": [],
+    "aprovadas": 26,
+    "revisar": [],
+    "fonteBody": "Gotham, \"Helvetica Neue\", Arial, sans-serif",
+    "fontesCarregadas": [],
+    "template": "ListPage"
+  },
+  {
+    "perfil": "administrador",
+    "rota": "oscs",
+    "caminho": "/oscs",
+    "acessivel": true,
+    "violacoes": [],
+    "aprovadas": 29,
+    "revisar": [],
+    "fonteBody": "Gotham, \"Helvetica Neue\", Arial, sans-serif",
+    "fontesCarregadas": [],
+    "template": "ListPage"
+  },
+  {
+    "perfil": "administrador",
+    "rota": "usuarios",
+    "caminho": "/usuarios",
+    "acessivel": true,
+    "violacoes": [],
+    "aprovadas": 29,
+    "revisar": [],
+    "fonteBody": "Gotham, \"Helvetica Neue\", Arial, sans-serif",
+    "fontesCarregadas": [],
+    "template": "ListPage"
+  },
+  {
+    "perfil": "administrador",
+    "rota": "auditoria",
+    "caminho": "/auditoria",
+    "acessivel": true,
+    "violacoes": [],
+    "aprovadas": 28,
+    "revisar": [],
+    "fonteBody": "Gotham, \"Helvetica Neue\", Arial, sans-serif",
+    "fontesCarregadas": [],
+    "template": "ListPage"
+  },
+  {
+    "perfil": "administrador",
+    "rota": "projecao",
+    "caminho": "/projecao/ensaio-2026/e2e-sessao-aberta",
+    "acessivel": true,
+    "violacoes": [],
+    "aprovadas": 16,
+    "revisar": [],
+    "fonteBody": "Gotham, \"Helvetica Neue\", Arial, sans-serif",
+    "fontesCarregadas": [],
+    "template": null
+  },
+  {
+    "perfil": "administrador",
+    "rota": "catalogo-ui",
+    "caminho": "/ui",
+    "acessivel": true,
+    "violacoes": [],
+    "aprovadas": 35,
+    "revisar": [],
+    "fonteBody": "Gotham, \"Helvetica Neue\", Arial, sans-serif",
+    "fontesCarregadas": [],
+    "template": null
+  },
+  {
+    "perfil": "administrador",
+    "rota": "diligencia-nova",
+    "caminho": "/chamamentos/ensaio-2026/propostas/ensaio-l1-beta/diligencias/nova",
+    "acessivel": true,
+    "violacoes": [],
+    "aprovadas": 27,
+    "revisar": [],
+    "fonteBody": "Gotham, \"Helvetica Neue\", Arial, sans-serif",
+    "fontesCarregadas": [],
+    "template": "FormPage"
+  },
+  {
+    "perfil": "avaliador",
+    "rota": "inicio",
+    "caminho": "/",
+    "acessivel": true,
+    "violacoes": [],
+    "aprovadas": 29,
+    "revisar": [],
+    "fonteBody": "Gotham, \"Helvetica Neue\", Arial, sans-serif",
+    "fontesCarregadas": [],
+    "template": "ListPage"
+  },
+  {
+    "perfil": "avaliador",
+    "rota": "painel-chamamento",
+    "caminho": "/chamamentos/ensaio-2026",
+    "acessivel": true,
+    "violacoes": [],
+    "aprovadas": 28,
+    "revisar": [],
+    "fonteBody": "Gotham, \"Helvetica Neue\", Arial, sans-serif",
+    "fontesCarregadas": [],
+    "template": "DetailPage"
+  },
+  {
+    "perfil": "avaliador",
+    "rota": "sessao",
+    "caminho": "/chamamentos/ensaio-2026/sessoes/e2e-sessao-aberta",
+    "acessivel": true,
+    "violacoes": [],
+    "aprovadas": 30,
+    "revisar": [],
+    "fonteBody": "Gotham, \"Helvetica Neue\", Arial, sans-serif",
+    "fontesCarregadas": [],
+    "template": "DetailPage"
+  },
+  {
+    "perfil": "avaliador",
+    "rota": "ata",
+    "caminho": "/chamamentos/ensaio-2026/sessoes/e2e-sessao-aberta/ata",
+    "acessivel": true,
+    "violacoes": [],
+    "aprovadas": 27,
+    "revisar": [],
+    "fonteBody": "Gotham, \"Helvetica Neue\", Arial, sans-serif",
+    "fontesCarregadas": [],
+    "template": "FormPage"
+  },
+  {
+    "perfil": "avaliador",
+    "rota": "admissibilidade",
+    "caminho": "/chamamentos/ensaio-2026/propostas/ensaio-l1-beta/admissibilidade",
+    "acessivel": true,
+    "violacoes": [],
+    "aprovadas": 31,
+    "revisar": [],
+    "fonteBody": "Gotham, \"Helvetica Neue\", Arial, sans-serif",
+    "fontesCarregadas": [],
+    "template": "FormPage"
+  },
+  {
+    "perfil": "avaliador",
+    "rota": "d1",
+    "caminho": "/chamamentos/ensaio-2026/propostas/ensaio-l1-beta/d1",
+    "acessivel": true,
+    "violacoes": [],
+    "aprovadas": 30,
+    "revisar": [
+      {
+        "id": "color-contrast",
+        "descricao": "Elements must meet minimum color contrast ratio thresholds",
+        "nos": 1
+      }
+    ],
+    "fonteBody": "Gotham, \"Helvetica Neue\", Arial, sans-serif",
+    "fontesCarregadas": [],
+    "template": "DetailPage"
+  },
+  {
+    "perfil": "avaliador",
+    "rota": "d2",
+    "caminho": "/chamamentos/ensaio-2026/propostas/ensaio-l1-beta/d2",
+    "acessivel": true,
+    "violacoes": [],
+    "aprovadas": 34,
+    "revisar": [
+      {
+        "id": "color-contrast",
+        "descricao": "Elements must meet minimum color contrast ratio thresholds",
+        "nos": 9
+      }
+    ],
+    "fonteBody": "Gotham, \"Helvetica Neue\", Arial, sans-serif",
+    "fontesCarregadas": [],
+    "template": "ListPage"
+  },
+  {
+    "perfil": "avaliador",
+    "rota": "d2-memoria",
+    "caminho": "/chamamentos/ensaio-2026/propostas/ensaio-l1-beta/d2/memoria",
+    "acessivel": true,
+    "violacoes": [],
+    "aprovadas": 28,
+    "revisar": [],
+    "fonteBody": "Gotham, \"Helvetica Neue\", Arial, sans-serif",
+    "fontesCarregadas": [],
+    "template": "DetailPage"
+  },
+  {
+    "perfil": "avaliador",
+    "rota": "diligencias",
+    "caminho": "/chamamentos/ensaio-2026/propostas/ensaio-l1-beta/diligencias",
+    "acessivel": true,
+    "violacoes": [],
+    "aprovadas": 32,
+    "revisar": [],
+    "fonteBody": "Gotham, \"Helvetica Neue\", Arial, sans-serif",
+    "fontesCarregadas": [],
+    "template": "ListPage"
+  },
+  {
+    "perfil": "avaliador",
+    "rota": "classificacao",
+    "caminho": "/chamamentos/ensaio-2026/lotes/L1/classificacao",
+    "acessivel": true,
+    "violacoes": [],
+    "aprovadas": 26,
+    "revisar": [],
+    "fonteBody": "Gotham, \"Helvetica Neue\", Arial, sans-serif",
+    "fontesCarregadas": [],
+    "template": "ListPage"
+  },
+  {
+    "perfil": "avaliador",
+    "rota": "projecao",
+    "caminho": "/projecao/ensaio-2026/e2e-sessao-aberta",
+    "acessivel": true,
+    "violacoes": [],
+    "aprovadas": 16,
+    "revisar": [],
+    "fonteBody": "Gotham, \"Helvetica Neue\", Arial, sans-serif",
+    "fontesCarregadas": [],
+    "template": null
+  },
+  {
+    "perfil": "avaliador",
+    "rota": "diligencia-nova",
+    "caminho": "/chamamentos/ensaio-2026/propostas/ensaio-l1-beta/diligencias/nova",
+    "acessivel": true,
+    "violacoes": [],
+    "aprovadas": 27,
+    "revisar": [],
+    "fonteBody": "Gotham, \"Helvetica Neue\", Arial, sans-serif",
+    "fontesCarregadas": [],
+    "template": "FormPage"
+  },
+  {
+    "perfil": "consulta",
+    "rota": "inicio",
+    "caminho": "/",
+    "acessivel": true,
+    "violacoes": [],
+    "aprovadas": 29,
+    "revisar": [],
+    "fonteBody": "Gotham, \"Helvetica Neue\", Arial, sans-serif",
+    "fontesCarregadas": [],
+    "template": "ListPage"
+  },
+  {
+    "perfil": "consulta",
+    "rota": "painel-chamamento",
+    "caminho": "/chamamentos/ensaio-2026",
+    "acessivel": true,
+    "violacoes": [],
+    "aprovadas": 28,
+    "revisar": [],
+    "fonteBody": "Gotham, \"Helvetica Neue\", Arial, sans-serif",
+    "fontesCarregadas": [],
+    "template": "DetailPage"
+  },
+  {
+    "perfil": "consulta",
+    "rota": "sessao",
+    "caminho": "/chamamentos/ensaio-2026/sessoes/e2e-sessao-aberta",
+    "acessivel": true,
+    "violacoes": [],
+    "aprovadas": 28,
+    "revisar": [],
+    "fonteBody": "Gotham, \"Helvetica Neue\", Arial, sans-serif",
+    "fontesCarregadas": [],
+    "template": "DetailPage"
+  },
+  {
+    "perfil": "consulta",
+    "rota": "ata",
+    "caminho": "/chamamentos/ensaio-2026/sessoes/e2e-sessao-aberta/ata",
+    "acessivel": true,
+    "violacoes": [],
+    "aprovadas": 27,
+    "revisar": [],
+    "fonteBody": "Gotham, \"Helvetica Neue\", Arial, sans-serif",
+    "fontesCarregadas": [],
+    "template": "FormPage"
+  },
+  {
+    "perfil": "consulta",
+    "rota": "admissibilidade",
+    "caminho": "/chamamentos/ensaio-2026/propostas/ensaio-l1-beta/admissibilidade",
+    "acessivel": true,
+    "violacoes": [],
+    "aprovadas": 31,
+    "revisar": [],
+    "fonteBody": "Gotham, \"Helvetica Neue\", Arial, sans-serif",
+    "fontesCarregadas": [],
+    "template": "FormPage"
+  },
+  {
+    "perfil": "consulta",
+    "rota": "d1",
+    "caminho": "/chamamentos/ensaio-2026/propostas/ensaio-l1-beta/d1",
+    "acessivel": true,
+    "violacoes": [],
+    "aprovadas": 30,
+    "revisar": [
+      {
+        "id": "color-contrast",
+        "descricao": "Elements must meet minimum color contrast ratio thresholds",
+        "nos": 2
+      }
+    ],
+    "fonteBody": "Gotham, \"Helvetica Neue\", Arial, sans-serif",
+    "fontesCarregadas": [],
+    "template": "DetailPage"
+  },
+  {
+    "perfil": "consulta",
+    "rota": "d2",
+    "caminho": "/chamamentos/ensaio-2026/propostas/ensaio-l1-beta/d2",
+    "acessivel": true,
+    "violacoes": [],
+    "aprovadas": 34,
+    "revisar": [
+      {
+        "id": "color-contrast",
+        "descricao": "Elements must meet minimum color contrast ratio thresholds",
+        "nos": 9
+      }
+    ],
+    "fonteBody": "Gotham, \"Helvetica Neue\", Arial, sans-serif",
+    "fontesCarregadas": [],
+    "template": "ListPage"
+  },
+  {
+    "perfil": "consulta",
+    "rota": "d2-memoria",
+    "caminho": "/chamamentos/ensaio-2026/propostas/ensaio-l1-beta/d2/memoria",
+    "acessivel": true,
+    "violacoes": [],
+    "aprovadas": 28,
+    "revisar": [],
+    "fonteBody": "Gotham, \"Helvetica Neue\", Arial, sans-serif",
+    "fontesCarregadas": [],
+    "template": "DetailPage"
+  },
+  {
+    "perfil": "consulta",
+    "rota": "diligencias",
+    "caminho": "/chamamentos/ensaio-2026/propostas/ensaio-l1-beta/diligencias",
+    "acessivel": true,
+    "violacoes": [],
+    "aprovadas": 32,
+    "revisar": [],
+    "fonteBody": "Gotham, \"Helvetica Neue\", Arial, sans-serif",
+    "fontesCarregadas": [],
+    "template": "ListPage"
+  },
+  {
+    "perfil": "consulta",
+    "rota": "classificacao",
+    "caminho": "/chamamentos/ensaio-2026/lotes/L1/classificacao",
+    "acessivel": true,
+    "violacoes": [],
+    "aprovadas": 26,
+    "revisar": [],
+    "fonteBody": "Gotham, \"Helvetica Neue\", Arial, sans-serif",
+    "fontesCarregadas": [],
+    "template": "ListPage"
+  },
+  {
+    "perfil": "consulta",
+    "rota": "projecao",
+    "caminho": "/projecao/ensaio-2026/e2e-sessao-aberta",
+    "acessivel": true,
+    "violacoes": [],
+    "aprovadas": 16,
+    "revisar": [],
+    "fonteBody": "Gotham, \"Helvetica Neue\", Arial, sans-serif",
+    "fontesCarregadas": [],
+    "template": null
+  }
+]

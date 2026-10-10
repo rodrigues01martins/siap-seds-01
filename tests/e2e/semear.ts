@@ -4,7 +4,7 @@ import { initializeApp } from 'firebase-admin/app'
 import { getAuth } from 'firebase-admin/auth'
 import { getFirestore } from 'firebase-admin/firestore'
 import { CHAMAMENTO_ENSAIO, montarEnsaio } from '../../scripts/lib/ensaio'
-import { CHAMAMENTO_FLUXO, PERFIS_E2E, PROPOSTA_FLUXO, SENHA_E2E, SESSAO_ABERTA, propostaE2E } from './perfis'
+import { CHAMAMENTO_FLUXO, CHAMAMENTOS_USO, PERFIS_E2E, PERFIS_USO, PROPOSTA_FLUXO, PROPOSTA_USO, SENHA_E2E, SESSAO_ABERTA, propostaE2E } from './perfis'
 
 export default async function semear(): Promise<void> {
   if (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_HOST) {
@@ -18,7 +18,7 @@ export default async function semear(): Promise<void> {
   const lote = db.batch()
   for (const [caminho, dados] of Object.entries(ensaio.documentos)) lote.set(db.doc(caminho), dados)
 
-  for (const perfil of PERFIS_E2E) {
+  for (const perfil of [...PERFIS_E2E, ...PERFIS_USO]) {
     const conta = await auth.createUser({ email: perfil.email, password: SENHA_E2E, displayName: perfil.nome })
     perfil.uid = conta.uid
     lote.set(db.doc(`usuarios/${conta.uid}`), {
@@ -58,5 +58,36 @@ export default async function semear(): Promise<void> {
     bloqueada: false,
     ensaio: true,
   })
+  // Testes de uso (uso.spec.ts): a proposta apta e completa do ensaio copiada para um chamamento por fluxo.
+  const origem = `chamamentos/${CHAMAMENTO_ENSAIO}/propostas/${propostaE2E(ensaio.propostas)}`
+  const comissao = [...PERFIS_E2E, ...PERFIS_USO].filter((p) => p.comissao)
+  for (const [fluxo, ch] of Object.entries(CHAMAMENTOS_USO)) {
+    const base = `chamamentos/${ch}`
+    lote.set(db.doc(base), { ...ensaio.documentos[`chamamentos/${CHAMAMENTO_ENSAIO}`], numero: `USO-${fluxo.toUpperCase()}/2026`, titulo: `Teste de uso — ${fluxo}` })
+    const proposta = { ...ensaio.documentos[origem]! }
+    if (fluxo === 'relator') {
+      // Do zero: sem admissibilidade, sem avaliação, sem sessão.
+      delete proposta.admissibilidade
+      delete proposta.totais
+    }
+    if (fluxo === 'membro') delete proposta.totais // admitida, ainda sem níveis
+    lote.set(db.doc(`${base}/propostas/${PROPOSTA_USO}`), proposta)
+    if (fluxo === 'presidente' || fluxo === 'telao') {
+      for (const [caminho, dados] of Object.entries(ensaio.documentos)) {
+        if (caminho.startsWith(`${origem}/`)) lote.set(db.doc(`${base}/propostas/${PROPOSTA_USO}/${caminho.slice(origem.length + 1)}`), dados)
+      }
+    }
+    if (fluxo !== 'relator') {
+      lote.set(db.doc(`${base}/sessoes/uso-sessao`), {
+        data: '2026-11-10',
+        status: 'aberta',
+        pauta: [PROPOSTA_USO],
+        presentes: comissao.map((p) => ({ uid: p.uid, email: p.email, perfil: p.comissao })),
+        declaracoes: comissao.map((p) => ({ uid: p.uid, semImpedimento: true })),
+        foco: null,
+        abertaPor: { uid: 'e2e', email: null },
+      })
+    }
+  }
   await lote.commit()
 }

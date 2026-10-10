@@ -166,6 +166,23 @@ describe('templates de página', () => {
     expect(within(etapas[0]!).getByRole('img', { name: 'concluída' })).toBeInTheDocument()
   })
 
+  it('cada template se identifica com data-template (a medição de design conta as telas sem template)', () => {
+    const casos: [string, React.ReactElement][] = [
+      ['ListPage', <ListPage cabecalho={cabecalho}>x</ListPage>],
+      ['FormPage', <FormPage cabecalho={cabecalho}>x</FormPage>],
+      ['DetailPage', <DetailPage cabecalho={cabecalho}>x</DetailPage>],
+      ['WizardPage', <WizardPage cabecalho={cabecalho} passos={['A']} passoAtual={0}>x</WizardPage>],
+      ['DashboardPage', <DashboardPage cabecalho={cabecalho} indicadores={[]} />],
+      ['AuthPage', <AuthPage titulo="Entrar">x</AuthPage>],
+    ]
+    for (const [nome, elemento] of casos) {
+      const { container, unmount } = render(<MemoryRouter>{elemento}</MemoryRouter>)
+      expect(container.querySelectorAll('[data-template]')).toHaveLength(1)
+      expect(container.querySelector('[data-template]')).toHaveAttribute('data-template', nome)
+      unmount()
+    }
+  })
+
   it('DashboardPage: indicadores em lista', () => {
     render(<DashboardPage cabecalho={cabecalho} indicadores={[{ rotulo: 'Propostas', valor: 6 }]} />)
     expect(within(screen.getByRole('list', { name: 'Indicadores' })).getByText('Propostas')).toBeInTheDocument()
