@@ -39,6 +39,7 @@ interface Props {
 type Dialogo = { tipo: 'homologar' | 'reabrir'; id: string } | { tipo: 'desempate'; nf: number; ids: string[] } | null
 
 const PLANOS = MATRIZ_2026.dimensao1.planos
+const CRITERIOS_DESEMPATE = new Map(MATRIZ_2026.desempate.map((c) => [c.ordem, `${c.ordem} – ${c.descricao}`]))
 const mesmoConjunto = (a: string[], b: string[]) => a.length === b.length && a.every((x) => b.includes(x))
 const classeAcao = 'rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-medium hover:bg-slate-50'
 
@@ -193,7 +194,7 @@ function DialogoDesempate({
       onFechar={onFechar}
     >
       <p className="text-slate-700">
-        Registre a ordem decidida pela Comissão (o sistema não calcula desempate; RF-27). A 1ª fica com a melhor posição.
+        Os critérios do Edital (I a VI) não resolveram este empate. Registre a ordem decidida pela Comissão (RF-27). A 1ª fica com a melhor posição.
       </p>
       <OrdemDesempate ordem={ordem} nomes={nomes} onMudar={setOrdem} />
     </DialogoTexto>
@@ -284,6 +285,14 @@ export function TabelaClassificacao({
                     {pos.desempatadaPelaComissao && (
                       <span className="rounded-full bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-900">Desempate da Comissão</span>
                     )}
+                    {pos.desempatadaPeloEdital && (
+                      <span
+                        title={CRITERIOS_DESEMPATE.get(pos.criterioDesempate ?? '')}
+                        className="rounded-full bg-sky-100 px-2 py-0.5 text-xs font-medium text-sky-900"
+                      >
+                        Desempate pelo Edital (critério {pos.criterioDesempate})
+                      </span>
+                    )}
                   </td>
                   {(podeHomologar || podeReabrir) && <td className="px-2 py-2">{acoes(p)}</td>}
                 </tr>
@@ -295,11 +304,11 @@ export function TabelaClassificacao({
 
       {r.empates.length > 0 && (
         <section className="space-y-2 text-sm">
-          <h2 className="text-base font-semibold">Empates (RF-27)</h2>
+          <h2 className="text-base font-semibold">Empates não resolvidos pelos critérios do Edital (RF-27)</h2>
           {r.empates.map((e) => {
             const decisao = e.decidido ? decisaoDo(e.nf, e.ids) : undefined
             return (
-              <div key={e.nf} className="rounded-md border border-slate-200 bg-white p-3">
+              <div key={`${e.nf}-${e.ids.join('-')}`} className="rounded-md border border-slate-200 bg-white p-3">
                 <p>
                   NF {formatarNumero(e.nf)}: {e.ids.map((id) => nomes.get(id)).join(', ')} —{' '}
                   {decisao ? (

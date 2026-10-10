@@ -166,14 +166,15 @@ export function semCarimbos<T extends Record<string, unknown> | undefined>(dados
 export async function semearPropostaComTotais(
   id: string,
   nf: number,
-  dados: { status?: string; bloqueada?: boolean } = {},
+  dados: { status?: string; bloqueada?: boolean; d1?: number } = {},
 ): Promise<void> {
+  const d1 = dados.d1 ?? nf - 5
   await obterAdmin()
     .db.doc(`chamamentos/${CH}/propostas/${id}`)
     .set({
       loteCodigo: 'L1',
       oscCnpj: '11222333000181',
       bloqueada: dados.bloqueada ?? false,
-      totais: { d1: nf - 5, d2: 5, nf, status: dados.status ?? 'apta', completa: true, pendentes: [], totaisPorPA: [], motivos: [] },
+      totais: { d1, d2: nf - d1, nf, status: dados.status ?? 'apta', completa: true, pendentes: [], totaisPorPA: [], motivos: [] },
     })
 }

@@ -117,7 +117,13 @@ export function montarQuadro(propostas: PropostaQuadro[], decisoes: DecisaoComJu
       d2: pos.d2,
       nf: pos.nf,
       situacao: ROTULO_STATUS[statusDaProposta(p)],
-      observacao: pos.empatada ? 'Empatada' : pos.desempatadaPelaComissao ? 'Desempate da Comissão' : '',
+      observacao: pos.empatada
+        ? 'Empatada'
+        : pos.desempatadaPelaComissao
+          ? 'Desempate da Comissão'
+          : pos.desempatadaPeloEdital
+            ? `Desempate pelo Edital (critério ${pos.criterioDesempate})`
+            : '',
     }
   })
   const fora: LinhaQuadro[] = propostasFora(r).map(({ id, situacao }) => {
@@ -160,7 +166,7 @@ export const COLUNAS_QUADRO = ['Posição', 'OSC', ...PLANOS.map((p) => p.codigo
 
 export const tituloQuadro = (c: CabecalhoQuadro) => `Quadro-resumo — Lote ${c.lote.codigo} — ${c.lote.descricao}`
 export const subtituloQuadro = (c: CabecalhoQuadro) =>
-  `Chamamento Público nº ${c.chamamento.numero} — ${c.chamamento.titulo}. Ranking por NF entre propostas aptas e completas (Anexo IV, 3.10); o sistema não calcula desempate.`
+  `Chamamento Público nº ${c.chamamento.numero} — ${c.chamamento.titulo}. Ranking por NF entre propostas aptas e completas (Anexo IV, 3.10); empates de NF resolvidos pelos critérios do Edital (I a VI) e, se persistirem, pela Comissão.`
 
 /** Texto de cada empate para o PDF e o XLSX. */
 export function textoEmpate(e: Quadro['empates'][number]): string {
@@ -195,7 +201,7 @@ export function quadroPdf(cabecalho: CabecalhoQuadro, quadro: Quadro, rodape: Ro
         [38, 110, 28, 28, 28, 28, 28, 28, 32, 32, 32, 60, '*'],
       ),
       ...(quadro.empates.length > 0
-        ? [{ text: 'Empates (RF-27)', style: 'secao' }, { ul: quadro.empates.map(textoEmpate) }]
+        ? [{ text: 'Empates não resolvidos pelos critérios do Edital (RF-27)', style: 'secao' }, { ul: quadro.empates.map(textoEmpate) }]
         : []),
     ],
   })

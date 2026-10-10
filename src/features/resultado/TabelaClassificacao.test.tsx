@@ -76,6 +76,19 @@ describe('Classificação do lote — ranking, pendentes e empates', () => {
     }
   })
 
+  it('empate de NF resolvido pelo Edital: posições distintas e selo com o critério, sem botão de desempate', () => {
+    const pa1Maior = consolidarProposta({
+      niveis: Object.fromEntries(CODIGOS.map((c) => [c, c === '1.1' ? 4 : c === '3.1' ? 2 : 3])),
+      experiencias: [],
+      dataLimite: '2026-10-31',
+    }).totais
+    montar({ propostas: [linha('x', 'Alfa'), linha('y', 'Beta', { totais: pa1Maior })] })
+    expect(within(linhaDe('Beta')).getAllByRole('cell')[0]).toHaveTextContent('1º')
+    expect(within(linhaDe('Alfa')).getAllByRole('cell')[0]).toHaveTextContent('2º')
+    expect(linhaDe('Beta')).toHaveTextContent('Desempate pelo Edital (critério II)')
+    expect(screen.queryByRole('button', { name: /Registrar desempate/ })).toBeNull()
+  })
+
   it('pendentes, inaptas e não admitidas abaixo, sem posição, com o motivo', () => {
     montar()
     const fora = screen.getByRole('table', { name: 'Fora da classificação' })

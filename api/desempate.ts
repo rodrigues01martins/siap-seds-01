@@ -1,6 +1,7 @@
 // PUT /api/desempate — registra a decisão de desempate da Comissão (RF-27). Perfil: presidente.
-// O sistema não calcula desempate: confere, com src/domain/classificacao.ts, que as propostas
-// informadas formam exatamente um grupo empatado atual do lote e grava a ordem decidida com a
+// Só para empates que os critérios do Edital (matriz: desempate) não resolveram: confere, com
+// src/domain/classificacao.ts, que as propostas informadas formam exatamente um desses grupos
+// empatados atuais do lote e grava a ordem decidida com a
 // justificativa em chamamentos/{ch}/desempates/{id}, auditado. Registrar de novo o mesmo grupo edita.
 
 import { FieldValue } from 'firebase-admin/firestore'

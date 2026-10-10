@@ -51,8 +51,8 @@ export function TelaClassificacao() {
         <Link to={`/chamamentos/${ch}`} className="underline">
           Chamamento {chamamento.dados.numero}
         </Link>{' '}
-        · ranking por NF entre propostas aptas e completas (Anexo IV, 3.10). Empates são sinalizados; o sistema não
-        calcula desempate.
+        · ranking por NF entre propostas aptas e completas (Anexo IV, 3.10). Empates de NF são resolvidos pelos
+        critérios do Edital (I a VI, na ordem); se persistirem, a Comissão decide e o presidente registra.
       </p>
       <TabelaClassificacao
         lote={dadosLote}

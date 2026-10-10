@@ -13,7 +13,7 @@ Matriz de Avaliação (Anexo IV). Regras de arquitetura e convenções: veja [`C
 |---|---|
 | `npm run dev` | App local em http://localhost:5173 |
 | `npm run typecheck` | Checagem de tipos |
-| `npm test` | Testes de domínio e de lógica (rápidos, sem emulador) |
+| `npm test` | Testes de domínio, telas e lógica (rápidos, **sem emulador**; rode antes de cada commit) |
 | `npm run test:regras` | Testes das `firestore.rules` no emulador (exige **Java 21+**) |
 | `npm run test:api` | Testes das funções `/api` nos emuladores de Auth e Firestore (exige **Java 21+**) |
 | `npm run emuladores` | Emuladores de Auth e Firestore para desenvolvimento local |
@@ -25,6 +25,26 @@ Matriz de Avaliação (Anexo IV). Regras de arquitetura e convenções: veja [`C
 
 Dia da sessão: [`docs/ROTEIRO-SESSAO.md`](docs/ROTEIRO-SESSAO.md). Antes de usar em produção:
 [`docs/CHECKLIST-PRODUCAO.md`](docs/CHECKLIST-PRODUCAO.md).
+
+## Fluxo de trabalho: `dev` → `main`
+
+Só existem duas branches. Não há Pull Requests nem GitHub Actions.
+
+| Branch | Para quê | Deploy na Vercel |
+|---|---|---|
+| `dev` | todo o trabalho e os commits | **Preview** (projeto Firebase **dev**) |
+| `main` | o que está em produção | **Production** (projeto Firebase **prod**) |
+
+1. Trabalhe e faça commit na `dev`. **Antes de cada commit:** `npm run typecheck && npm test`. Se falhar,
+   corrija antes de commitar. Os testes de emulador (`npm run test:regras` e `npm run test:api`) exigem
+   Java 21+; rode-os quando mexer em `firestore.rules` ou na `/api`.
+2. `git push` da `dev` → a Vercel publica o Preview. Teste nele.
+3. Quando estiver bom: merge da `dev` na `main` **com merge commit** e push:
+   ```bash
+   git checkout main && git pull && git merge --no-ff dev && git push && git checkout dev
+   ```
+   A Vercel publica a produção.
+4. Se `firestore.rules` mudou: copie as regras para o console (seção 3), **primeiro no dev, depois no prod**.
 
 ---
 
@@ -73,87 +93,49 @@ As funções `/api` gravam no Firestore com o Admin SDK. Elas leem a chave da co
 |---|---|---|---|
 | `FIREBASE_SERVICE_ACCOUNT` | **Secret** | **Production** | JSON inteiro da chave do Admin SDK do projeto **prod** (`siap-seds-01`) |
 | `FIREBASE_SERVICE_ACCOUNT` | **Secret** | **Preview** | JSON inteiro da chave do Admin SDK do projeto **dev** (`siap-web-dev`) |
+| `ADMIN_INICIAL_EMAIL` | Plain | **Production** | E-mail do primeiro administrador de prod (seção 4) |
+| `ADMIN_INICIAL_EMAIL` | Plain | **Preview** | E-mail do primeiro administrador de dev (seção 4) |
 
 Como gerar cada chave: Firebase Console (do projeto) → *Configurações do projeto* → *Contas de serviço* →
 **Gerar nova chave privada**. Abra o JSON no Bloco de Notas, copie tudo para o *Value* e apague o arquivo.
 Depois, *Redeploy*. Sem a variável, toda chamada à `/api` que precise do Firebase responde 500 e o log da
 função mostra `Defina FIREBASE_SERVICE_ACCOUNT ...`.
 
-## 3. Secret no GitHub (publicação automática das regras em prod)
+## 3. Regras do Firestore: copiar para o console
 
-A cada push na `main`, o workflow de CI roda os testes e, se passarem, publica `firestore.rules` e
-`firestore.indexes.json` no projeto **prod**.
+Não há publicação automática. Sempre que `firestore.rules` mudar (o assistente avisa no fim do trabalho):
 
-1. Crie uma conta de serviço só para isso no projeto **prod**:
-   [Google Cloud Console](https://console.cloud.google.com/iam-admin/serviceaccounts) (projeto prod) →
-   *Criar conta de serviço* → nome `github-publicar-regras` → papéis:
-   - **Firebase Rules Admin**
-   - **Cloud Datastore Index Admin**
-   - **Service Usage Consumer**
+1. Abra o arquivo [`firestore.rules`](firestore.rules) no GitHub (branch `dev`) e copie **todo** o conteúdo.
+2. Firebase Console → projeto **siap-web-dev** → **Firestore Database** → aba **Regras** → apague o texto,
+   cole o novo → **Publicar**. Teste no Preview.
+3. Depois do merge na `main`, repita no projeto **siap-seds-01** (prod).
 
-   Se o log do deploy acusar falta de permissão, acrescente o papel que ele indicar.
-2. Na conta criada → *Chaves* → *Adicionar chave* → *JSON*. O arquivo é baixado.
-3. No GitHub: **Settings → Secrets and variables → Actions → New repository secret**
-   - Name: `FIREBASE_SERVICE_ACCOUNT_PROD`
-   - Secret: cole **todo o conteúdo** do JSON.
-4. Apague o arquivo JSON do seu computador.
+Se a tela de regras acusar erro de sintaxe, não publique: o texto foi copiado pela metade.
+Índices: hoje o app só usa índices simples (criados automaticamente); `firestore.indexes.json` está vazio.
 
-Sem o secret, o job `publicar regras e índices (prod)` termina com um aviso e não publica nada.
-Com o secret de outro projeto, o job falha antes de publicar.
+## 4. Primeiro administrador (sem terminal)
 
-Para publicar as regras em **dev** manualmente: `npx firebase login` e depois
-`npx firebase deploy --only firestore:rules,firestore:indexes --project dev`.
+Uma vez por projeto (dev e prod):
 
-## 4. Primeiro administrador e matriz
+1. **Criar a conta:** Firebase Console → *Authentication* → *Users* → **Add user** (e-mail e senha).
+   Crie a conta **antes** do passo 2, para que ninguém registre esse e-mail no seu lugar.
+2. **Vercel:** cadastre `ADMIN_INICIAL_EMAIL` com esse e-mail (Production para prod, Preview para dev) e faça
+   **Redeploy** do ambiente.
+3. **No app:** entre com essa conta. Na tela "Acesso não autorizado", clique em **Sou o administrador inicial**.
+   A `/api/primeiro-admin` confere o e-mail, dá o perfil `admin`, registra em `usuarios/{uid}` e na auditoria.
+4. Pronto: os demais perfis (presidente, relator, membro, controle) são dados pelo admin na tela
+   **Perfis de acesso** (`/perfis`). Cada pessoa precisa ter a conta criada no *Authentication* antes.
 
-### 4.1 Pelo GitHub Actions (prod, sem instalar nada)
+A `/api/primeiro-admin` só funciona enquanto **não existir nenhum admin** no projeto; depois responde 409.
+Sem a variável, ou com outro e-mail, responde 403.
 
-1. **Gerar a chave do Admin SDK:** Firebase Console (`siap-seds-01`) → *Configurações do projeto* →
-   *Contas de serviço* → **Gerar nova chave privada**. Abra o JSON baixado no Bloco de Notas e copie tudo.
-2. **Cadastrar o secret:** GitHub → repositório → **Settings → Secrets and variables → Actions** →
-   *New repository secret* → Name `FIREBASE_SERVICE_ACCOUNT_ADMIN_PROD`, Secret: o JSON inteiro.
-   Depois apague o arquivo baixado.
-3. **Criar o usuário:** Firebase Console → *Authentication* → *Users* → **Add user** (e-mail e senha).
-4. **Dar o perfil:** GitHub → **Actions** → *Administração (prod)* → **Run workflow** →
-   ação `definir-perfil`, o e-mail e o perfil → *Run workflow*.
-5. **Publicar a matriz:** mesmo caminho, ação `publicar-matriz` (marque *forcar* só para sobrescrever).
-6. Entre no app. Se aparecer "Acesso não autorizado", clique em **Verificar novamente**.
-
-O log de cada execução fica em *Actions*, e a auditoria registra `executor: github:<seu usuário>`.
-O mesmo workflow serve para dar ou remover perfis dos membros da Comissão (`remover-perfil`).
-
-### 4.2 Pelo terminal (exige Node.js 22 e o repositório clonado)
-
-Os scripts usam o **Admin SDK** e leem a credencial da variável `FIREBASE_SERVICE_ACCOUNT`.
-
-1. **Gerar a chave** (no projeto em que vai rodar): Firebase Console → *Configurações do projeto* →
-   *Contas de serviço* → **Gerar nova chave privada**. Guarde o JSON **fora** do repositório.
-2. **Criar o usuário:** *Authentication* → *Users* → **Add user** (e-mail e senha).
-3. **Definir a variável** no terminal:
-   - Linux/macOS (bash): `export FIREBASE_SERVICE_ACCOUNT="$(cat ~/chaves/siap-dev.json)"`
-   - Windows (PowerShell): `$env:FIREBASE_SERVICE_ACCOUNT = Get-Content C:\chaves\siap-dev.json -Raw`
-4. **Dar o perfil admin:**
-   ```bash
-   npm run set-role -- --projeto dev --email voce@seds.go.gov.br --perfil admin
-   ```
-5. **Publicar a matriz:**
-   ```bash
-   npm run seed:matriz -- --projeto dev
-   ```
-6. Entre no app. Se aparecer "Acesso não autorizado", clique em **Verificar novamente** (ou saia e
-   entre de novo): o perfil vive no token de login, que precisa ser renovado.
-
-Em **prod**, troque a chave pela do projeto prod e acrescente `--confirmar`:
-```bash
-npm run set-role -- --projeto prod --email voce@seds.go.gov.br --perfil admin --confirmar
-npm run seed:matriz -- --projeto prod --confirmar
+**Opcional, pelo terminal** (exige Node.js 22, o repositório clonado e a chave do Admin SDK fora do repositório):
+```powershell
+$env:FIREBASE_SERVICE_ACCOUNT = Get-Content C:\chaves\siap-dev.json -Raw    # bash: export FIREBASE_SERVICE_ACCOUNT="$(cat ~/chaves/siap-dev.json)"
+npm run set-role -- --projeto dev --email pessoa@go.gov.br --perfil membro    # prod: --projeto prod ... --confirmar
+npm run seed:matriz -- --projeto dev                                           # registra a matriz em matrizes/2026
 ```
-
-Outras opções:
-- Perfis válidos: `admin`, `presidente`, `relator`, `membro`, `controle`.
-- Remover o acesso: `npm run set-role -- --projeto dev --email pessoa@... --remover` (encerra as sessões).
-- Republicar a matriz alterada: `npm run seed:matriz -- --projeto dev --forcar`.
-- Cada execução registra um evento em `auditoria` (com quem executou); `set-role` também atualiza `usuarios/{uid}`.
+O app lê a matriz do código (`src/domain/matriz/matriz_2026.json`); `matrizes/2026` é só o registro publicado.
 
 ## 5. A `/api`: porta única de escrita
 
@@ -178,6 +160,7 @@ passa por uma função `/api`, que:
 > Os PDFs dos Cadernos **não** são carregados no app: a consulta é feita no SEI. O app guarda só o nº SEI
 > (`numeroSEI`) e as páginas citadas.
 | `/api/perfis` | `POST` dar/trocar, `DELETE` remover | `{ email, perfil }` / `{ email }` | admin |
+| `/api/primeiro-admin` | `POST` | — | qualquer conta logada com o e-mail de `ADMIN_INICIAL_EMAIL`, só enquanto não houver admin (seção 4) |
 
 - `dataLimitePropostas` (`AAAA-MM-DD`): referência da D2 (Anexo IV, 3.3.1, IV). Depois que alguma proposta do
   chamamento já tem totais calculados, não pode mais mudar → **409**.
@@ -306,10 +289,14 @@ O componente `Formulario` valida com o mesmo esquema da `/api` e põe os erros 4
   aplica `classificar()` aos totais gravados. Ranking por NF entre aptas e completas, com PA1…PA6, D1, D2, NF e
   status; inaptas, desclassificadas, não admitidas e pendentes ficam abaixo, sem posição, com o motivo do domínio.
   Selo **"classificação não definitiva"** enquanto houver pendente ou empate sem decisão.
-- **Desempate (RF-27)**: o sistema não calcula desempate. O presidente registra a ordem decidida pela Comissão,
-  com justificativa (mín. 20 caracteres), em `chamamentos/{ch}/desempates/{id}`. A /api confere que as propostas
-  formam exatamente um empate atual do lote (senão **409**); se o grupo ou a NF mudar depois, a decisão deixa de
-  valer e o empate volta a aparecer.
+- **Desempate (RF-27)**: empates de NF no mesmo lote são resolvidos pelos critérios do Edital, aplicados
+  sucessivamente (maior valor vence): **I** D1 · **II** PA1 · **III** PA2 · **IV** PA5 · **V** Critério 2.1 ·
+  **VI** Critério 2.3. A ordem e a fonte ficam em `matriz_2026.json` (`desempate`, `fonteDesempate`). A tela e o
+  quadro-resumo mostram o selo **"Desempate pelo Edital (critério N)"**. Os totais gravados trazem `d2PorCriterio`
+  (pontos de C2.1…C2.4); proposta com totais anteriores ao RF-27 não usa os critérios V e VI até o próximo recálculo.
+- **Decisão da Comissão**: só quando os seis critérios não resolvem. O presidente registra a ordem com justificativa
+  (mín. 20 caracteres) em `chamamentos/{ch}/desempates/{id}`. A /api confere que as propostas formam exatamente um
+  empate **residual** do lote (senão **409**); se o grupo ou a NF mudar depois, a decisão deixa de valer.
 - **Homologação na tela**: botão do presidente com confirmação dupla (mostra NF e status e pede "conferi").
   Proposta com **diligência em aberto** (aberta ou respondida) não é homologada (**409**).
 - **Reabertura (RF-18)**: só proposta homologada (senão **409**); motivo obrigatório (mín. 20); grava
@@ -400,20 +387,19 @@ plano Blaze). O arquivo `backups/backup-<projeto>-<chamamento|todos>-<data e hor
   sessões, desempates), as OSCs das propostas, a matriz e os registros de auditoria desses documentos;
 - Timestamps preservados (`{"__tipo": "timestamp", ...}`), contagem por coleção e **SHA-256** do conteúdo.
 
-**Em prod, pelo GitHub Actions** (recomendado): *Actions → Backup do Firestore (prod) → Run workflow* (chamamento
-vazio = todos; momento antes ou depois da sessão). Usa o secret `FIREBASE_SERVICE_ACCOUNT_ADMIN_PROD` (seção 4.1)
-e exige o secret **`BACKUP_SENHA`** (16 ou mais caracteres): **o repositório é público**, e o arquivo vira
-artifact **cifrado** (AES-256-GCM, chave derivada da senha por scrypt). Sem a senha, ninguém o abre, nem quem baixar o
-artifact. O artifact fica até 90 dias: baixe-o e guarde-o na rede da SEDS.
-
-**Pelo terminal:** `npm run backup -- --projeto prod --confirmar` (com `FIREBASE_SERVICE_ACCOUNT`; `--chamamento ID`
-para um só). Com `BACKUP_SENHA` definida (ou `--cifrar`), o arquivo sai cifrado (`.json.cifrado`). A pasta
-`backups/` está no `.gitignore`. O backup só **lê**: consome leituras da cota gratuita do Firestore (uma por
-documento, mais as listagens de subcoleções).
+**Pelo terminal** (exige a chave do Admin SDK do projeto em `FIREBASE_SERVICE_ACCOUNT`):
+```powershell
+$env:BACKUP_SENHA = 'senha longa guardada no cofre da SEDS'      # 16+ caracteres; o arquivo sai cifrado
+npm run backup -- --projeto prod --confirmar                     # --chamamento ID para um só
+```
+Com `BACKUP_SENHA` (ou `--cifrar`) o arquivo sai cifrado (`.json.cifrado`, AES-256-GCM, chave derivada da senha
+por scrypt): sem a senha ninguém o abre. Sem a senha, sai em claro, com dados das propostas: guarde em local
+restrito. A pasta `backups/` está no `.gitignore`. Guarde cada arquivo na rede da SEDS. O backup só **lê**:
+consome leituras da cota gratuita do Firestore (uma por documento, mais as listagens de subcoleções).
 
 ### Restauração (só no dev)
 ```bash
-# baixe e descompacte o artifact; a senha vem da variável, nunca do comando
+# a senha vem da variável, nunca do comando
 export BACKUP_SENHA='...'                     # PowerShell: $env:BACKUP_SENHA = '...'
 export FIREBASE_SERVICE_ACCOUNT="$(cat ~/chaves/siap-dev.json)"
 npm run restaurar -- --projeto dev --arquivo backup-....json.cifrado                 # simulação: confere e mostra

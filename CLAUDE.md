@@ -48,16 +48,29 @@ Fonte no código: src/domain/permissoes.ts (teste garante que bate com esta tabe
 | Reabrir proposta homologada (RF-18) | presidente |
 | Diligências (RF-28) | presidente, relator |
 | Leitura da auditoria | admin, presidente, controle |
-Empate de NF: o sistema só sinaliza (empatada) e não calcula desempate. Enquanto o Edital não parametrizar
-o critério (RF-27), o presidente registra a decisão da Comissão com justificativa (api/desempate.ts, auditado).
+Empate de NF (RF-27): aplicam-se, em ordem, os critérios do Edital da matriz (matriz_2026.json: desempate e
+fonteDesempate; src/domain/classificacao.ts). Só se persistir o empate a Comissão decide e o presidente registra
+a ordem com justificativa (api/desempate.ts, auditado; 409 para grupo que o Edital já resolveu).
+
+## Fluxo de trabalho (obrigatório)
+- Existem só duas branches: dev e main. Nunca crie outras branches nem Pull Requests.
+- Todo trabalho é feito e commitado na dev (e enviado com push para a dev).
+- Antes de CADA commit: npm run typecheck e npm test. Se falhar, corrija; não faça commit com erro.
+- Merge na main somente quando o usuário pedir ("faça o merge da dev na main"), com merge commit
+  (git merge --no-ff dev), e push.
+- Quando firestore.rules mudar, avise no final com a mensagem:
+  "ATENÇÃO: copiar firestore.rules para o console do Firebase (dev e depois prod)".
+- Sem GitHub Actions (não há .github/workflows).
+- Testes de emulador (npm run test:regras e npm run test:api, Java 21+) ao mexer em firestore.rules ou na /api.
 
 ## Convenções
 - Código e nomes em português, sem acentos em identificadores (ex.: calcularD2, experiencias).
-- Uma branch por etapa (ex.: feat/etapa-2-firebase), criada a partir da main; um PR por etapa.
-- Todo PR com testes passando (npm run typecheck && npm test && npm run test:regras && npm run test:api).
-- TDD: commit test: (vermelho) antes do feat:/fix: que o faz passar.
-- Merge na main com merge commit (não squash), preservando o histórico do TDD.
+- TDD: o teste vem primeiro e é visto falhando (vermelho) antes do código que o faz passar. Como nenhum
+  commit pode quebrar typecheck ou npm test:
+  - teste de emulador (/api, regras): commit test: com um esboço do módulo que compila, depois feat:/fix:;
+  - teste que roda no npm test: rode-o vermelho localmente e commite teste e código juntos no feat:/fix:.
 - Commits no padrão: feat:, fix:, test:, chore:, docs:
+- Primeiro admin de cada projeto: api/primeiro-admin.ts (ADMIN_INICIAL_EMAIL na Vercel); demais perfis pela tela (C6).
 
 ## Comandos
 npm run dev | npm run build | npm test | npm run typecheck

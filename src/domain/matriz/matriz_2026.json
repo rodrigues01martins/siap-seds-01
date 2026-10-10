@@ -2,6 +2,15 @@
   "versao": "2026",
   "fonte": "Anexo nº 04/2026/SEDS/GECG-20244 — Matriz de Avaliação e Pontuação das Propostas (SEI 95574211, processo 202610319003258)",
   "notaFinalMaxima": 132,
+  "fonteDesempate": "Edital do Chamamento Público SEDS/GO 2026 — critérios de desempate da Nota Final entre propostas do mesmo lote (incisos I a VI), aplicados sucessivamente",
+  "desempate": [
+    { "ordem": "I", "descricao": "maior pontuação na Dimensão 1 – Capacidade Técnica e Operacional", "referencia": "D1" },
+    { "ordem": "II", "descricao": "maior pontuação no PA 1 – Atendimento Socioeducativo, Individualização do Atendimento e Garantia de Direitos", "referencia": "PA1" },
+    { "ordem": "III", "descricao": "maior pontuação no PA 2 – Promoção Intersetorial de Direitos", "referencia": "PA2" },
+    { "ordem": "IV", "descricao": "maior pontuação no PA 5 – Gestão e Desenvolvimento de Pessoas", "referencia": "PA5" },
+    { "ordem": "V", "descricao": "maior pontuação no Critério 2.1 – Diversidade e Aderência das Experiências Institucionais", "referencia": "C2.1" },
+    { "ordem": "VI", "descricao": "maior pontuação no Critério 2.3 – Porte e Escala Operacional Comprovados", "referencia": "C2.3" }
+  ],
   "dimensao1": {
     "titulo": "Capacidade Técnica e Operacional",
     "maximo": 112,

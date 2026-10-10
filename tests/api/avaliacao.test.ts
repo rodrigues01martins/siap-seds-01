@@ -151,6 +151,7 @@ describe('/api/avaliacao — gravação, auditoria e recálculo (C4)', () => {
           totaisPorPA: d1.totaisPorPA,
           d1: d1.d1,
           d2: d2.total,
+          d2PorCriterio: { 'C2.1': 0, 'C2.2': 0, 'C2.3': 0, 'C2.4': 0 },
           nf: d1.d1 + d2.total,
           status: d1.status,
           completa: d1.completa,

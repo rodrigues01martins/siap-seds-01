@@ -52,6 +52,19 @@ describe('quadro-resumo do lote — a mesma tabela da classificação', () => {
     expect(q.linhas[5]!.nf).toBeNull()
   })
 
+  it('empate de NF resolvido pelo Edital aparece com o critério (II: maior PA1)', () => {
+    const q = montarQuadro(
+      [linha('x', 'Alfa', { totais: totais(3, []) }), linha('y', 'Beta', { totais: { ...consolidarProposta({ niveis: Object.fromEntries(CODIGOS.map((c) => [c, c === '1.1' ? 4 : c === '3.1' ? 2 : 3])), experiencias: [], dataLimite: '2026-10-31' }).totais } })],
+      [],
+    )
+    expect(q.linhas.map((l) => [l.posicao, l.nomeOsc, l.observacao])).toEqual([
+      [1, 'Beta', 'Desempate pelo Edital (critério II)'],
+      [2, 'Alfa', 'Desempate pelo Edital (critério II)'],
+    ])
+    expect(q.empates).toEqual([])
+    expect(q.definitiva).toBe(true)
+  })
+
   it('aplica a decisão de desempate da Comissão (RF-27)', () => {
     const nf = totais(3).nf
     const q = montarQuadro(PROPOSTAS, [{ propostas: ['b', 'c'], nf, ordem: ['c', 'b'], justificativa: 'Maior nota no PA1, conforme ata.' }])

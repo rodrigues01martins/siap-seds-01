@@ -52,6 +52,14 @@ describe('/api/desempate — acesso e validação', () => {
     expect((await chamar(rota, 'PUT', corpo({ chamamentoId: 'nao-existe' }), presidente.token)).status).toBe(404)
   })
 
+  it('empate de NF resolvido pelos critérios do Edital (I: maior D1) não admite decisão manual → 409', async () => {
+    await semearPropostaComTotais('b', 84, { d1: 80 })
+    await semearPropostaComTotais('c', 84, { d1: 79 })
+    const r = await chamar(rota, 'PUT', corpo({ ordem: ['c', 'b'] }), presidente.token)
+    expect(r).toMatchObject({ status: 409, corpo: { erro: 'As propostas informadas não formam um empate atual neste lote.' } })
+    expect(await totalAuditoria()).toBe(0)
+  })
+
   it('propostas que não formam um empate atual → 409', async () => {
     for (const ordem of [['a', 'b'], ['b'], ['b', 'x']].filter((o) => o.length > 1)) {
       const r = await chamar(rota, 'PUT', corpo({ ordem }), presidente.token)

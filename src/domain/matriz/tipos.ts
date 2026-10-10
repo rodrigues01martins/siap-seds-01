@@ -62,10 +62,23 @@ export interface RegrasAdmissibilidade {
   irregularidadesFormais: { observacao: string; tipos: ItemCodificado[] }
 }
 
+/**
+ * Critério de desempate da NF (RF-27), aplicado em ordem: maior valor da `referencia` vence.
+ * referencia: "D1", código de PA ("PA1"…) ou de critério da D2 ("C2.1"…).
+ */
+export interface CriterioDesempate {
+  ordem: string
+  descricao: string
+  referencia: string
+}
+
 export interface Matriz {
   versao: string
   fonte: string
   notaFinalMaxima: number
+  /** Fonte dos critérios de desempate (Edital). */
+  fonteDesempate: string
+  desempate: CriterioDesempate[]
   admissibilidade: RegrasAdmissibilidade
   dimensao1: {
     titulo: string
