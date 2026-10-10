@@ -1,13 +1,18 @@
-// /chamamentos/:ch/propostas/:p/admissibilidade — registro da admissibilidade (presidente e relator);
-// os demais perfis consultam. Grava por PUT /api/admissibilidade.
+// /chamamentos/:ch/propostas/:p/admissibilidade (FormPage) — registro da admissibilidade (quem tem a
+// permissão); os demais perfis consultam. Grava por PUT /api/admissibilidade.
 
 import { useParams } from 'react-router'
-import { EstadoLeitura, dataBr } from '../../componentes/basicos'
+import { FormPage } from '../../components/templates/paginas'
+import { Alert } from '../../components/ui/Alert'
+import { EmptyState } from '../../components/ui/EmptyState'
+import { ErrorState } from '../../components/ui/ErrorState'
+import { Skeleton } from '../../components/ui/Skeleton'
 import type { Admissibilidade } from '../../domain/admissibilidade'
 import { podeFazer } from '../../domain/permissoes'
 import { chamarApi } from '../../lib/api'
+import { dataBr } from '../../lib/datas'
 import { useUsuario } from '../auth/useUsuario'
-import { CabecalhoProposta, useDadosProposta } from '../avaliacao/CabecalhoProposta'
+import { cabecalhoDaProposta, ContextoProposta, useDadosProposta } from '../avaliacao/CabecalhoProposta'
 import { FormAdmissibilidade } from './FormAdmissibilidade'
 
 const ROTULO_SITUACAO = { admitida: 'Admitida', nao_admitida: 'Não admitida', desclassificada: 'Desclassificada (28.2)' }
@@ -18,52 +23,48 @@ export function TelaAdmissibilidade() {
   const { ch = '', p = '' } = useParams()
   const { usuario } = useUsuario()
   const leitura = useDadosProposta(ch, p)
-  if (leitura.carregando || leitura.erro) return <EstadoLeitura carregando={leitura.carregando} erro={leitura.erro} />
-  if (!leitura.dados) return <p className="text-slate-600">Proposta não encontrada.</p>
+  if (leitura.carregando) return <Skeleton linhas={6} rotulo="Carregando admissibilidade" />
+  if (leitura.erro) return <ErrorState mensagem={leitura.erro} />
+  if (!leitura.dados) return <EmptyState titulo="Proposta não encontrada" descricao="Confira o endereço ou volte ao painel do chamamento." />
 
   const { proposta } = leitura.dados
   const gravada = (proposta as { admissibilidade?: Gravada }).admissibilidade ?? null
   const motivo = proposta.bloqueada
-    ? 'Proposta homologada: somente leitura.'
+    ? 'Proposta homologada.'
     : !podeFazer(usuario?.acesso ?? null, 'admissibilidade')
       ? 'Você consulta a admissibilidade; o registro exige a permissão "Admissibilidade".'
       : null
+  const autoria = gravada?.registradaPor
+    ? ` Registrada por ${gravada.registradaPor.email ?? 'usuário'}${gravada.registradaEm ? ` em ${dataBr(gravada.registradaEm.toDate().toISOString().slice(0, 10))}` : ''}.`
+    : ''
 
   return (
-    <>
-      <CabecalhoProposta dados={leitura.dados} ch={ch} aba="admissibilidade" />
+    <FormPage cabecalho={cabecalhoDaProposta(leitura.dados, ch, 'admissibilidade')}>
+      <ContextoProposta dados={leitura.dados} ch={ch} aba="admissibilidade" />
       {gravada && (
-        <section className="mb-4 rounded-lg border border-slate-200 bg-white p-4 text-sm">
-          <p>
-            Situação registrada: <strong>{ROTULO_SITUACAO[gravada.situacao]}</strong>
-            {gravada.registradaPor && (
-              <span className="text-slate-500">
-                {' '}
-                — por {gravada.registradaPor.email ?? 'usuário'}
-                {gravada.registradaEm ? ` em ${dataBr(gravada.registradaEm.toDate().toISOString().slice(0, 10))}` : ''}
-              </span>
-            )}
-          </p>
+        <Alert
+          tom={gravada.situacao === 'admitida' ? 'success' : 'error'}
+          titulo={`Situação registrada: ${ROTULO_SITUACAO[gravada.situacao]}`}
+        >
+          {autoria && <p>{autoria.trim()}</p>}
           {gravada.motivos.length > 0 && (
-            <ul className="mt-1 list-inside list-disc text-red-800">
+            <ul className="mt-1 list-inside list-disc">
               {gravada.motivos.map((m) => (
                 <li key={m}>{m}</li>
               ))}
             </ul>
           )}
-        </section>
+        </Alert>
       )}
-      <div className="max-w-5xl rounded-lg border border-slate-200 bg-white p-5">
-        <FormAdmissibilidade
-          key={gravada ? JSON.stringify(gravada.planos) + gravada.resultado : 'nova'}
-          valor={gravada}
-          somenteLeitura={motivo !== null}
-          motivoSomenteLeitura={motivo ?? undefined}
-          onSalvar={async (corpo) => {
-            await chamarApi('/api/admissibilidade', { metodo: 'PUT', corpo: { chamamentoId: ch, propostaId: p, ...corpo } })
-          }}
-        />
-      </div>
-    </>
+      <FormAdmissibilidade
+        key={gravada ? JSON.stringify(gravada.planos) + gravada.resultado : 'nova'}
+        valor={gravada}
+        somenteLeitura={motivo !== null}
+        motivoSomenteLeitura={motivo ?? undefined}
+        onSalvar={async (corpo) => {
+          await chamarApi('/api/admissibilidade', { metodo: 'PUT', corpo: { chamamentoId: ch, propostaId: p, ...corpo } })
+        }}
+      />
+    </FormPage>
   )
 }

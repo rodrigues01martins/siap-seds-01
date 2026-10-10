@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { esquemaCriarOsc, esquemaCriarProposta } from '../../esquemas/cadastros'
 import { ErroApi } from '../../lib/api'
-import { AlertaErroApi } from './AlertaErroApi'
+import { AlertaErroApi, tituloDoErro } from './AlertaErroApi'
 import { CampoLista, CampoTexto, FormularioApi } from './FormularioApi'
 
 function FormOsc({ onEnviar, somenteLeitura }: { onEnviar: (dados: unknown) => Promise<void>; somenteLeitura?: boolean }) {
@@ -94,6 +94,19 @@ describe('FormularioApi (componentes da Etapa 2 + esquema zod da /api)', () => {
 })
 
 describe('AlertaErroApi', () => {
+  it.each([
+    [400, 'Dados inválidos'],
+    [401, 'Sessão expirada'],
+    [403, 'Sem permissão'],
+    [404, 'Não encontrado'],
+    [409, 'Operação não permitida'],
+    [0, 'Sem conexão'],
+    [500, 'Erro no servidor'],
+  ])('status %i → título "%s"', (status, titulo) => {
+    expect(tituloDoErro(new ErroApi(status, 'x'))).toBe(titulo)
+  })
+
+
   it('erro da /api: título pelo status e link para entrar de novo no 401', () => {
     render(<AlertaErroApi erro={new ErroApi(401, 'Sessão expirada.')} />)
     expect(screen.getByRole('alert')).toHaveTextContent('Sessão expirada')

@@ -56,7 +56,9 @@ function montar(props: Partial<Parameters<typeof TabelaClassificacao>[0]> = {}) 
 }
 
 const ranking = () => screen.getByRole('table', { name: 'Classificação do lote L1' })
-const linhaDe = (nome: string) => within(ranking()).getByRole('row', { name: nome })
+/** Linha da tabela pelo nome da OSC (o nome acessível da linha é o texto das células). */
+const linhaPorNome = (tabela: HTMLElement, nome: string) => within(tabela).getByText(nome, { selector: 'span' }).closest('tr')!
+const linhaDe = (nome: string) => linhaPorNome(ranking(), nome)
 
 describe('Classificação do lote — ranking, pendentes e empates', () => {
   it('ranking por NF entre aptas e completas, com PA1…PA6, D1, D2, NF e status', () => {
@@ -92,13 +94,13 @@ describe('Classificação do lote — ranking, pendentes e empates', () => {
   it('pendentes, inaptas e não admitidas abaixo, sem posição, com o motivo', () => {
     montar()
     const fora = screen.getByRole('table', { name: 'Fora da classificação' })
-    expect(within(fora).getByRole('row', { name: 'Fundação Delta' })).toHaveTextContent('Pendente')
-    expect(within(fora).getByRole('row', { name: 'Fundação Delta' })).toHaveTextContent('Faltam 2 subcritérios')
-    expect(within(fora).getByRole('row', { name: 'Obra Épsilon' })).toHaveTextContent('Inapta')
-    expect(within(fora).getByRole('row', { name: 'Obra Épsilon' })).toHaveTextContent('inferior ao corte de 67,2 pontos')
-    expect(within(fora).getByRole('row', { name: 'Grupo Zeta' })).toHaveTextContent('Não admitida')
-    expect(within(fora).getByRole('row', { name: 'Grupo Zeta' })).toHaveTextContent('28.1.IV')
-    expect(within(ranking()).queryByRole('row', { name: 'Fundação Delta' })).not.toBeInTheDocument()
+    expect(linhaPorNome(fora, 'Fundação Delta')).toHaveTextContent('Pendente')
+    expect(linhaPorNome(fora, 'Fundação Delta')).toHaveTextContent('Faltam 2 subcritérios')
+    expect(linhaPorNome(fora, 'Obra Épsilon')).toHaveTextContent('Inapta')
+    expect(linhaPorNome(fora, 'Obra Épsilon')).toHaveTextContent('inferior ao corte de 67,2 pontos')
+    expect(linhaPorNome(fora, 'Grupo Zeta')).toHaveTextContent('Não admitida')
+    expect(linhaPorNome(fora, 'Grupo Zeta')).toHaveTextContent('28.1.IV')
+    expect(within(ranking()).queryByText('Fundação Delta')).not.toBeInTheDocument()
   })
 
   it('selo "classificação não definitiva" com os motivos (pendente e empate sem decisão)', () => {
@@ -130,19 +132,20 @@ describe('Desempate pelo presidente (RF-27)', () => {
     await userEvent.click(within(dialogo).getByRole('button', { name: 'Registrar decisão' }))
     expect(await within(dialogo).findByText('Informe a justificativa do desempate (ao menos 20 caracteres).')).toBeInTheDocument()
     expect(onDesempatar).not.toHaveBeenCalled()
-    await userEvent.type(within(dialogo).getByLabelText('Justificativa'), 'Maior nota no PA1, conforme ata da sessão.')
+    await userEvent.type(within(dialogo).getByRole('textbox', { name: /^Justificativa/ }), 'Maior nota no PA1, conforme ata da sessão.')
     await userEvent.click(within(dialogo).getByRole('button', { name: 'Registrar decisão' }))
     await waitFor(() => expect(onDesempatar).toHaveBeenCalledWith(['c', 'b'], 'Maior nota no PA1, conforme ata da sessão.'))
   })
 })
 
 describe('Homologação na tela (C5) e reabertura (RF-18)', () => {
-  it('confirmação dupla mostrando NF e status', async () => {
+  it('confirmação dupla (ConfirmDialog) mostrando NF e status; Cancelar recebe o foco', async () => {
     const { onHomologar } = montar()
     await userEvent.click(within(linhaDe('Instituto Alfa')).getByRole('button', { name: 'Homologar' }))
-    const dialogo = screen.getByRole('dialog', { name: 'Homologar Instituto Alfa' })
+    const dialogo = screen.getByRole('alertdialog', { name: 'Homologar Instituto Alfa?' })
+    expect(within(dialogo).getByRole('button', { name: 'Cancelar' })).toHaveFocus()
     expect(dialogo).toHaveTextContent('NF 112')
-    expect(dialogo).toHaveTextContent('Status: Apta')
+    expect(within(dialogo).getByText('Apta')).toHaveAttribute('data-status', 'success')
     const confirmar = within(dialogo).getByRole('button', { name: 'Confirmar homologação' })
     expect(confirmar).toBeDisabled()
     await userEvent.click(within(dialogo).getByRole('checkbox', { name: /Conferi a NF e o status/ }))
@@ -150,16 +153,19 @@ describe('Homologação na tela (C5) e reabertura (RF-18)', () => {
     await waitFor(() => expect(onHomologar).toHaveBeenCalledWith('a'))
   })
 
-  it('homologada: selo e botão Reabrir com motivo obrigatório', async () => {
+  it('homologada: selo e botão Reabrir destrutivo com motivo obrigatório', async () => {
     const { onReabrir } = montar({ propostas: [linha('a', 'Instituto Alfa', { totais: totais(4), bloqueada: true })] })
     const alfa = linhaDe('Instituto Alfa')
     expect(alfa).toHaveTextContent('Homologada')
     expect(within(alfa).queryByRole('button', { name: 'Homologar' })).not.toBeInTheDocument()
     await userEvent.click(within(alfa).getByRole('button', { name: 'Reabrir' }))
-    const dialogo = screen.getByRole('dialog', { name: 'Reabrir Instituto Alfa' })
-    await userEvent.click(within(dialogo).getByRole('button', { name: 'Confirmar reabertura' }))
+    const dialogo = screen.getByRole('alertdialog', { name: 'Reabrir Instituto Alfa?' })
+    const confirmar = within(dialogo).getByRole('button', { name: 'Confirmar reabertura' })
+    expect(confirmar.className).toContain('bg-button-destructive-bg')
+    await userEvent.click(confirmar)
     expect(await within(dialogo).findByText('Informe o motivo da reabertura (ao menos 20 caracteres).')).toBeInTheDocument()
-    await userEvent.type(within(dialogo).getByLabelText('Motivo'), 'Erro material no registro do subcritério 3.1.')
+    expect(onReabrir).not.toHaveBeenCalled()
+    await userEvent.type(within(dialogo).getByRole('textbox', { name: /^Motivo/ }), 'Erro material no registro do subcritério 3.1.')
     await userEvent.click(within(dialogo).getByRole('button', { name: 'Confirmar reabertura' }))
     await waitFor(() => expect(onReabrir).toHaveBeenCalledWith('a', 'Erro material no registro do subcritério 3.1.'))
   })

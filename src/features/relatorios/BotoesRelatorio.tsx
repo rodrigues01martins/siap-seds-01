@@ -1,6 +1,8 @@
 // Botões que geram documentos no navegador: espelho da proposta (PDF) e quadro-resumo do lote (PDF/XLSX).
 
-import { AlertaErro } from '../../componentes/AlertaErro'
+import { FileDown, FileSpreadsheet } from 'lucide-react'
+import { AlertaErroApi } from '../../components/ui/AlertaErroApi'
+import { Button } from '../../components/ui/Button'
 import { TIPO_XLSX, baixarArquivo, nomeDeArquivo } from '../../lib/arquivo'
 import { precisaMinuta } from '../../relatorios/documento'
 import { dadosVerificadosEspelho, montarEspelho } from '../../relatorios/espelho'
@@ -8,16 +10,14 @@ import { montarQuadro, quadroPdf, type CabecalhoQuadro, type DecisaoComJustifica
 import { carregarEspelho } from './carregar'
 import { useGeracao } from './useGeracao'
 
-const classe = 'rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50'
-
 export function BotaoEspelho({ ch, p }: { ch: string; p: string }) {
   const { gerando, erro, gerar, rodape } = useGeracao()
   return (
-    <span className="inline-flex flex-col items-end gap-1">
-      <button
-        type="button"
-        className={classe}
-        disabled={gerando !== null}
+    <>
+      <Button
+        variante="secondary"
+        icone={FileDown}
+        carregando={gerando !== null}
         onClick={() =>
           gerar('espelho', async () => {
             const dados = await carregarEspelho(ch, p)
@@ -29,9 +29,9 @@ export function BotaoEspelho({ ch, p }: { ch: string; p: string }) {
         }
       >
         {gerando ? 'Gerando…' : 'Espelho (PDF)'}
-      </button>
-      <AlertaErro erro={erro} />
-    </span>
+      </Button>
+      <AlertaErroApi erro={erro} />
+    </>
   )
 }
 
@@ -59,10 +59,11 @@ export function BotoesQuadro({
 
   return (
     <>
-      <button
-        type="button"
-        className={classe}
-        disabled={gerando !== null}
+      <Button
+        variante="secondary"
+        icone={FileDown}
+        carregando={gerando === 'pdf'}
+        desabilitado={gerando === 'xlsx'}
         onClick={() =>
           gerar('pdf', async () => {
             const { baixarPdf } = await import('../../relatorios/pdf')
@@ -72,11 +73,12 @@ export function BotoesQuadro({
         }
       >
         {gerando === 'pdf' ? 'Gerando…' : 'Quadro-resumo (PDF)'}
-      </button>
-      <button
-        type="button"
-        className={classe}
-        disabled={gerando !== null}
+      </Button>
+      <Button
+        variante="secondary"
+        icone={FileSpreadsheet}
+        carregando={gerando === 'xlsx'}
+        desabilitado={gerando === 'pdf'}
         onClick={() =>
           gerar('xlsx', async () => {
             const { quadroXlsx } = await import('../../relatorios/xlsx')
@@ -86,8 +88,8 @@ export function BotoesQuadro({
         }
       >
         {gerando === 'xlsx' ? 'Gerando…' : 'Quadro-resumo (XLSX)'}
-      </button>
-      <AlertaErro erro={erro} />
+      </Button>
+      <AlertaErroApi erro={erro} />
     </>
   )
 }

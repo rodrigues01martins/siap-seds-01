@@ -14,12 +14,18 @@ export interface PropsAlert {
   acao?: ReactNode
   onFechar?: () => void
   className?: string
+  /** Nome acessível do alerta (aria-label), quando o título não basta para identificá-lo. */
+  rotulo?: string
+  /** Papel ARIA: por padrão alert (erro, atenção) ou status (sucesso, informação). Aviso permanente de
+   *  atenção que não deve interromper o leitor de tela ao abrir a página usa "status". */
+  papel?: 'alert' | 'status'
 }
 
-export function Alert({ tom, titulo, children, acao, onFechar, className }: PropsAlert) {
+export function Alert({ tom, titulo, children, acao, onFechar, className, rotulo, papel }: PropsAlert) {
   return (
     <div
-      role={tom === 'error' || tom === 'warning' ? 'alert' : 'status'}
+      role={papel ?? (tom === 'error' || tom === 'warning' ? 'alert' : 'status')}
+      aria-label={rotulo}
       className={cx('flex gap-3 rounded-input border-l-4 p-4', CLASSES_TOM[tom], className)}
     >
       <Icone icone={ICONE_TOM[tom]} tamanho={20} className="mt-0.5 shrink-0" />

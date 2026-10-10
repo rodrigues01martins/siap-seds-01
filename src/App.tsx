@@ -16,7 +16,7 @@ import { PainelChamamento } from './features/chamamentos/PainelChamamento'
 import { TelaD2 } from './features/experiencias/TelaD2'
 import { TelaMemoriaD2 } from './features/experiencias/TelaMemoriaD2'
 import { TelaOscs } from './features/oscs/TelaOscs'
-import { TelaDiligencias } from './features/diligencias/TelaDiligencias'
+import { TelaDiligencia, TelaDiligencias, TelaNovaDiligencia } from './features/diligencias/TelaDiligencias'
 import { TelaProjecao } from './features/projecao/TelaProjecao'
 import { TelaAta } from './features/relatorios/TelaAta'
 import { TelaClassificacao } from './features/resultado/TelaClassificacao'
@@ -60,6 +60,8 @@ export default function App() {
             <Route path="chamamentos/:ch/propostas/:p/d2" element={so(null, <TelaD2 />)} />
             <Route path="chamamentos/:ch/propostas/:p/d2/memoria" element={so(null, <TelaMemoriaD2 />)} />
             <Route path="chamamentos/:ch/propostas/:p/diligencias" element={so(null, <TelaDiligencias />)} />
+            <Route path="chamamentos/:ch/propostas/:p/diligencias/nova" element={so('diligencias', <TelaNovaDiligencia />)} />
+            <Route path="chamamentos/:ch/propostas/:p/diligencias/:d" element={so(null, <TelaDiligencia />)} />
             <Route path="chamamentos/:ch/lotes/:lote/classificacao" element={so(null, <TelaClassificacao />)} />
             <Route path="oscs" element={so('oscs', <TelaOscs />)} />
             <Route path="usuarios" element={so('admin', <TelaUsuarios />)} />

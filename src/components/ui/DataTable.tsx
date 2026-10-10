@@ -46,6 +46,8 @@ export interface PropsDataTable<T> {
   onTentarNovamente?: () => void
   vazio?: { titulo: string; descricao?: string; acao?: ReactNode }
   densidadeInicial?: Densidade
+  /** Células com espaçamento horizontal menor (8 px), para tabelas com muitas colunas numéricas. */
+  colunasEstreitas?: boolean
 }
 
 type Ordem = { coluna: string; direcao: 'ascending' | 'descending' } | null
@@ -71,7 +73,9 @@ export function DataTable<T>({
   onTentarNovamente,
   vazio = { titulo: 'Nenhum registro' },
   densidadeInicial = 'confortavel',
+  colunasEstreitas = false,
 }: PropsDataTable<T>) {
+  const px = colunasEstreitas ? 'px-2' : 'px-4'
   const [termo, setTermo] = useState('')
   const [valoresFiltro, setValoresFiltro] = useState<Record<string, string>>({})
   const [ordem, setOrdem] = useState<Ordem>(null)
@@ -166,7 +170,7 @@ export function DataTable<T>({
                     key={c.id}
                     scope="col"
                     aria-sort={c.ordenar ? direcao : undefined}
-                    className={cx('h-(--sds-table-header-height) border-b border-table-border px-4 text-label-md', c.alinhar === 'direita' && 'text-right')}
+                    className={cx('h-(--sds-table-header-height) border-b border-table-border text-label-md', px, c.alinhar === 'direita' && 'text-right')}
                   >
                     {c.ordenar ? (
                       <button
@@ -184,7 +188,7 @@ export function DataTable<T>({
                 )
               })}
               {acoes && (
-                <th scope="col" className="h-(--sds-table-header-height) border-b border-table-border px-4 text-right text-label-md">
+                <th scope="col" className={cx('h-(--sds-table-header-height) border-b border-table-border text-right text-label-md', px)}>
                   Ações
                 </th>
               )}
@@ -221,11 +225,11 @@ export function DataTable<T>({
                   className="border-b border-table-border bg-table-row-bg text-text-primary last:border-b-0 hover:bg-table-row-bg-hover focus-visible:bg-table-row-bg-hover"
                 >
                   {colunas.map((c) => (
-                    <td key={c.id} className={cx(alturaLinha, 'px-4', c.alinhar === 'direita' && 'text-right tabular-nums')}>
+                    <td key={c.id} className={cx(alturaLinha, px, c.alinhar === 'direita' && 'text-right tabular-nums')}>
                       {c.celula(linha)}
                     </td>
                   ))}
-                  {acoes && <td className={cx(alturaLinha, 'px-4 text-right')}>{acoes(linha)}</td>}
+                  {acoes && <td className={cx(alturaLinha, px, 'text-right')}>{acoes(linha)}</td>}
                 </tr>
               ))
             )}

@@ -1,9 +1,22 @@
 // Erro de uma chamada à /api como Alert do DS: título pelo status HTTP e a mensagem em português da /api;
 // erros desconhecidos mostram texto genérico (sem detalhe técnico). 401 oferece "Entrar novamente".
 
-import { tituloDoErro } from '../../componentes/AlertaErro'
 import { ErroApi } from '../../lib/api'
 import { Alert } from './Alert'
+
+const TITULOS: Record<number, string> = {
+  0: 'Sem conexão',
+  400: 'Dados inválidos',
+  401: 'Sessão expirada',
+  403: 'Sem permissão',
+  404: 'Não encontrado',
+  409: 'Operação não permitida',
+}
+
+/** Título do alerta pelo status HTTP da /api. */
+export function tituloDoErro(erro: ErroApi): string {
+  return TITULOS[erro.status] ?? (erro.status >= 500 ? 'Erro no servidor' : 'Erro')
+}
 
 export function AlertaErroApi({ erro }: { erro: unknown }) {
   if (!erro) return null

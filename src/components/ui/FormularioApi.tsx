@@ -5,7 +5,7 @@
 
 import { useState, type ReactNode } from 'react'
 import { FormProvider, useForm, useFormContext, type DefaultValues, type FieldValues, type Resolver } from 'react-hook-form'
-import { mensagemDoCampo, paraErros } from '../../componentes/Formulario'
+import { mensagemDoCampo, paraErros } from './form'
 import { CAMPO_RAIZ, camposDoErro, type z } from '../../esquemas/base'
 import { ErroApi } from '../../lib/api'
 import { Alert } from './Alert'
@@ -37,6 +37,10 @@ export interface PropsFormularioApi<E extends z.ZodType<FieldValues>> {
   acoesSecundarias?: ReactNode
   /** Nome acessível do formulário. */
   rotulo?: string
+  /** Substitui a linha de ações padrão (ex.: Voltar/Avançar de um assistente); renderizado dentro do formulário. */
+  rodape?: ReactNode
+  /** Id do <form> (botão de enviar fora dele, com o atributo form). */
+  id?: string
 }
 
 export function FormularioApi<E extends z.ZodType<FieldValues>>({
@@ -51,6 +55,8 @@ export function FormularioApi<E extends z.ZodType<FieldValues>>({
   somenteLeitura = false,
   acoesSecundarias,
   rotulo,
+  rodape,
+  id,
 }: PropsFormularioApi<E>) {
   const mapear = (campos: Campos, corpo: unknown): Campos =>
     Object.fromEntries(Object.entries(campos).map(([campo, msg]) => [campo === CAMPO_RAIZ ? campo : campoDoFormulario(campo, corpo), msg]))
@@ -84,6 +90,7 @@ export function FormularioApi<E extends z.ZodType<FieldValues>>({
   return (
     <FormProvider {...metodos}>
       <form
+        id={id}
         aria-label={rotulo}
         noValidate
         onSubmit={(evento) => {
@@ -101,7 +108,8 @@ export function FormularioApi<E extends z.ZodType<FieldValues>>({
           </Alert>
         )}
         <AlertaErroApi erro={erroServidor} />
-        {!somenteLeitura && (
+        {!somenteLeitura && rodape}
+        {!somenteLeitura && !rodape && (
           <div className="flex flex-wrap justify-end gap-3">
             {acoesSecundarias}
             <Button type="submit" carregando={formState.isSubmitting}>

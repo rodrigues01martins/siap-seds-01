@@ -17,7 +17,7 @@ export function RotaProtegida({ children, exige }: Props) {
 
   switch (decidirAcesso(usuario, exige)) {
     case 'carregando':
-      return <p className="p-8 text-slate-600">Carregando…</p>
+      return <p role="status" className="p-8 text-body-md text-text-secondary">Carregando…</p>
     case 'login':
       return <Navigate to="/login" replace state={{ de: local.pathname }} />
     case 'nao-autorizado':

@@ -1,5 +1,6 @@
-// Confirmação de ação destrutiva: alertdialog, foco inicial em "Cancelar" (o caminho seguro), botão
-// destrutivo com o verbo da ação (ex.: "Desativar"), carregando enquanto confirma.
+// Confirmação de ação: alertdialog, foco inicial em "Cancelar" (o caminho seguro), botão com o verbo da
+// ação (ex.: "Desativar"), carregando enquanto confirma. Destrutiva por padrão; variante "primary" para
+// atos importantes que não destroem (ex.: homologar). Conteúdo extra (ex.: justificativa) em children.
 
 import type { ReactNode } from 'react'
 import { Button } from './Button'
@@ -14,9 +15,13 @@ export interface PropsConfirmDialog {
   onConfirmar: () => void
   onCancelar: () => void
   confirmando?: boolean
+  variante?: 'destructive' | 'primary'
+  /** Botão de confirmar desabilitado (ex.: até marcar "Conferi"). */
+  confirmarDesabilitado?: boolean
+  children?: ReactNode
 }
 
-export function ConfirmDialog({ aberto, titulo, mensagem, rotuloConfirmar, rotuloCancelar = 'Cancelar', onConfirmar, onCancelar, confirmando }: PropsConfirmDialog) {
+export function ConfirmDialog({ aberto, titulo, mensagem, rotuloConfirmar, rotuloCancelar = 'Cancelar', onConfirmar, onCancelar, confirmando, variante = 'destructive', confirmarDesabilitado, children }: PropsConfirmDialog) {
   return (
     <Dialog
       aberto={aberto}
@@ -30,11 +35,13 @@ export function ConfirmDialog({ aberto, titulo, mensagem, rotuloConfirmar, rotul
           <Button variante="secondary" onClick={onCancelar} data-autofocus>
             {rotuloCancelar}
           </Button>
-          <Button variante="destructive" onClick={onConfirmar} carregando={confirmando}>
+          <Button variante={variante} onClick={onConfirmar} carregando={confirmando} desabilitado={confirmarDesabilitado}>
             {rotuloConfirmar}
           </Button>
         </>
       }
-    />
+    >
+      {children}
+    </Dialog>
   )
 }

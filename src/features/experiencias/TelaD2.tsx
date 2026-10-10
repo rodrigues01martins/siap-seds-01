@@ -1,18 +1,30 @@
-// /chamamentos/:ch/propostas/:p/d2 — experiências da OSC (D2): tabela editável, documentos,
-// desconsiderar por critério (Anexo IV, 3.8.5) e linha do tempo A/B. Escrita: presidente e relator.
+// /chamamentos/:ch/propostas/:p/d2 (ListPage) — experiências da OSC (D2): tabela editável (DataTable),
+// painel lateral para criar/editar a experiência e seus documentos, desconsiderar por critério
+// (Anexo IV, 3.8.5) e linha do tempo A/B. Escrita: quem tem a permissão "Experiências da D2".
 
+import { Calculator, Plus } from 'lucide-react'
 import { useState } from 'react'
-import { Link, useParams } from 'react-router'
-import { AlertaErro } from '../../componentes/AlertaErro'
-import { Botao, EstadoLeitura, Secao } from '../../componentes/basicos'
+import { useParams } from 'react-router'
+import { ListPage } from '../../components/templates/paginas'
+import { Alert } from '../../components/ui/Alert'
+import { AlertaErroApi } from '../../components/ui/AlertaErroApi'
+import { Button } from '../../components/ui/Button'
+import { ButtonLink } from '../../components/ui/ButtonLink'
+import { Card } from '../../components/ui/Card'
+import { Drawer } from '../../components/ui/Drawer'
+import { EmptyState } from '../../components/ui/EmptyState'
+import { ErrorState } from '../../components/ui/ErrorState'
+import { Skeleton } from '../../components/ui/Skeleton'
+import { useToast } from '../../components/ui/Toast'
 import type { Desconsideracao } from '../../domain/d2'
 import { formatarNumero } from '../../domain/formatacao'
+import { MATRIZ_2026 } from '../../domain/matriz'
 import { podeFazer } from '../../domain/permissoes'
 import type { CamposExperiencia } from '../../esquemas/experiencia'
 import { chamarApi } from '../../lib/api'
 import { useColecao } from '../../lib/firestore'
 import { useUsuario } from '../auth/useUsuario'
-import { CabecalhoProposta, useDadosProposta } from '../avaliacao/CabecalhoProposta'
+import { AvisoSomenteLeitura, cabecalhoDaProposta, ContextoProposta, useDadosProposta } from '../avaliacao/CabecalhoProposta'
 import { FormExperiencia } from './FormExperiencia'
 import { GraficoLinhaDoTempo } from './GraficoLinhaDoTempo'
 import { TabelaExperiencias, type ExperienciaGravada } from './TabelaExperiencias'
@@ -20,6 +32,7 @@ import { TabelaExperiencias, type ExperienciaGravada } from './TabelaExperiencia
 export function TelaD2() {
   const { ch = '', p = '' } = useParams()
   const { usuario } = useUsuario()
+  const { mostrar } = useToast()
   const leitura = useDadosProposta(ch, p)
   const experiencias = useColecao<Omit<ExperienciaGravada, 'id'>>(`chamamentos/${ch}/propostas/${p}/experiencias`)
   const [editando, setEditando] = useState<string | 'nova' | null>(null)
@@ -27,80 +40,74 @@ export function TelaD2() {
 
   const carregando = leitura.carregando || experiencias.carregando
   const erroLeitura = leitura.erro ?? experiencias.erro
-  if (carregando || erroLeitura) return <EstadoLeitura carregando={carregando} erro={erroLeitura} />
-  if (!leitura.dados) return <p className="text-slate-600">Proposta não encontrada.</p>
+  if (carregando) return <Skeleton linhas={8} rotulo="Carregando experiências da D2" />
+  if (erroLeitura) return <ErrorState mensagem={erroLeitura} />
+  if (!leitura.dados) return <EmptyState titulo="Proposta não encontrada" descricao="Confira o endereço ou volte ao painel do chamamento." />
 
   const { proposta, chamamento } = leitura.dados
   const lista = [...experiencias.dados].sort((a, b) => a.inicio.localeCompare(b.inicio) || a.id.localeCompare(b.id))
   const admissao = proposta.admissibilidade?.situacao
   const motivo = proposta.bloqueada
-    ? 'Proposta homologada: somente leitura.'
+    ? 'Proposta homologada.'
     : admissao === 'nao_admitida' || admissao === 'desclassificada'
       ? 'Proposta não admitida (Anexo III, item 28): não segue para avaliação.'
       : !podeFazer(usuario?.acesso ?? null, 'experienciasD2')
-      ? 'Você consulta as experiências, mas não as edita (permissão "Experiências da D2").'
-      : null
+        ? 'Você consulta as experiências, mas não as edita (permissão "Experiências da D2").'
+        : null
   const alvo = { chamamentoId: ch, propostaId: p }
   const nomes = Object.fromEntries(lista.map((e) => [e.id, e.descricao]))
-
-  async function executar(acao: () => Promise<unknown>) {
-    setErro(null)
-    try {
-      await acao()
-    } catch (e) {
-      setErro(e)
-    }
-  }
+  const d2 = proposta.totais?.d2
 
   async function salvar(dados: CamposExperiencia) {
     if (editando === 'nova') await chamarApi('/api/experiencia', { metodo: 'POST', corpo: { ...alvo, ...dados } })
     else await chamarApi('/api/experiencia', { metodo: 'PATCH', corpo: { ...alvo, id: editando, ...dados } })
+    mostrar({ tom: 'success', titulo: editando === 'nova' ? 'Experiência cadastrada' : 'Experiência atualizada', mensagem: 'A D2 foi recalculada.' })
     setEditando(null)
   }
 
   return (
-    <>
-      <CabecalhoProposta dados={leitura.dados} ch={ch} aba="d2" />
-      {motivo && <p className="mb-3 rounded-md bg-slate-100 p-2 text-sm text-slate-700">{motivo}</p>}
-      <AlertaErro erro={erro} />
+    <ListPage
+      cabecalho={cabecalhoDaProposta(leitura.dados, ch, 'd2', {
+        acoesSecundarias: (
+          <ButtonLink para={`/chamamentos/${ch}/propostas/${p}/d2/memoria`} variante="secondary" icone={Calculator}>
+            Memória de cálculo
+          </ButtonLink>
+        ),
+        acaoPrimaria: motivo ? undefined : (
+          <Button icone={Plus} onClick={() => setEditando('nova')}>
+            Nova experiência
+          </Button>
+        ),
+      })}
+    >
+      <ContextoProposta dados={leitura.dados} ch={ch} aba="d2" />
+      <AvisoSomenteLeitura motivo={motivo} />
+      <AlertaErroApi erro={erro} />
 
-      <Secao
-        titulo={`Experiências — D2 gravada: ${proposta.totais?.d2 === undefined ? '—' : formatarNumero(proposta.totais.d2)} / 20`}
-        acoes={
-          <span className="flex gap-2">
-            <Link to={`/chamamentos/${ch}/propostas/${p}/d2/memoria`} className="text-sm text-sky-800 underline">
-              Memória de cálculo
-            </Link>
-            {!motivo && editando === null && <Botao onClick={() => setEditando('nova')}>Nova experiência</Botao>}
-          </span>
-        }
+      <Card
+        titulo="Experiências da OSC"
+        descricao={`D2 gravada pela /api: ${d2 === undefined ? '—' : formatarNumero(d2)} de ${formatarNumero(MATRIZ_2026.dimensao2.maximo)} pontos · ${lista.length} experiência(s)`}
       >
         <TabelaExperiencias
           experiencias={lista}
           somenteLeitura={motivo !== null}
           onEditar={(id) => setEditando(id)}
-          onExcluir={(id) => {
-            if (!window.confirm(`Excluir a experiência "${nomes[id]}"? A D2 será recalculada.`)) return
-            void executar(() => chamarApi('/api/experiencia', { metodo: 'DELETE', corpo: { ...alvo, id } }))
+          onExcluir={async (id) => {
+            setErro(null)
+            try {
+              await chamarApi('/api/experiencia', { metodo: 'DELETE', corpo: { ...alvo, id } })
+              mostrar({ tom: 'success', titulo: 'Experiência excluída', mensagem: 'A D2 foi recalculada.' })
+            } catch (e) {
+              setErro(e)
+            }
           }}
           onDesconsiderar={(id, desconsideracoes: Desconsideracao[]) =>
             chamarApi('/api/experiencia', { metodo: 'PATCH', corpo: { ...alvo, id, desconsideracoes } }).then(() => undefined)
           }
         />
-      </Secao>
+      </Card>
 
-      {editando !== null && !motivo && (
-        <Secao titulo={editando === 'nova' ? 'Nova experiência' : `Editar: ${nomes[editando] ?? ''}`}>
-          <div className="max-w-4xl rounded-lg border border-slate-200 bg-white p-5">
-            <FormExperiencia inicial={editando === 'nova' ? null : lista.find((e) => e.id === editando)} onSalvar={salvar} />
-            <div className="mt-3">
-              <Botao onClick={() => setEditando(null)}>Cancelar</Botao>
-            </div>
-          </div>
-        </Secao>
-      )}
-
-      <Secao titulo="Linha do tempo (categorias A e B)">
+      <Card titulo="Linha do tempo (categorias A e B)" descricao="Sobreposições contam uma vez só no C2.2 e só elas permitem somar no C2.3 (Anexo IV, 3.8.3).">
         {chamamento.dataLimitePropostas ? (
           <GraficoLinhaDoTempo
             experiencias={lista.map((e) => ({ id: e.id, categorias: e.categorias as ('A' | 'B' | 'C' | 'D')[], inicio: e.inicio, fim: e.fim }))}
@@ -108,9 +115,29 @@ export function TelaD2() {
             nomes={nomes}
           />
         ) : (
-          <p className="text-sm text-amber-800">Cadastre a data limite das propostas no chamamento.</p>
+          <Alert tom="warning" titulo="Sem data limite">
+            Cadastre a data limite das propostas no chamamento.
+          </Alert>
         )}
-      </Secao>
-    </>
+      </Card>
+
+      <Drawer
+        aberto={editando !== null && !motivo}
+        largura="lg"
+        titulo={editando === 'nova' ? 'Nova experiência' : `Editar: ${nomes[editando ?? ''] ?? ''}`}
+        descricao="A D2 é recalculada pela /api ao salvar."
+        onFechar={() => setEditando(null)}
+      >
+        <FormExperiencia
+          inicial={editando === 'nova' ? null : lista.find((e) => e.id === editando)}
+          onSalvar={salvar}
+          acoesSecundarias={
+            <Button variante="secondary" onClick={() => setEditando(null)}>
+              Cancelar
+            </Button>
+          }
+        />
+      </Drawer>
+    </ListPage>
   )
 }

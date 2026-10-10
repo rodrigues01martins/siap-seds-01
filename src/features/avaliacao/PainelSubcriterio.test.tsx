@@ -20,7 +20,7 @@ const salvar = () => userEvent.click(screen.getByRole('button', { name: 'Salvar 
 async function preencher({ nivel = 3, justificativa = 'Metodologia descrita com fluxos e responsáveis.', paginas = '2, 5' } = {}) {
   await userEvent.click(screen.getByRole('radio', { name: new RegExp(`^Nível ${nivel}\\b`) }))
   await userEvent.click(screen.getByRole('radio', { name: 'Unanimidade' }))
-  await userEvent.type(screen.getByLabelText(/^Justificativa/), justificativa)
+  await userEvent.type(screen.getByRole('textbox', { name: /^Justificativa/ }), justificativa)
   if (paginas) await userEvent.type(screen.getByLabelText('Páginas citadas'), paginas)
 }
 
@@ -73,7 +73,7 @@ describe('Painel do subcritério', () => {
   it('contador da justificativa com o mínimo do chamamento; curta não envia', async () => {
     const onSalvar = montar('3.1', { justificativaMinima: 30 })
     await preencher({ justificativa: 'Curta demais.' })
-    expect(screen.getByText('13 / mín. 30 caracteres')).toBeInTheDocument()
+    expect(screen.getByText('13 / mín. 30')).toBeInTheDocument()
     await salvar()
     expect(await screen.findByText('A justificativa deve ter ao menos 30 caracteres.')).toBeInTheDocument()
     expect(onSalvar).not.toHaveBeenCalled()
@@ -86,7 +86,7 @@ describe('Painel do subcritério', () => {
       'Página 9 acima do limite de 8 páginas do PA3',
     )
     await salvar()
-    expect(screen.getByLabelText('Páginas citadas')).toHaveAccessibleDescription('Página 9 acima do limite de 8 páginas do PA3.')
+    expect(screen.getByLabelText('Páginas citadas')).toHaveAccessibleDescription(/Erro: Página 9 acima do limite de 8 páginas do PA3\./)
     expect(onSalvar).not.toHaveBeenCalled()
   })
 
@@ -94,7 +94,7 @@ describe('Painel do subcritério', () => {
     const onSalvar = montar('3.1')
     await preencher({ paginas: '2, x' })
     await salvar()
-    expect(screen.getByLabelText('Páginas citadas')).toHaveAccessibleDescription('As páginas devem ser números inteiros a partir de 1.')
+    expect(screen.getByLabelText('Páginas citadas')).toHaveAccessibleDescription(/Erro: As páginas devem ser números inteiros a partir de 1\./)
     expect(onSalvar).not.toHaveBeenCalled()
   })
 
@@ -119,6 +119,20 @@ describe('Painel do subcritério', () => {
     expect(screen.getByRole('radio', { name: /^Nível 2\b/ })).toBeChecked()
     expect(screen.getByLabelText('Páginas citadas')).toHaveValue('3, 4')
     expect(screen.getByLabelText('Voto divergente')).toHaveValue('Y')
+  })
+
+  it('seções do formulário longo: Identificação, Elementos, Escala 0–4, Decisão, Justificativa e páginas', () => {
+    montar('1.1')
+    expect(screen.getByRole('region', { name: 'Identificação' })).toHaveTextContent('Eliminatório: nível 0 desclassifica')
+    for (const titulo of ['Elementos de avaliação', 'Escala 0–4', 'Decisão', 'Justificativa e páginas']) {
+      expect(screen.getByRole('heading', { level: 3, name: titulo })).toBeInTheDocument()
+    }
+  })
+
+  it('com idFormulario o botão fica fora do painel (rodapé da tela)', () => {
+    montar('3.1', { idFormulario: 'form-sub' })
+    expect(screen.queryByRole('button', { name: 'Salvar avaliação' })).not.toBeInTheDocument()
+    expect(screen.getByRole('form', { name: 'Avaliação do subcritério 3.1' })).toHaveAttribute('id', 'form-sub')
   })
 
   it('somente leitura (homologada ou sem permissão): sem botão de salvar e com o motivo', () => {

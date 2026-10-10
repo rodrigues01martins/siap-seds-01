@@ -16,9 +16,11 @@ export interface PropsDrawer {
   rodape?: ReactNode
   /** Lado de onde o painel entra (esquerda: menu de navegação em telas pequenas). */
   lado?: 'direita' | 'esquerda'
+  /** Largura máxima: md (448 px, padrão) ou lg (672 px, formulários com mais campos). */
+  largura?: 'md' | 'lg'
 }
 
-export function Drawer({ aberto, titulo, descricao, onFechar, children, rodape, lado = 'direita' }: PropsDrawer) {
+export function Drawer({ aberto, titulo, descricao, onFechar, children, rodape, lado = 'direita', largura = 'md' }: PropsDrawer) {
   const ref = useRef<HTMLDivElement>(null)
   const id = useId()
   const aoTeclar = useFocoPreso(aberto, ref, onFechar)
@@ -34,7 +36,7 @@ export function Drawer({ aberto, titulo, descricao, onFechar, children, rodape, 
         aria-describedby={descricao ? `${id}-descricao` : undefined}
         onKeyDown={aoTeclar}
         tabIndex={-1}
-        className={cx('relative flex h-full w-full max-w-md flex-col bg-background-surface shadow-modal', lado === 'esquerda' ? 'mr-auto' : 'ml-auto')}
+        className={cx('relative flex h-full w-full flex-col bg-background-surface shadow-modal', largura === 'lg' ? 'max-w-2xl' : 'max-w-md', lado === 'esquerda' ? 'mr-auto' : 'ml-auto')}
       >
         <div className="flex items-start justify-between gap-4 border-b border-border-default px-6 py-4">
           <div>
