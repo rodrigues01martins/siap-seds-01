@@ -86,7 +86,7 @@ describe('/api/desempate — gravação e auditoria', () => {
       decididoPor: { uid: presidente.uid, email: presidente.email },
     })
     expect(doc?.decididoEm).toBeInstanceOf(Timestamp)
-    expect((await auditoriaDe(caminho))[0]).toMatchObject({ acao: 'criar', uid: presidente.uid, perfil: 'presidente' })
+    expect((await auditoriaDe(caminho))[0]).toMatchObject({ acao: 'criar', uid: presidente.uid, perfil: 'usuario' })
 
     const r2 = await chamar(rota, 'PUT', corpo({ ordem: ['b', 'c'] }), presidente.token)
     expect(r2.corpo?.id).toBe(r.corpo?.id)

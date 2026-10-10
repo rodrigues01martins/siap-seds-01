@@ -86,7 +86,7 @@ describe('/api/homologar — homologação', () => {
       antes: { bloqueada: false },
       depois: { bloqueada: true, homologadaPor: { uid: presidente.uid } },
       uid: presidente.uid,
-      perfil: 'presidente',
+      perfil: 'usuario',
     })
   })
 

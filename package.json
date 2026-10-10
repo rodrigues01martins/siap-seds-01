@@ -16,16 +16,23 @@
     "test:regras": "firebase emulators:exec --only firestore --project demo-siap-seds \"vitest run --config vitest.regras.config.ts\"",
     "emuladores": "firebase emulators:start --only auth,firestore --project dev",
     "seed:matriz": "tsx scripts/seed-matriz.ts",
-    "set-role": "tsx scripts/set-role.ts",
+    "tornar-admin": "tsx scripts/tornar-admin.ts",
     "test:api": "firebase emulators:exec --only auth,firestore --project demo-siap-seds \"vitest run --config vitest.api.config.ts\"",
     "backup": "tsx scripts/backup-firestore.ts",
     "restaurar": "tsx scripts/restaurar-firestore.ts",
-    "ensaio": "tsx scripts/ensaio.ts"
+    "ensaio": "tsx scripts/ensaio.ts",
+    "test:e2e:baseline": "firebase emulators:exec --only auth,firestore --project demo-siap-seds \"playwright test tests/e2e/baseline.spec.ts\"",
+    "test:e2e:ui": "firebase emulators:exec --only auth,firestore --project demo-siap-seds \"playwright test tests/e2e/catalogo.spec.ts\"",
+    "test:e2e:etapa3": "firebase emulators:exec --only auth,firestore --project demo-siap-seds \"playwright test tests/e2e/etapa3.spec.ts\"",
+    "test:e2e:etapa4": "firebase emulators:exec --only auth,firestore --project demo-siap-seds \"playwright test tests/e2e/etapa4.spec.ts\"",
+    "test:e2e:uso": "firebase emulators:exec --only auth,firestore --project demo-siap-seds \"playwright test tests/e2e/uso.spec.ts\"",
+    "test:e2e:acessibilidade": "firebase emulators:exec --only auth,firestore --project demo-siap-seds \"playwright test tests/e2e/acessibilidade.spec.ts\""
   },
   "dependencies": {
     "exceljs": "^4.4.0",
     "firebase": "^10.14.1",
     "firebase-admin": "^13.10.0",
+    "lucide-react": "^1.55.0",
     "pdfmake": "^0.3.11",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -34,7 +41,9 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@firebase/rules-unit-testing": "^3.0.4",
+    "@playwright/test": "1.56.1",
     "@tailwindcss/vite": "^4.3.3",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/jest-dom": "^7.0.1",

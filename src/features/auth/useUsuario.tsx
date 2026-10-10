@@ -1,16 +1,18 @@
-// Sessão do usuário: um único listener do Firebase Auth compartilhado via contexto.
-// O perfil vem do custom claim "perfil" do ID token (definido por scripts/set-role.ts).
+// Sessão do usuário: login (Firebase Auth) + cadastro em usuarios/{uid}, ouvido em tempo real.
+// Quando o administrador libera ou retira uma permissão, a tela muda sozinha (sem sair e entrar).
+// A leitura do cadastro (e o primeiro acesso do administrador inicial) fica em ./cadastro.ts, com limite de
+// tempo: a tela nunca fica em "Carregando…" para sempre.
 
-import { onIdTokenChanged, signOut } from 'firebase/auth'
+import { onAuthStateChanged, signOut } from 'firebase/auth'
+import { doc, getDocFromServer, onSnapshot } from 'firebase/firestore'
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { extrairPerfil } from '../../domain/perfis'
-import { obterAuth } from '../../lib/firebase'
+import { chamarApi } from '../../lib/api'
+import { obterAuth, obterDb } from '../../lib/firebase'
 import type { EstadoUsuario } from './acesso'
+import { acompanharCadastro } from './cadastro'
 
 interface ValorUsuario extends EstadoUsuario {
   sair: () => Promise<void>
-  /** Força a renovação do ID token para ler um perfil recém-atribuído. */
-  recarregarPerfil: () => Promise<void>
 }
 
 const ContextoUsuario = createContext<ValorUsuario | null>(null)
@@ -19,38 +21,52 @@ export function UsuarioProvider({ children }: { children: ReactNode }) {
   const [estado, setEstado] = useState<EstadoUsuario>({ carregando: true, usuario: null })
 
   useEffect(() => {
-    const auth = obterAuth()
     let ativo = true
-    // onIdTokenChanged também dispara quando o token é renovado (ex.: recarregarPerfil).
-    const cancelar = onIdTokenChanged(auth, async (user) => {
+    let pararCadastro: (() => void) | null = null
+    const atualizar = (novo: EstadoUsuario) => {
+      if (ativo) setEstado(novo)
+    }
+
+    const pararLogin = onAuthStateChanged(obterAuth(), (user) => {
+      pararCadastro?.()
+      pararCadastro = null
       if (!user) {
-        if (ativo) setEstado({ carregando: false, usuario: null })
+        atualizar({ carregando: false, usuario: null })
         return
       }
-      let perfil = null
-      try {
-        perfil = extrairPerfil((await user.getIdTokenResult()).claims)
-      } catch {
-        perfil = null // sem token legível não há acesso
-      }
-      if (ativo) setEstado({ carregando: false, usuario: { uid: user.uid, email: user.email, perfil } })
+      const referencia = doc(obterDb(), 'usuarios', user.uid)
+      pararCadastro = acompanharCadastro(
+        {
+          ouvir: (aoReceber, aoFalhar) => onSnapshot(referencia, (d) => aoReceber(d.data()), aoFalhar),
+          pedirPrimeiroAcesso: async () => {
+            await chamarApi('/api/usuarios', { metodo: 'PUT' })
+          },
+          lerDoServidor: async () => (await getDocFromServer(referencia)).data(),
+        },
+        (cadastro) => {
+          if (cadastro.carregando) return atualizar({ carregando: true, usuario: null })
+          atualizar({
+            carregando: false,
+            usuario: {
+              uid: user.uid,
+              email: user.email,
+              nome: cadastro.nome ?? user.displayName,
+              acesso: cadastro.acesso,
+              erro: cadastro.erro,
+            },
+          })
+        },
+      )
     })
+
     return () => {
       ativo = false
-      cancelar()
+      pararLogin()
+      pararCadastro?.()
     }
   }, [])
 
-  const valor = useMemo<ValorUsuario>(
-    () => ({
-      ...estado,
-      sair: () => signOut(obterAuth()),
-      recarregarPerfil: async () => {
-        await obterAuth().currentUser?.getIdToken(true)
-      },
-    }),
-    [estado],
-  )
+  const valor = useMemo<ValorUsuario>(() => ({ ...estado, sair: () => signOut(obterAuth()) }), [estado])
 
   return <ContextoUsuario.Provider value={valor}>{children}</ContextoUsuario.Provider>
 }

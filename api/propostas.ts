@@ -3,7 +3,6 @@
 // "bloqueada" só muda pela homologação (Etapa 3b): este endpoint não aceita o campo.
 
 import type { Transaction } from 'firebase-admin/firestore'
-import { PERMISSOES } from '../src/domain/permissoes.js'
 import { esquemaCriarProposta, esquemaEditarProposta } from '../src/esquemas/cadastros.js'
 import { obterAdmin } from './_lib/admin.js'
 import { ErroApi, MENSAGENS } from './_lib/erros.js'
@@ -53,7 +52,7 @@ async function conferirDuplicidade(
 
 export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   POST: async (requisicao) => {
-    const autor = await autenticar(requisicao, PERMISSOES.cadastros)
+    const autor = await autenticar(requisicao, 'propostas')
     const { chamamentoId, loteCodigo: lote, oscCnpj, ...demais } = await lerCorpo(requisicao, esquemaCriarProposta)
     const id = obterAdmin().db.collection(`chamamentos/${chamamentoId}/propostas`).doc().id
     await gravar(autor, async (transacao) => {
@@ -71,7 +70,7 @@ export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   },
 
   PATCH: async (requisicao) => {
-    const autor = await autenticar(requisicao, PERMISSOES.cadastros)
+    const autor = await autenticar(requisicao, 'propostas')
     const { chamamentoId, propostaId, ...alteracoes } = await lerCorpo(requisicao, esquemaEditarProposta)
     const caminho = `chamamentos/${chamamentoId}/propostas/${propostaId}`
     await gravar(autor, async (transacao) => {

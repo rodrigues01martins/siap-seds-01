@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // A projeção (telão) acompanha a sessão em tempo real: uma avaliação registrada pela /api aparece
 // sem recarregar a página. Usa o SDK do navegador contra o emulador, logado como o usuário do telão
-// (perfil membro), com as firestore.rules de verdade.
+// (só a permissão Consulta), com as firestore.rules de verdade.
 
 import '@testing-library/jest-dom/vitest'
 import { readFileSync } from 'node:fs'
@@ -28,7 +28,10 @@ beforeAll(async () => {
     projectId: process.env.GCLOUD_PROJECT ?? 'demo-siap-seds',
     firestore: { rules: readFileSync('firestore.rules', 'utf8') },
   })
-  banco.db = ambiente.authenticatedContext('uid-telao', { perfil: 'membro' }).firestore()
+  banco.db = ambiente.authenticatedContext('uid-telao').firestore()
+  await obterAdmin()
+    .db.doc('usuarios/uid-telao')
+    .set({ email: 'telao@teste.go.gov.br', admin: false, ativo: true, permissoes: ['consultar'] })
   await semearProposta()
   await obterAdmin().db.doc(CAMINHO_PROPOSTA).update({ numeroSEI: '95570001' })
   await obterAdmin()

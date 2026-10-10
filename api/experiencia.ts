@@ -6,7 +6,6 @@
 // A D2 e os totais são recalculados na mesma transação (C4).
 
 import { problemasDaExperiencia } from '../src/domain/d2.js'
-import { PERMISSOES } from '../src/domain/permissoes.js'
 import type { TotaisProposta } from '../src/domain/proposta.js'
 import {
   esquemaCriarExperiencia,
@@ -57,7 +56,7 @@ function exigirExistente(atual: Record<string, unknown> | null): Record<string, 
 
 export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   POST: async (requisicao) => {
-    const autor = await autenticar(requisicao, PERMISSOES.experienciasD2)
+    const autor = await autenticar(requisicao, 'experienciasD2')
     const { chamamentoId, propostaId, ...dados } = await lerCorpo(requisicao, esquemaCriarExperiencia)
     const id = obterAdmin().db.collection(`chamamentos/${chamamentoId}/propostas/${propostaId}/experiencias`).doc().id
     const caminho = `chamamentos/${chamamentoId}/propostas/${propostaId}/experiencias/${id}`
@@ -69,7 +68,7 @@ export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   },
 
   PATCH: async (requisicao) => {
-    const autor = await autenticar(requisicao, PERMISSOES.experienciasD2)
+    const autor = await autenticar(requisicao, 'experienciasD2')
     const { chamamentoId, propostaId, id, ...alteracoes } = await lerCorpo(requisicao, esquemaEditarExperiencia)
     const caminho = `chamamentos/${chamamentoId}/propostas/${propostaId}/experiencias/${id}`
     const totais = await alterar(autor, chamamentoId, propostaId, id, (atual) => ({
@@ -81,7 +80,7 @@ export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   },
 
   DELETE: async (requisicao) => {
-    const autor = await autenticar(requisicao, PERMISSOES.experienciasD2)
+    const autor = await autenticar(requisicao, 'experienciasD2')
     const { chamamentoId, propostaId, id } = await lerCorpo(requisicao, esquemaExcluirExperiencia)
     const caminho = `chamamentos/${chamamentoId}/propostas/${propostaId}/experiencias/${id}`
     const totais = await alterar(autor, chamamentoId, propostaId, id, (atual) => {

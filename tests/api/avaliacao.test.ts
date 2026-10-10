@@ -60,17 +60,16 @@ beforeEach(async () => {
 })
 
 describe('/api/avaliacao — acesso', () => {
-  it('405, 401 e 403 (admin e controle não registram nível)', async () => {
+  it('405, 401 e 403 (controle, só consulta, não registra nível)', async () => {
     const r405 = await chamar(rota, 'GET', undefined, relator.token)
     expect(r405.status).toBe(405)
     expect(r405.headers.get('Allow')).toBe('PUT')
     expect((await chamar(rota, 'PUT', registro(), null)).status).toBe(401)
-    expect((await chamar(rota, 'PUT', registro(), admin.token)).status).toBe(403)
     expect((await chamar(rota, 'PUT', registro(), controle.token)).status).toBe(403)
   })
 
-  it.each(['presidente', 'relator', 'membro'] as const)('%s registra nível', async (perfil) => {
-    const usuario = { presidente, relator, membro }[perfil]
+  it.each(['presidente', 'relator', 'membro', 'admin'] as const)('%s registra nível', async (perfil) => {
+    const usuario = { presidente, relator, membro, admin }[perfil]
     expect((await chamar(rota, 'PUT', registro(), usuario.token)).status).toBe(200)
   })
 })
@@ -118,14 +117,14 @@ describe('/api/avaliacao — gravação, auditoria e recálculo (C4)', () => {
       sessaoId: SESSAO,
     })
     const [registroAuditoria] = await auditoriaDe(`${CAMINHO_PROPOSTA}/avaliacoes/3.1`)
-    expect(registroAuditoria).toMatchObject({ acao: 'criar', antes: null, depois: { nivel: 3 }, uid: relator.uid, perfil: 'relator' })
+    expect(registroAuditoria).toMatchObject({ acao: 'criar', antes: null, depois: { nivel: 3 }, uid: relator.uid, perfil: 'usuario' })
   })
 
   it('registrar de novo o mesmo subcritério → editar, com antes e depois', async () => {
     await chamar(rota, 'PUT', registro(), relator.token)
     await chamar(rota, 'PUT', registro({ nivel: 1 }), presidente.token)
     const registros = await auditoriaDe(`${CAMINHO_PROPOSTA}/avaliacoes/3.1`)
-    expect(registros[1]).toMatchObject({ acao: 'editar', antes: { nivel: 3 }, depois: { nivel: 1 }, perfil: 'presidente' })
+    expect(registros[1]).toMatchObject({ acao: 'editar', antes: { nivel: 3 }, depois: { nivel: 1 }, perfil: 'usuario' })
   })
 
   it('recalcula totais da proposta na mesma gravação (avaliação incompleta → pendente)', async () => {

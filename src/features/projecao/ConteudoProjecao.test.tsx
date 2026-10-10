@@ -54,6 +54,7 @@ describe('Projeção — subcritério', () => {
     const registrado = screen.getByRole('listitem', { name: 'Nível 2' })
     expect(registrado).toHaveAttribute('aria-current', 'true')
     expect(within(registrado).getByText('Nível registrado')).toBeInTheDocument()
+    expect(registrado.className).toContain('bg-projecao-destaque-bg') // action.primary, além do texto
     expect(screen.getByRole('listitem', { name: 'Nível 3' })).not.toHaveAttribute('aria-current')
     for (const { descritor } of MATRIZ_2026.dimensao1.escala) expect(screen.getByText(descritor)).toBeInTheDocument()
     expect(screen.getByText('Maioria')).toBeInTheDocument()

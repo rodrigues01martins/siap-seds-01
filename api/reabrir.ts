@@ -3,7 +3,6 @@
 // homologação anterior (o histórico fica na auditoria). Única escrita permitida em proposta homologada.
 
 import { FieldValue } from 'firebase-admin/firestore'
-import { PERMISSOES } from '../src/domain/permissoes.js'
 import { esquemaReabrir } from '../src/esquemas/resultado.js'
 import { obterAdmin } from './_lib/admin.js'
 import { ErroApi, MENSAGENS } from './_lib/erros.js'
@@ -14,7 +13,7 @@ import { lerCorpo } from './_lib/validacao.js'
 
 export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   POST: async (requisicao) => {
-    const autor = await autenticar(requisicao, PERMISSOES.reabrir)
+    const autor = await autenticar(requisicao, 'reabrir')
     const { chamamentoId, propostaId, motivo } = await lerCorpo(requisicao, esquemaReabrir)
     const caminho = `chamamentos/${chamamentoId}/propostas/${propostaId}`
 

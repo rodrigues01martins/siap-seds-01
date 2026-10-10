@@ -25,7 +25,7 @@ export interface Leitura<T> {
 
 export function mensagemErroLeitura(erro: Pick<FirestoreError, 'code'>): string {
   return erro.code === 'permission-denied'
-    ? 'Seu perfil não tem permissão para ver estes dados.'
+    ? 'Você não tem permissão para ver estes dados. Peça ao administrador.'
     : 'Não foi possível carregar os dados. Verifique a conexão e recarregue a página.'
 }
 

@@ -79,7 +79,7 @@ describe('Controle da projeção na tela da D1', () => {
   it('sem permissão de conduzir: só o indicador e o link do telão; atalhos desligados', () => {
     const { onProjetar } = montar({ podeProjetar: false })
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Abrir telão' })).toHaveAttribute('href', '/projecao/ch1/s1')
+    expect(screen.getByRole('link', { name: /^Abrir telão/ })).toHaveAttribute('href', '/projecao/ch1/s1')
     tecla('ArrowRight', 'ArrowRight')
     expect(onProjetar).not.toHaveBeenCalled()
   })

@@ -53,6 +53,8 @@ describe('Tela de admissibilidade (Anexo III, item 28)', () => {
     expect(pa3).toHaveTextContent('37')
     expect(within(pa3).getByText('Excede o limite de 8 em 2 página(s)')).toBeInTheDocument()
     expect(pa3).toHaveAttribute('data-excede', 'true')
+    // Alerta de atenção (ícone + texto), não só a cor da linha.
+    expect(screen.getByRole('alert', { name: 'Limite de páginas' })).toHaveTextContent('PA3 excede o limite de 8 em 2 página(s)')
   })
 
   it('PA ausente: desclassificação automática (28.2) e 28.1.VII desmarcado; admitir é recusado', async () => {
@@ -94,6 +96,16 @@ describe('Tela de admissibilidade (Anexo III, item 28)', () => {
     })
     expect(Object.values(corpo.requisitos as Record<string, boolean>).every(Boolean)).toBe(true)
     expect((corpo.planos as unknown[])[0]).toEqual({ codigo: 'PA1', ausente: false, paginaInicial: 3, paginaFinal: 14 })
+  })
+
+  it('seções numeradas e contador dos requisitos atendidos', async () => {
+    montar()
+    for (const titulo of ['1. Requisitos essenciais (Anexo III, 28.1)', '2. Páginas por Plano de Ação', '3. Irregularidades meramente formais (Anexo III, 28.5)', '4. Resultado']) {
+      expect(screen.getByRole('region', { name: titulo })).toBeInTheDocument()
+    }
+    expect(screen.getByText('1 de 10 atendidos')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('checkbox', { name: /^28\.1\.I / }))
+    expect(screen.getByText('2 de 10 atendidos')).toBeInTheDocument()
   })
 
   it('somente leitura: sem botão de registrar', () => {

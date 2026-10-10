@@ -1,70 +1,58 @@
-import { useState } from 'react'
-import { AlertaErro } from '../../componentes/AlertaErro'
-import { chamarApi } from '../../lib/api'
+// Conta sem acesso ao app (sem cadastro, sem nenhuma permissão ou desativada): tela própria (AuthPage).
+// Sem a permissão de uma tela, mas com acesso ao app: aviso dentro do AppShell (sem outro header/main).
+// Não há botão de "verificar": quando o administrador libera, a tela muda sozinha.
+
+import { House, LogOut, RotateCw } from 'lucide-react'
+import { AuthPage } from '../../components/templates/AuthPage'
+import { Alert } from '../../components/ui/Alert'
+import { Button } from '../../components/ui/Button'
+import { PageHeader } from '../../components/ui/PageHeader'
+import { ButtonLink } from '../../components/ui/ButtonLink'
+import { podeLer } from '../../domain/permissoes'
 import { useUsuario } from './useUsuario'
 
 export function AcessoNaoAutorizado() {
-  const { usuario, sair, recarregarPerfil } = useUsuario()
-  const [verificando, setVerificando] = useState(false)
-  const [erro, setErro] = useState<unknown>(null)
+  const { usuario, sair } = useUsuario()
+  const acesso = usuario?.acesso ?? null
+  const temApp = podeLer(acesso)
 
-  async function verificarNovamente() {
-    setVerificando(true)
-    try {
-      await recarregarPerfil()
-    } finally {
-      setVerificando(false)
-    }
-  }
+  const mensagem = temApp
+    ? 'Você não tem permissão para esta tela. Se precisar dela, peça ao administrador.'
+    : acesso?.ativo === false
+      ? 'Esta conta está desativada. Fale com o administrador.'
+      : 'Sua conta ainda não tem acesso liberado. Peça ao administrador que libere na tela Usuários; esta página atualiza sozinha.'
 
-  /** Primeiro acesso do sistema: vira admin se for a conta de ADMIN_INICIAL_EMAIL e não houver admin. */
-  async function tornarPrimeiroAdmin() {
-    setErro(null)
-    setVerificando(true)
-    try {
-      await chamarApi('/api/primeiro-admin', { metodo: 'POST' })
-      await recarregarPerfil()
-    } catch (e) {
-      setErro(e)
-    } finally {
-      setVerificando(false)
-    }
+  if (temApp) {
+    return (
+      <>
+        <PageHeader titulo="Acesso não autorizado" />
+        <Alert tom="warning" titulo="Sem permissão para esta tela" acao={<ButtonLink para="/" variante="secondary" tamanho="sm" icone={House}>Voltar ao início</ButtonLink>}>
+          Conta {usuario?.email}. {mensagem}
+        </Alert>
+      </>
+    )
   }
 
   return (
-    <main className="mx-auto mt-24 max-w-md rounded-lg border border-slate-200 bg-white p-8 shadow-sm">
-      <h1 className="text-xl font-semibold text-slate-900">Acesso não autorizado</h1>
-      <p className="mt-3 text-slate-600">
-        A conta <strong>{usuario?.email}</strong> não tem perfil para acessar esta área. Solicite ao administrador
-        a atribuição de um perfil.
+    <AuthPage titulo="Acesso não autorizado">
+      <p className="text-body-md text-text-primary">
+        Conta <strong>{usuario?.email}</strong>. {mensagem}
       </p>
-      <div className="mt-6 flex gap-3">
-        <button
-          type="button"
-          onClick={verificarNovamente}
-          disabled={verificando}
-          className="rounded-md bg-slate-900 px-4 py-2 text-white disabled:opacity-60"
-        >
-          {verificando ? 'Verificando…' : 'Verificar novamente'}
-        </button>
-        <button type="button" onClick={() => sair()} className="rounded-md border border-slate-300 px-4 py-2">
-          Sair
-        </button>
-      </div>
-      <div className="mt-6 border-t border-slate-200 pt-4 text-sm text-slate-600">
-        <p>Primeira instalação, ainda sem nenhum administrador?</p>
-        <button
-          type="button"
-          onClick={tornarPrimeiroAdmin}
-          disabled={verificando}
-          className="mt-2 rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-800 disabled:opacity-60"
-        >
-          Sou o administrador inicial
-        </button>
-        <div className="mt-3">
-          <AlertaErro erro={erro} />
+      {usuario?.erro && (
+        <div className="mt-4">
+          <Alert tom="warning" titulo="Detalhe">
+            {usuario.erro}
+          </Alert>
         </div>
+      )}
+      <div className="mt-6 flex flex-wrap gap-3">
+        <Button icone={RotateCw} onClick={() => window.location.reload()}>
+          Recarregar
+        </Button>
+        <Button variante="secondary" icone={LogOut} onClick={() => void sair()}>
+          Sair
+        </Button>
       </div>
-    </main>
+    </AuthPage>
   )
 }

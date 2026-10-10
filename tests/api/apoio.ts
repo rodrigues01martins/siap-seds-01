@@ -2,7 +2,6 @@
 
 import type { Timestamp } from 'firebase-admin/firestore'
 import { obterAdmin } from '../../api/_lib/admin'
-import type { Perfil } from '../../src/domain/perfis'
 
 const PROJETO = process.env.GCLOUD_PROJECT ?? 'demo-siap-seds'
 const SENHA = 'senha-teste-123'
@@ -22,18 +21,46 @@ export interface RegistroAuditoria {
   antes: Record<string, unknown> | null
   depois: Record<string, unknown> | null
   uid: string
-  perfil: Perfil
+  /** 'admin' ou 'usuario' (quem gravou). */
+  perfil: string
   dataHora: Timestamp
 }
 
+/**
+ * Cenários de teste com os nomes dos antigos perfis, traduzidos para o acesso atual (usuarios/{uid}:
+ * admin, permissoes e papel na Comissão). Mantém legíveis os testes de cada rota.
+ */
+export type PerfilTeste = 'admin' | 'presidente' | 'relator' | 'membro' | 'controle'
+
+const AVALIACAO = ['admissibilidade', 'nivelD1', 'experienciasD2', 'diligencias']
+
+export const ACESSO_TESTE: Record<PerfilTeste, { admin: boolean; permissoes: string[]; comissao: string | null }> = {
+  admin: { admin: true, permissoes: [], comissao: null },
+  presidente: {
+    admin: false,
+    permissoes: ['consultar', ...AVALIACAO, 'sessaoAbrirEncerrar', 'sessaoConduzir', 'homologar', 'reabrir', 'desempate'],
+    comissao: 'presidente',
+  },
+  relator: { admin: false, permissoes: ['consultar', ...AVALIACAO, 'sessaoConduzir'], comissao: 'relator' },
+  membro: { admin: false, permissoes: ['consultar', 'nivelD1'], comissao: 'membro' },
+  controle: { admin: false, permissoes: ['consultar'], comissao: null },
+}
+
+/** Cadastros (usuarios/{uid}) dos usuários de teste: limparFirestore os regrava. */
+const cadastros = new Map<string, Record<string, unknown>>()
+
+/** Apaga o Firestore e regrava o cadastro dos usuários de teste ainda existentes no Auth. */
 export async function limparFirestore(): Promise<void> {
   const host = process.env.FIRESTORE_EMULATOR_HOST
   await fetch(`http://${host}/emulator/v1/projects/${PROJETO}/databases/(default)/documents`, { method: 'DELETE' })
+  const { db } = obterAdmin()
+  await Promise.all([...cadastros].map(([uid, dados]) => db.doc(`usuarios/${uid}`).set(dados)))
 }
 
 export async function limparAuth(): Promise<void> {
   const host = process.env.FIREBASE_AUTH_EMULATOR_HOST
   await fetch(`http://${host}/emulator/v1/projects/${PROJETO}/accounts`, { method: 'DELETE' })
+  cadastros.clear()
 }
 
 /** Faz login no emulador de Auth e devolve o ID token (com os claims atuais). */
@@ -54,15 +81,28 @@ export async function entrar(email: string): Promise<string> {
 
 let sequencia = 0
 
-/** Cria um usuário no emulador, com ou sem perfil, já logado. */
-export async function criarUsuario(perfil: Perfil | null, claimsExtras: Record<string, unknown> = {}): Promise<Usuario> {
+/**
+ * Cria um usuário no emulador, já logado, com o cadastro em usuarios/{uid} do cenário `perfil`
+ * (null = conta sem cadastro). `extras` sobrescreve campos do cadastro (ex.: { ativo: false }).
+ */
+export async function criarUsuario(perfil: PerfilTeste | null, extras: Record<string, unknown> = {}): Promise<Usuario> {
   const { auth } = obterAdmin()
   sequencia += 1
-  const email = `${perfil ?? 'sem-perfil'}-${sequencia}@teste.go.gov.br`
+  const email = `${perfil ?? 'sem-cadastro'}-${sequencia}@teste.go.gov.br`
   const usuario = await auth.createUser({ email, password: SENHA })
-  const claims = { ...claimsExtras, ...(perfil ? { perfil } : {}) }
-  if (Object.keys(claims).length > 0) await auth.setCustomUserClaims(usuario.uid, claims)
+  if (perfil) await cadastrar(usuario.uid, { email, nome: `Pessoa ${sequencia}`, ativo: true, ...ACESSO_TESTE[perfil], ...extras })
   return { uid: usuario.uid, email, token: await entrar(email) }
+}
+
+/** Cria só a conta no Authentication (sem cadastro em usuarios/{uid}), já logada. */
+export async function criarConta(email: string): Promise<Usuario> {
+  const usuario = await obterAdmin().auth.createUser({ email, password: SENHA })
+  return { uid: usuario.uid, email: usuario.email!, token: await entrar(email) }
+}
+
+async function cadastrar(uid: string, dados: Record<string, unknown>): Promise<void> {
+  cadastros.set(uid, dados)
+  await obterAdmin().db.doc(`usuarios/${uid}`).set(dados)
 }
 
 export interface RespostaTeste {
@@ -135,9 +175,9 @@ export async function semearSessao(id: string, dados: Record<string, unknown> = 
     .set({ data: '2026-11-10', pauta: [PROP], status: 'aberta', presentes: [], declaracoes: [], foco: null, ...dados })
 }
 
-/** Espelha o usuário em usuarios/{uid}, como /api/perfis e set-role fazem. */
-export async function registrarUsuario(usuario: Usuario, perfil: Perfil | null): Promise<void> {
-  await obterAdmin().db.doc(`usuarios/${usuario.uid}`).set({ email: usuario.email, perfil })
+/** Regrava o cadastro (usuarios/{uid}) do usuário com o cenário `perfil`. */
+export async function registrarUsuario(usuario: Usuario, perfil: PerfilTeste): Promise<void> {
+  await cadastrar(usuario.uid, { email: usuario.email, ativo: true, ...ACESSO_TESTE[perfil] })
 }
 
 /** Grava níveis diretamente (sem a /api), para montar cenários grandes rapidamente. */

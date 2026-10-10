@@ -72,6 +72,16 @@ describe('Tabela de experiências da D2', () => {
     expect(screen.getByRole('row', { name: /Gestão do CASE Goiânia/ })).toHaveTextContent('Desconsiderada em C2.3')
   })
 
+  it('excluir pede confirmação destrutiva (Cancelar é o caminho seguro)', async () => {
+    const { onExcluir } = montar()
+    await userEvent.click(screen.getByRole('button', { name: 'Excluir Gestão do CASE Goiânia' }))
+    const confirmacao = screen.getByRole('alertdialog', { name: 'Excluir a experiência?' })
+    expect(within(confirmacao).getByRole('button', { name: 'Cancelar' })).toHaveFocus()
+    expect(onExcluir).not.toHaveBeenCalled()
+    await userEvent.click(within(confirmacao).getByRole('button', { name: 'Excluir' }))
+    await waitFor(() => expect(onExcluir).toHaveBeenCalledWith('e1'))
+  })
+
   it('somente leitura: sem editar, excluir ou desconsiderar', () => {
     montar({ somenteLeitura: true })
     expect(screen.queryByRole('button', { name: /^Editar/ })).not.toBeInTheDocument()
@@ -83,7 +93,7 @@ describe('Tabela de experiências da D2', () => {
 describe('Formulário de experiência', () => {
   async function preencherMinimo() {
     await userEvent.type(screen.getByLabelText('Descrição'), 'Gestão do CASE Goiânia')
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Categoria A' }))
+    await userEvent.click(screen.getByRole('checkbox', { name: /^Categoria A —/ }))
     await userEvent.selectOptions(screen.getByLabelText('Modalidade'), 'internacao')
     await userEvent.type(screen.getByLabelText('Início'), '2019-01-01')
   }
@@ -92,7 +102,7 @@ describe('Formulário de experiência', () => {
     const onSalvar = vi.fn()
     render(<FormExperiencia onSalvar={onSalvar} />)
     await preencherMinimo()
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Categoria D' }))
+    await userEvent.click(screen.getByRole('checkbox', { name: /^Categoria D —/ }))
     await userEvent.click(screen.getByRole('button', { name: 'Salvar experiência' }))
     expect(await screen.findByText('A categoria D exige parceria regida pelo MROSC (Lei Federal nº 13.019/2014).')).toBeInTheDocument()
     expect(onSalvar).not.toHaveBeenCalled()
@@ -107,7 +117,7 @@ describe('Formulário de experiência', () => {
     await userEvent.type(screen.getByLabelText('Tipo do documento 1'), 'Atestado de capacidade técnica')
     await userEvent.type(screen.getByLabelText('Nº SEI do documento 1'), '000067890')
     await userEvent.click(screen.getByRole('checkbox', { name: 'Documento 1 comprova execução satisfatória' }))
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Documento 1 aceito' }))
+    await userEvent.click(screen.getByRole('checkbox', { name: /^Documento 1 aceito/ }))
     await userEvent.click(screen.getByRole('button', { name: 'Salvar experiência' }))
     await waitFor(() => expect(onSalvar).toHaveBeenCalledTimes(1))
     expect(onSalvar.mock.calls[0]![0]).toMatchObject({

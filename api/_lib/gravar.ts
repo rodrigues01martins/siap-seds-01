@@ -1,12 +1,13 @@
 // Gravação única da /api: tudo em runTransaction, com um registro em auditoria/{id}
-// por operação (quem: uid, e-mail e perfil), no mesmo commit. Bloqueia escrita em proposta homologada (bloqueada = true).
+// por operação (quem: uid, e-mail e perfil admin/usuario), no mesmo commit. Bloqueia escrita em proposta homologada (bloqueada = true).
 
 import { FieldValue, type Transaction } from 'firebase-admin/firestore'
 import { obterAdmin } from './admin.js'
 import { ErroApi, MENSAGENS } from './erros.js'
-import type { Autor } from './porteiro.js'
+import type { Assinatura } from './porteiro.js'
 
-export type { Autor }
+/** Quem grava: basta a assinatura (uid, e-mail e perfil); o Autor do porteiro também serve. */
+export type Autor = Assinatura
 
 export interface Operacao {
   caminho: string

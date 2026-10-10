@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { marcaDagua, textoDoPdf, textoDoRodape } from '../testes/textoPdf'
-import { MARCA_MINUTA, formatarDataHora, linhasRodape, montarPdf, precisaMinuta, type Rodape } from './documento'
+import type { Content } from 'pdfmake/interfaces'
+import { marcaDagua, textoDe, textoDoPdf, textoDoRodape } from '../testes/textoPdf'
+import { CORES_DOCUMENTO, ESTILOS, FONTE_PDF, MARCA_MINUTA, formatarDataHora, linhasRodape, montarPdf, precisaMinuta, tabela, type Rodape } from './documento'
 
 const RODAPE: Rodape = {
   geradoEm: new Date('2026-11-10T17:05:09.000Z'),
@@ -44,5 +45,34 @@ describe('marca d’água "MINUTA"', () => {
     expect(marcaDagua(montarPdf({ titulo: 'T', conteudo: [], rodape: RODAPE, minuta: true }))).toBe(MARCA_MINUTA)
     expect(MARCA_MINUTA).toBe('MINUTA')
     expect(marcaDagua(montarPdf({ titulo: 'T', conteudo: [], rodape: RODAPE, minuta: false }))).toBeNull()
+  })
+})
+
+describe('identidade visual dos documentos (DS: azul institucional, neutral.100, marca e hierarquia do Kit)', () => {
+  const definicao = () => montarPdf({ titulo: 'Quadro', subtitulo: 'Lote L1', conteudo: [tabela(['A', 'B'], [['1', '2'], ['3', '4'], ['5', '6']])], rodape: RODAPE, minuta: false })
+
+  it('cabeçalho de toda página com a marca e a hierarquia (Secretaria → Governo de Goiás) e o sistema', () => {
+    const d = definicao()
+    const cabecalho = typeof d.header === 'function' ? textoDe(d.header(2, 3, { width: 595, height: 842, orientation: 'portrait' }) as Content) : ''
+    expect(cabecalho).toContain('SEDS')
+    expect(cabecalho.indexOf('Secretaria de Estado de Desenvolvimento Social')).toBeLessThan(cabecalho.indexOf('Governo de Goiás'))
+    expect(cabecalho).toContain('Avaliação de Planos de Ação')
+  })
+
+  it('títulos (documento e seções) em azul institucional #005FAA', () => {
+    expect(ESTILOS!.titulo!.color).toBe(CORES_DOCUMENTO.azulInstitucional)
+    expect(ESTILOS!.secao!.color).toBe(CORES_DOCUMENTO.azulInstitucional)
+    expect(CORES_DOCUMENTO.azulInstitucional).toBe('#005FAA')
+  })
+
+  it('tabelas com linhas alternadas em neutral.100 (#EEEEEE) e cabeçalho destacado', () => {
+    const t = tabela(['A', 'B'], [['1', '2'], ['3', '4'], ['5', '6']]) as unknown as { layout: { fillColor: (i: number) => string | null } }
+    expect(CORES_DOCUMENTO.zebra).toBe('#EEEEEE')
+    expect([0, 1, 2, 3].map((i) => t.layout.fillColor(i))).toEqual([CORES_DOCUMENTO.cabecalhoTabela, null, CORES_DOCUMENTO.zebra, null])
+  })
+
+  it('fonte: Gotham só com arquivo licenciado; sem ele, a Roboto embutida do pdfmake', () => {
+    expect(FONTE_PDF).toBe('Roboto')
+    expect(definicao().defaultStyle?.font).toBe('Roboto')
   })
 })

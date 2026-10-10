@@ -1,6 +1,5 @@
-// C1 — cadastros (chamamentos, OSCs, propostas) e C6 — perfis. Usados pela /api e pelos formulários.
+// C1 — cadastros (chamamentos, OSCs, propostas). Usados pela /api e pelos formulários.
 
-import { PERFIS } from '../domain/perfis.js'
 import { algumCampoAlem, cnpj, dataIso, idDocumento, opcional, semRepeticao, z } from './base.js'
 
 // ---------- Chamamento ----------
@@ -109,16 +108,3 @@ export const esquemaEditarProposta = z
     observacao: opcional(observacao),
   })
   .refine(algumCampoAlem(['chamamentoId', 'propostaId']), 'Informe ao menos um campo para alterar.')
-
-// ---------- Perfis ----------
-
-const email = z
-  .email({ error: 'Informe um e-mail válido.' })
-  .transform((valor) => valor.trim().toLowerCase())
-
-export const esquemaDefinirPerfil = z.strictObject({
-  email,
-  perfil: z.enum(PERFIS, { error: `Perfil inválido. Use: ${PERFIS.join(', ')}.` }),
-})
-
-export const esquemaRemoverPerfil = z.strictObject({ email })

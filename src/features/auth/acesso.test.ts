@@ -1,14 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import type { Perfil } from '../../domain/perfis'
+import type { Acesso } from '../../domain/permissoes'
 import { decidirAcesso, type EstadoUsuario } from './acesso'
 
-const logado = (perfil: Perfil | null): EstadoUsuario => ({
+const logado = (acesso: Acesso | null): EstadoUsuario => ({
   carregando: false,
-  usuario: { uid: 'u1', email: 'u1@seds.go.gov.br', perfil },
+  usuario: { uid: 'u1', email: 'u1@seds.go.gov.br', nome: 'Pessoa', acesso },
 })
+const comum = (permissoes: Acesso['permissoes'], ativo = true): Acesso => ({ admin: false, ativo, permissoes })
+const ADMIN: Acesso = { admin: true, ativo: true, permissoes: [] }
 
 describe('decidirAcesso (rota protegida)', () => {
-  it('enquanto o Firebase resolve a sessão → carregando', () => {
+  it('enquanto o Firebase resolve a sessão ou o cadastro → carregando', () => {
     expect(decidirAcesso({ carregando: true, usuario: null })).toBe('carregando')
   })
 
@@ -16,16 +18,21 @@ describe('decidirAcesso (rota protegida)', () => {
     expect(decidirAcesso({ carregando: false, usuario: null })).toBe('login')
   })
 
-  it('logado sem perfil → nao-autorizado', () => {
+  it('logado sem cadastro, sem nenhuma permissão ou desativado → nao-autorizado', () => {
     expect(decidirAcesso(logado(null))).toBe('nao-autorizado')
+    expect(decidirAcesso(logado(comum([])))).toBe('nao-autorizado')
+    expect(decidirAcesso(logado(comum(['consultar'], false)))).toBe('nao-autorizado')
   })
 
-  it.each(['admin', 'presidente', 'relator', 'membro', 'controle'] as const)('perfil %s → liberado', (perfil) => {
-    expect(decidirAcesso(logado(perfil))).toBe('liberado')
+  it('com ao menos uma permissão ou administrador → liberado', () => {
+    expect(decidirAcesso(logado(comum(['consultar'])))).toBe('liberado')
+    expect(decidirAcesso(logado(ADMIN))).toBe('liberado')
   })
 
-  it('rota restrita a perfis: perfil fora da lista → nao-autorizado', () => {
-    expect(decidirAcesso(logado('controle'), ['admin', 'presidente'])).toBe('nao-autorizado')
-    expect(decidirAcesso(logado('admin'), ['admin', 'presidente'])).toBe('liberado')
+  it('rota que exige uma permissão ou o administrador', () => {
+    expect(decidirAcesso(logado(comum(['consultar'])), 'chamamentos')).toBe('nao-autorizado')
+    expect(decidirAcesso(logado(comum(['chamamentos'])), 'chamamentos')).toBe('liberado')
+    expect(decidirAcesso(logado(comum(['chamamentos'])), 'admin')).toBe('nao-autorizado')
+    expect(decidirAcesso(logado(ADMIN), 'admin')).toBe('liberado')
   })
 })

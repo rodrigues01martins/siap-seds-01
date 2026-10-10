@@ -7,7 +7,6 @@
 import { FieldValue } from 'firebase-admin/firestore'
 import { z } from 'zod'
 import { MATRIZ_2026 } from '../src/domain/matriz/index.js'
-import { PERMISSOES } from '../src/domain/permissoes.js'
 import { STATUS_DILIGENCIA_EM_ABERTO } from '../src/esquemas/resultado.js'
 import { obterAdmin } from './_lib/admin.js'
 import { ErroApi, MENSAGENS } from './_lib/erros.js'
@@ -22,7 +21,7 @@ const TOTAL_SUBCRITERIOS = MATRIZ_2026.dimensao1.planos.reduce((soma, p) => soma
 
 export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   POST: async (requisicao) => {
-    const autor = await autenticar(requisicao, PERMISSOES.homologar)
+    const autor = await autenticar(requisicao, 'homologar')
     const { chamamentoId, propostaId } = await lerCorpo(requisicao, esquema)
     const caminho = `chamamentos/${chamamentoId}/propostas/${propostaId}`
 

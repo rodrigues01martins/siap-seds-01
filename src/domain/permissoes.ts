@@ -1,36 +1,79 @@
-// Matriz de permissões de escrita e leitura sensível (espelha a seção do CLAUDE.md).
+// Acesso ao app (espelha a seção "Acesso" do CLAUDE.md): um único perfil, o Administrador, que faz a gestão
+// de usuários; os demais recebem permissões por área. Fica em usuarios/{uid} (admin, permissoes, ativo),
+// gravado só pela /api (tela Usuários) e lido pelas firestore.rules, pela /api e pelo app.
 
-import type { Perfil } from './perfis.js'
+export const AREAS = [
+  {
+    id: 'consulta',
+    rotulo: 'Consulta',
+    permissoes: [{ id: 'consultar', rotulo: 'Ver chamamentos, avaliações e relatórios (somente leitura)' }],
+  },
+  {
+    id: 'cadastros',
+    rotulo: 'Cadastros',
+    permissoes: [
+      { id: 'chamamentos', rotulo: 'Chamamentos e lotes' },
+      { id: 'oscs', rotulo: 'OSCs' },
+      { id: 'propostas', rotulo: 'Propostas' },
+    ],
+  },
+  {
+    id: 'avaliacao',
+    rotulo: 'Avaliação',
+    permissoes: [
+      { id: 'admissibilidade', rotulo: 'Admissibilidade (Anexo III, item 28)' },
+      { id: 'nivelD1', rotulo: 'Níveis da D1 (subcritérios)' },
+      { id: 'experienciasD2', rotulo: 'Experiências da D2' },
+      { id: 'diligencias', rotulo: 'Diligências (RF-28)' },
+    ],
+  },
+  {
+    id: 'sessao',
+    rotulo: 'Sessão e resultado',
+    permissoes: [
+      { id: 'sessaoAbrirEncerrar', rotulo: 'Abrir e encerrar sessão' },
+      { id: 'sessaoConduzir', rotulo: 'Conduzir sessão (presentes, impedimentos e telão)' },
+      { id: 'homologar', rotulo: 'Homologar proposta' },
+      { id: 'reabrir', rotulo: 'Reabrir proposta homologada (RF-18)' },
+      { id: 'desempate', rotulo: 'Registrar desempate da Comissão (RF-27)' },
+    ],
+  },
+] as const
 
-export const PERMISSOES = {
-  /** C1 — chamamentos, OSCs e propostas */
-  cadastros: ['admin'],
-  /** C2 — nível dos subcritérios da D1 */
-  nivelD1: ['presidente', 'relator', 'membro'],
-  /** C3 — experiências da D2 */
-  experienciasD2: ['presidente', 'relator'],
-  /** C5 — homologar proposta */
-  homologar: ['presidente'],
-  /** C6 — dar e remover perfis */
-  perfis: ['admin'],
-  /** Sessão da Comissão: abrir e encerrar */
-  sessaoAbrirEncerrar: ['presidente'],
-  /** Sessão: presentes, declarações de impedimento e foco */
-  sessaoConduzir: ['presidente', 'relator'],
-  /** Admissibilidade (Anexo III, item 28) */
-  admissibilidade: ['presidente', 'relator'],
-  /** Registrar a decisão de desempate da Comissão (RF-27) */
-  desempate: ['presidente'],
-  /** Reabrir proposta homologada (RF-18) */
-  reabrir: ['presidente'],
-  /** Diligências (RF-28) */
-  diligencias: ['presidente', 'relator'],
-  /** Leitura da trilha de auditoria (também nas firestore.rules) */
-  lerAuditoria: ['admin', 'presidente', 'controle'],
-} as const satisfies Record<string, readonly Perfil[]>
+export type Permissao = (typeof AREAS)[number]['permissoes'][number]['id']
 
-export type AcaoProtegida = keyof typeof PERMISSOES
+export const PERMISSOES: readonly Permissao[] = AREAS.flatMap((a) => a.permissoes.map((p) => p.id))
 
-export function podeFazer(perfil: Perfil | null, acao: AcaoProtegida): boolean {
-  return perfil !== null && (PERMISSOES[acao] as readonly Perfil[]).includes(perfil)
+/** O que a operação exige: uma permissão ou ser administrador (gestão de usuários e histórico). */
+export type Exigencia = Permissao | 'admin'
+
+export interface Acesso {
+  admin: boolean
+  ativo: boolean
+  permissoes: readonly Permissao[]
+}
+
+export function ehPermissao(valor: unknown): valor is Permissao {
+  return typeof valor === 'string' && (PERMISSOES as readonly string[]).includes(valor)
+}
+
+/** Lê o documento usuarios/{uid}; ausente = null (sem cadastro). Valores inválidos viram o padrão seguro. */
+export function lerAcesso(dados: Record<string, unknown> | null | undefined): Acesso | null {
+  if (!dados) return null
+  return {
+    admin: dados.admin === true,
+    ativo: dados.ativo !== false,
+    permissoes: Array.isArray(dados.permissoes) ? dados.permissoes.filter(ehPermissao) : [],
+  }
+}
+
+/** Entra no app e lê os dados: conta ativa, administradora ou com ao menos uma permissão. */
+export function podeLer(acesso: Acesso | null): boolean {
+  return acesso !== null && acesso.ativo && (acesso.admin || acesso.permissoes.length > 0)
+}
+
+export function podeFazer(acesso: Acesso | null, exigencia: Exigencia): boolean {
+  if (!acesso?.ativo) return false
+  if (acesso.admin) return true
+  return exigencia !== 'admin' && acesso.permissoes.includes(exigencia)
 }

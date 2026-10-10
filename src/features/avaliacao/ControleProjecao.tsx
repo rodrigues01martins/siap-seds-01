@@ -2,7 +2,10 @@
 // admissibilidade, D2 ou resumo, e atalhos Alt+→ / Alt+← (próximo/anterior subcritério) e Alt+R
 // (resumo). Cada troca chama /api/sessao (onProjetar). Mostra o que está no telão agora.
 
+import { MonitorUp } from 'lucide-react'
 import { useEffect } from 'react'
+import { Button } from '../../components/ui/Button'
+import { Icone } from '../../components/ui/Icone'
 import { MATRIZ_2026 } from '../../domain/matriz'
 import type { TipoFoco } from '../../esquemas/sessao'
 import type { Sessao } from '../../lib/tipos'
@@ -32,8 +35,6 @@ function noTelao(foco: Sessao['foco'], propostaId: string): string {
   return tipo === 'subcriterio' ? `Subcritério ${foco.subcriterio}` : ROTULO_TIPO_FOCO[tipo]
 }
 
-const classeBotao = 'rounded-md border border-slate-300 bg-white px-2.5 py-1 text-sm hover:bg-slate-50'
-
 export function ControleProjecao({ codigoAtual, foco, propostaId, podeProjetar, linkTelao, onSelecionar, onProjetar }: Props) {
   useEffect(() => {
     if (!podeProjetar) return
@@ -60,33 +61,35 @@ export function ControleProjecao({ codigoAtual, foco, propostaId, podeProjetar, 
   const projetando = foco?.propostaId === propostaId && tipoDoFoco(foco) === 'subcriterio' && foco.subcriterio === codigoAtual
 
   return (
-    <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
-      <span role="status" aria-label="Projetando agora" className="mr-2">
-        <span className="text-slate-500">No telão:</span>{' '}
-        <strong className={projetando ? 'text-emerald-700' : 'text-slate-800'}>{noTelao(foco, propostaId)}</strong>
+    <section aria-label="Projeção" className="flex flex-wrap items-center gap-3 rounded-card border border-card-border bg-card-bg px-4 py-3">
+      <span role="status" aria-label="Projetando agora" className="mr-2 text-body-sm">
+        <span className="text-text-secondary">No telão:</span>{' '}
+        <strong className={projetando ? 'text-status-success-text' : 'text-text-primary'}>{noTelao(foco, propostaId)}</strong>
       </span>
       {podeProjetar && (
         <>
-          <button type="button" className={classeBotao} aria-label={`Projetar ${codigoAtual}`} onClick={() => void onProjetar({ tipo: 'subcriterio', subcriterio: codigoAtual })}>
+          <Button variante="secondary" tamanho="sm" aria-label={`Projetar ${codigoAtual}`} onClick={() => void onProjetar({ tipo: 'subcriterio', subcriterio: codigoAtual })}>
             Projetar {codigoAtual}
-          </button>
-          <button type="button" className={classeBotao} onClick={() => void onProjetar({ tipo: 'admissibilidade' })}>
+          </Button>
+          <Button variante="tertiary" tamanho="sm" onClick={() => void onProjetar({ tipo: 'admissibilidade' })}>
             Projetar admissibilidade
-          </button>
-          <button type="button" className={classeBotao} onClick={() => void onProjetar({ tipo: 'd2' })}>
+          </Button>
+          <Button variante="tertiary" tamanho="sm" onClick={() => void onProjetar({ tipo: 'd2' })}>
             Projetar D2
-          </button>
-          <button type="button" className={classeBotao} onClick={() => void onProjetar({ tipo: 'resumo' })}>
+          </Button>
+          <Button variante="tertiary" tamanho="sm" onClick={() => void onProjetar({ tipo: 'resumo' })}>
             Projetar resumo
-          </button>
-          <span className="text-xs text-slate-500">Atalhos: Alt+→ / Alt+← subcritério · Alt+R resumo</span>
+          </Button>
+          <span className="text-caption text-text-muted">Atalhos: Alt+→ / Alt+← subcritério · Alt+R resumo</span>
         </>
       )}
       {linkTelao && (
-        <a href={linkTelao} target="_blank" rel="noreferrer" className="ml-auto text-sky-800 underline">
+        <a href={linkTelao} target="_blank" rel="noreferrer" className="ml-auto inline-flex items-center gap-1 text-label-md text-text-link underline-offset-2 hover:underline">
+          <Icone icone={MonitorUp} tamanho={16} />
           Abrir telão
+          <span className="sr-only"> (abre em nova aba)</span>
         </a>
       )}
-    </div>
+    </section>
   )
 }

@@ -236,7 +236,7 @@ describe('desempate pelo Edital (RF-27) — matriz', () => {
       ['V', 'C2.1'],
       ['VI', 'C2.3'],
     ])
-    expect(MATRIZ_2026.fonteDesempate).toMatch(/Edital/)
+    expect(MATRIZ_2026.fonteDesempate).toMatch(/Edital.*item 15\.14\.1.*SEI 202610319003258/)
   })
 })
 

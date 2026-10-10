@@ -1,52 +1,139 @@
-// /chamamentos/:ch/propostas/:p/diligencias — diligências da proposta (RF-28). Escrita: presidente e
-// relator; proposta homologada fica somente leitura. Diligência em aberto impede a homologação.
+// Diligências da proposta (RF-28). Escrita: quem tem a permissão "Diligências"; proposta homologada fica
+// somente leitura. Diligência em aberto impede a homologação.
+// - /chamamentos/:ch/propostas/:p/diligencias (ListPage): lista e "Nova diligência".
+// - …/diligencias/nova (FormPage): abertura (objeto e prazo).
+// - …/diligencias/:d (FormPage): resposta e encerramento.
 
-import { useParams } from 'react-router'
-import { EstadoLeitura } from '../../componentes/basicos'
+import { Plus } from 'lucide-react'
+import { useNavigate, useParams } from 'react-router'
+import { FormPage, ListPage } from '../../components/templates/paginas'
+import { ButtonLink } from '../../components/ui/ButtonLink'
+import { Card } from '../../components/ui/Card'
+import { EmptyState } from '../../components/ui/EmptyState'
+import { ErrorState } from '../../components/ui/ErrorState'
+import { Skeleton } from '../../components/ui/Skeleton'
+import { useToast } from '../../components/ui/Toast'
 import { podeFazer } from '../../domain/permissoes'
 import { chamarApi } from '../../lib/api'
 import { useColecao } from '../../lib/firestore'
 import { useUsuario } from '../auth/useUsuario'
-import { CabecalhoProposta, useDadosProposta } from '../avaliacao/CabecalhoProposta'
-import { ListaDiligencias, type DiligenciaGravada } from './ListaDiligencias'
+import { AvisoSomenteLeitura, cabecalhoDaProposta, ContextoProposta, useDadosProposta, type DadosProposta } from '../avaliacao/CabecalhoProposta'
+import { AvisoConteudoNovo, FormNovaDiligencia, ListaDiligencias, TratarDiligencia, type DiligenciaGravada } from './ListaDiligencias'
 
-export function TelaDiligencias() {
+function useDiligencias() {
   const { ch = '', p = '' } = useParams()
   const { usuario } = useUsuario()
   const leitura = useDadosProposta(ch, p)
   const diligencias = useColecao<Omit<DiligenciaGravada, 'id'>>(`chamamentos/${ch}/propostas/${p}/diligencias`)
-
   const carregando = leitura.carregando || diligencias.carregando
   const erro = leitura.erro ?? diligencias.erro
-  if (carregando || erro) return <EstadoLeitura carregando={carregando} erro={erro} />
-  if (!leitura.dados) return <p className="text-slate-600">Proposta não encontrada.</p>
-
-  const { proposta } = leitura.dados
-  const motivo = proposta.bloqueada
-    ? 'Proposta homologada: somente leitura.'
-    : !podeFazer(usuario?.perfil ?? null, 'diligencias')
-      ? 'Seu perfil consulta as diligências; o registro é do presidente ou do relator.'
-      : null
+  const motivo = (dados: DadosProposta) =>
+    dados.proposta.bloqueada
+      ? 'Proposta homologada.'
+      : !podeFazer(usuario?.acesso ?? null, 'diligencias')
+        ? 'Você consulta as diligências; o registro exige a permissão "Diligências".'
+        : null
   const base = { chamamentoId: ch, propostaId: p }
+  const caminho = `/chamamentos/${ch}/propostas/${p}/diligencias`
   const lista = [...diligencias.dados].sort((a, b) => a.prazo.localeCompare(b.prazo))
+  return { ch, carregando, erro, dados: leitura.dados, lista, motivo, base, caminho }
+}
 
+function Estado({ carregando, erro }: { carregando: boolean; erro: string | null }) {
+  if (carregando) return <Skeleton linhas={6} rotulo="Carregando diligências" />
+  if (erro) return <ErrorState mensagem={erro} />
+  return <EmptyState titulo="Proposta não encontrada" descricao="Confira o endereço ou volte ao painel do chamamento." />
+}
+
+/** Trilha das telas filhas: … / Diligências / <página>. */
+function cabecalhoFilho(dados: DadosProposta, ch: string, caminho: string, titulo: string) {
+  const c = cabecalhoDaProposta(dados, ch, 'diligencias')
+  return {
+    ...c,
+    trilha: [...c.trilha!.slice(0, -1), { rotulo: 'Diligências', para: caminho }, { rotulo: titulo }],
+    titulo,
+    descricao: `${dados.osc?.razaoSocial ?? 'OSC'} · ${c.descricao as string}`,
+    acoesSecundarias: undefined,
+  }
+}
+
+export function TelaDiligencias() {
+  const { ch, carregando, erro, dados, lista, motivo, caminho } = useDiligencias()
+  if (carregando || erro || !dados) return <Estado carregando={carregando} erro={erro} />
+  const somenteLeitura = motivo(dados)
   return (
-    <>
-      <CabecalhoProposta dados={leitura.dados} ch={ch} aba="diligencias" />
-      {motivo && <p className="mb-3 rounded-md bg-slate-100 p-2 text-sm text-slate-700">{motivo}</p>}
-      <ListaDiligencias
-        diligencias={lista}
-        somenteLeitura={motivo !== null}
-        onCriar={async (dados) => {
-          await chamarApi('/api/diligencias', { metodo: 'POST', corpo: { ...base, ...dados } })
+    <ListPage
+      cabecalho={cabecalhoDaProposta(dados, ch, 'diligencias', {
+        acaoPrimaria: somenteLeitura ? undefined : (
+          <ButtonLink para={`${caminho}/nova`} icone={Plus}>
+            Nova diligência
+          </ButtonLink>
+        ),
+      })}
+    >
+      <ContextoProposta dados={dados} ch={ch} aba="diligencias" />
+      <AvisoConteudoNovo />
+      <AvisoSomenteLeitura motivo={somenteLeitura} />
+      <Card titulo="Diligências" descricao="Diligência aberta ou respondida (sem encerramento) impede a homologação da proposta.">
+        <ListaDiligencias diligencias={lista} caminho={(id) => `${caminho}/${id}`} somenteLeitura={somenteLeitura !== null} />
+      </Card>
+    </ListPage>
+  )
+}
+
+export function TelaNovaDiligencia() {
+  const navegar = useNavigate()
+  const { mostrar } = useToast()
+  const { ch, carregando, erro, dados, motivo, base, caminho } = useDiligencias()
+  if (carregando || erro || !dados) return <Estado carregando={carregando} erro={erro} />
+  const somenteLeitura = motivo(dados)
+  return (
+    <FormPage cabecalho={cabecalhoFilho(dados, ch, caminho, 'Nova diligência')}>
+      <AvisoConteudoNovo />
+      {somenteLeitura ? (
+        <AvisoSomenteLeitura motivo={somenteLeitura} />
+      ) : (
+        <FormNovaDiligencia
+          acoesSecundarias={
+            <ButtonLink para={caminho} variante="secondary">
+              Cancelar
+            </ButtonLink>
+          }
+          onCriar={async (corpo) => {
+            await chamarApi('/api/diligencias', { metodo: 'POST', corpo: { ...base, ...corpo } })
+            mostrar({ tom: 'success', titulo: 'Diligência aberta' })
+            navegar(caminho)
+          }}
+        />
+      )}
+    </FormPage>
+  )
+}
+
+export function TelaDiligencia() {
+  const { d = '' } = useParams()
+  const { mostrar } = useToast()
+  const { ch, carregando, erro, dados, lista, motivo, base, caminho } = useDiligencias()
+  if (carregando || erro || !dados) return <Estado carregando={carregando} erro={erro} />
+  const diligencia = lista.find((x) => x.id === d)
+  if (!diligencia) return <EmptyState titulo="Diligência não encontrada" acao={<ButtonLink para={caminho} variante="secondary">Voltar às diligências</ButtonLink>} />
+  const somenteLeitura = motivo(dados)
+  return (
+    <FormPage cabecalho={cabecalhoFilho(dados, ch, caminho, 'Diligência')}>
+      <AvisoConteudoNovo />
+      <AvisoSomenteLeitura motivo={somenteLeitura} />
+      <TratarDiligencia
+        diligencia={diligencia}
+        somenteLeitura={somenteLeitura !== null}
+        onResponder={async (resposta) => {
+          await chamarApi('/api/diligencias', { metodo: 'PATCH', corpo: { ...base, id: d, acao: 'responder', resposta } })
+          mostrar({ tom: 'success', titulo: 'Resposta registrada' })
         }}
-        onResponder={async (id, resposta) => {
-          await chamarApi('/api/diligencias', { metodo: 'PATCH', corpo: { ...base, id, acao: 'responder', resposta } })
-        }}
-        onEncerrar={async (id, conclusao) => {
-          await chamarApi('/api/diligencias', { metodo: 'PATCH', corpo: { ...base, id, acao: 'encerrar', conclusao } })
+        onEncerrar={async (conclusao) => {
+          await chamarApi('/api/diligencias', { metodo: 'PATCH', corpo: { ...base, id: d, acao: 'encerrar', conclusao } })
+          mostrar({ tom: 'success', titulo: 'Diligência encerrada' })
         }}
       />
-    </>
+    </FormPage>
   )
 }

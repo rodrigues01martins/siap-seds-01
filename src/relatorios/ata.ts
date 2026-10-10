@@ -5,7 +5,7 @@
 import type { Content, TDocumentDefinitions } from 'pdfmake/interfaces'
 import { formatarCnpj } from '../domain/cnpj.js'
 import { formatarNumero } from '../domain/formatacao.js'
-import type { Perfil } from '../domain/perfis.js'
+import { ROTULO_PAPEL, type PapelComissao } from '../domain/comissao.js'
 import { montarPdf, type Rodape } from './documento.js'
 
 export interface DadosAta {
@@ -14,7 +14,7 @@ export interface DadosAta {
     id: string
     /** AAAA-MM-DD */
     data: string
-    presentes: { uid: string; email: string | null; perfil: Perfil }[]
+    presentes: { uid: string; email: string | null; perfil: PapelComissao }[]
     declaracoes: { uid: string; semImpedimento: boolean; motivo?: string }[]
   }
   /** Propostas da pauta. */
@@ -44,13 +44,6 @@ export interface DadosAta {
   }[]
 }
 
-const ROTULO_PERFIL: Record<Perfil, string> = {
-  admin: 'Administrador',
-  presidente: 'Presidente',
-  relator: 'Relator',
-  membro: 'Membro',
-  controle: 'Controle',
-}
 const ROTULO_DILIGENCIA = { aberta: 'Aberta', respondida: 'Respondida', encerrada: 'Encerrada' }
 
 const dataBr = (iso: string) => iso.split('-').reverse().join('/')
@@ -68,7 +61,7 @@ export function textoInicialAta(d: DadosAta): string {
     `Aos ${dataBr(d.sessao.data)}, reuniu-se a Comissão de Seleção para a análise das propostas abaixo, com o registro das decisões a seguir.`,
     '',
     '1. PRESENTES',
-    ...d.sessao.presentes.map((p) => `- ${p.email ?? p.uid} (${ROTULO_PERFIL[p.perfil]})`),
+    ...d.sessao.presentes.map((p) => `- ${p.email ?? p.uid} (${ROTULO_PAPEL[p.perfil]})`),
     '',
     '2. DECLARAÇÕES DE IMPEDIMENTO',
     ...d.sessao.presentes.map((p) => {
@@ -111,7 +104,7 @@ export function textoInicialAta(d: DadosAta): string {
     '7. ENCERRAMENTO',
     'Nada mais havendo a tratar, a sessão foi encerrada e eu, relator(a), lavrei a presente ata, que vai assinada pelos membros presentes.',
     '',
-    ...d.sessao.presentes.flatMap((p) => ['', '______________________________________', `${p.email ?? p.uid} (${ROTULO_PERFIL[p.perfil]})`]),
+    ...d.sessao.presentes.flatMap((p) => ['', '______________________________________', `${p.email ?? p.uid} (${ROTULO_PAPEL[p.perfil]})`]),
   ]
   return linhas.join('\n')
 }

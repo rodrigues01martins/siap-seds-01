@@ -1,4 +1,6 @@
 // Gera e baixa o PDF no navegador (pdfmake com as fontes Roboto embutidas).
+// Gotham é licenciada (DS §9): só entra quando houver os arquivos oficiais em public/fonts/ — aí registrá-los
+// aqui (pdfMake.addFonts) e trocar FONTE_PDF em documento.ts. Nunca baixar Gotham de fonte externa.
 // Carregado sob demanda (import dinâmico) para não pesar no carregamento inicial do app.
 
 import * as moduloPdfMake from 'pdfmake/build/pdfmake'

@@ -18,7 +18,7 @@ Matriz de Avaliação (Anexo IV). Regras de arquitetura e convenções: veja [`C
 | `npm run test:api` | Testes das funções `/api` nos emuladores de Auth e Firestore (exige **Java 21+**) |
 | `npm run emuladores` | Emuladores de Auth e Firestore para desenvolvimento local |
 | `npm run seed:matriz -- --projeto dev` | Grava a matriz em `matrizes/2026` |
-| `npm run set-role -- --projeto dev --email ... --perfil ...` | Define o perfil de um usuário |
+| `npm run tornar-admin -- --projeto dev --email ...` | Emergência: torna administrador uma conta (seção 4) |
 | `npm run backup -- --projeto dev\|prod [--chamamento ID]` | Backup em JSON datado (seção 7) |
 | `npm run restaurar -- --projeto dev --arquivo ...` | Restaura um backup **só no dev** (seção 7) |
 | `npm run ensaio -- --projeto dev [--recriar\|--remover]` | Dados fictícios para ensaiar a sessão (seção 7) |
@@ -93,8 +93,6 @@ As funções `/api` gravam no Firestore com o Admin SDK. Elas leem a chave da co
 |---|---|---|---|
 | `FIREBASE_SERVICE_ACCOUNT` | **Secret** | **Production** | JSON inteiro da chave do Admin SDK do projeto **prod** (`siap-seds-01`) |
 | `FIREBASE_SERVICE_ACCOUNT` | **Secret** | **Preview** | JSON inteiro da chave do Admin SDK do projeto **dev** (`siap-web-dev`) |
-| `ADMIN_INICIAL_EMAIL` | Plain | **Production** | E-mail do primeiro administrador de prod (seção 4) |
-| `ADMIN_INICIAL_EMAIL` | Plain | **Preview** | E-mail do primeiro administrador de dev (seção 4) |
 
 Como gerar cada chave: Firebase Console (do projeto) → *Configurações do projeto* → *Contas de serviço* →
 **Gerar nova chave privada**. Abra o JSON no Bloco de Notas, copie tudo para o *Value* e apague o arquivo.
@@ -113,26 +111,33 @@ Não há publicação automática. Sempre que `firestore.rules` mudar (o assiste
 Se a tela de regras acusar erro de sintaxe, não publique: o texto foi copiado pela metade.
 Índices: hoje o app só usa índices simples (criados automaticamente); `firestore.indexes.json` está vazio.
 
-## 4. Primeiro administrador (sem terminal)
+## 4. Usuários e acesso
 
-Uma vez por projeto (dev e prod):
+Há um único perfil, o **Administrador**. Ele faz a gestão de usuários na tela **Usuários** (`/usuarios`) e libera,
+para cada pessoa, as permissões de cada área (tabela "Áreas e permissões" abaixo). O acesso fica no documento
+`usuarios/{uid}` e vale **na hora**: não é preciso sair e entrar, nem mexer na Vercel.
 
-1. **Criar a conta:** Firebase Console → *Authentication* → *Users* → **Add user** (e-mail e senha).
-   Crie a conta **antes** do passo 2, para que ninguém registre esse e-mail no seu lugar.
-2. **Vercel:** cadastre `ADMIN_INICIAL_EMAIL` com esse e-mail (Production para prod, Preview para dev) e faça
-   **Redeploy** do ambiente.
-3. **No app:** entre com essa conta. Na tela "Acesso não autorizado", clique em **Sou o administrador inicial**.
-   A `/api/primeiro-admin` confere o e-mail, dá o perfil `admin`, registra em `usuarios/{uid}` e na auditoria.
-4. Pronto: os demais perfis (presidente, relator, membro, controle) são dados pelo admin na tela
-   **Perfis de acesso** (`/perfis`). Cada pessoa precisa ter a conta criada no *Authentication* antes.
+**Primeiro administrador** (uma vez por projeto, dev e prod):
+1. O e-mail dele está no código, em [`api/_lib/adminsIniciais.ts`](api/_lib/adminsIniciais.ts).
+2. Firebase Console → *Authentication* → *Users* → **Add user** com esse e-mail (e uma senha qualquer).
+3. Entre no app com essa conta: ela vira administradora sozinha. Isso só acontece enquanto o projeto
+   **não tiver nenhum administrador**; depois, novos administradores são definidos na tela Usuários.
 
-A `/api/primeiro-admin` só funciona enquanto **não existir nenhum admin** no projeto; depois responde 409.
-Sem a variável, ou com outro e-mail, responde 403.
+**Novo usuário** (tela Usuários → **Novo usuário**): nome, e-mail, papel na Comissão (opcional) e permissões.
+O app cria a conta no Authentication e o Firebase envia à pessoa o e-mail **"redefinir senha"**, com o link para
+ela criar a própria senha. Na tela de login há também **"Primeiro acesso ou esqueci minha senha"**.
+Personalize esse e-mail uma vez por projeto: Firebase Console → *Authentication* → *Templates* →
+*Password reset* (ex.: assunto "SIAP SEDS — crie sua senha").
+
+**Gerenciar** (tela Usuários → **Gerenciar**): ligar e desligar permissões, tornar ou remover administrador, papel
+na Comissão (presidente, relator ou membro; aparece na sessão e na ata), reenviar o e-mail de senha e
+**desativar** a conta (bloqueia o login e encerra as sessões). Ninguém tira o próprio acesso de administrador
+nem desativa a própria conta.
 
 **Opcional, pelo terminal** (exige Node.js 22, o repositório clonado e a chave do Admin SDK fora do repositório):
 ```powershell
 $env:FIREBASE_SERVICE_ACCOUNT = Get-Content C:\chaves\siap-dev.json -Raw    # bash: export FIREBASE_SERVICE_ACCOUNT="$(cat ~/chaves/siap-dev.json)"
-npm run set-role -- --projeto dev --email pessoa@go.gov.br --perfil membro    # prod: --projeto prod ... --confirmar
+npm run tornar-admin -- --projeto dev --email pessoa@goias.gov.br          # emergência; prod: --projeto prod ... --confirmar
 npm run seed:matriz -- --projeto dev                                           # registra a matriz em matrizes/2026
 ```
 O app lê a matriz do código (`src/domain/matriz/matriz_2026.json`); `matrizes/2026` é só o registro publicado.
@@ -143,24 +148,25 @@ O navegador **nunca** grava no Firestore (as `firestore.rules` negam toda escrit
 passa por uma função `/api`, que:
 
 1. confere o login (`Authorization: Bearer <ID token>`) → sem token ou token inválido/revogado: **401**;
-2. confere o perfil do usuário contra a matriz de permissões → perfil sem permissão: **403**;
+2. confere o acesso em `usuarios/{uid}` (administrador ou a permissão da operação; conta ativa) → sem permissão: **403**;
 3. valida os dados (mensagens em português) → **400** `{ erro, campos }`; método errado → **405**;
 4. grava numa transação junto com um registro em `auditoria/{id}`
-   `{ caminho, acao, antes, depois, uid, perfil, dataHora }`;
+   `{ caminho, acao, antes, depois, uid, email, perfil: 'admin' | 'usuario', dataHora }`;
 5. recusa qualquer escrita em proposta homologada (`bloqueada = true`) ou em suas subcoleções → **409**.
 
-### Endpoints da Etapa 3a (cadastros e perfis)
+### Endpoints de cadastros e usuários
 
-| Endpoint | Métodos | Corpo (JSON) | Perfil |
+| Endpoint | Métodos | Corpo (JSON) | Permissão |
 |---|---|---|---|
-| `/api/chamamentos` | `POST` criar, `PATCH` editar | `{ numero, titulo, processoSei, dataLimitePropostas, indiceCorrecao?, dataBaseCorrecao?, justificativaMinima?, lotes: [{ codigo, descricao }] }` (`PATCH` com `id`) | admin |
-| `/api/oscs` | `POST` criar, `PATCH` editar | `{ cnpj, razaoSocial, nomeFantasia? }` — CNPJ numérico ou alfanumérico | admin |
-| `/api/propostas` | `POST` criar, `PATCH` editar | `{ chamamentoId, loteCodigo, oscCnpj, protocolo, numeroSEI, observacao? }` (`PATCH` com `propostaId`) | admin |
+| `/api/chamamentos` | `POST` criar, `PATCH` editar | `{ numero, titulo, processoSei, dataLimitePropostas, indiceCorrecao?, dataBaseCorrecao?, justificativaMinima?, lotes: [{ codigo, descricao }] }` (`PATCH` com `id`) | `chamamentos` |
+| `/api/oscs` | `POST` criar, `PATCH` editar | `{ cnpj, razaoSocial, nomeFantasia? }` — CNPJ numérico ou alfanumérico | `oscs` |
+| `/api/propostas` | `POST` criar, `PATCH` editar | `{ chamamentoId, loteCodigo, oscCnpj, protocolo, numeroSEI, observacao? }` (`PATCH` com `propostaId`) | `propostas` |
+| `/api/usuarios` | `POST` novo usuário | `{ nome, email, admin, permissoes: [...], comissao: 'presidente' \| 'relator' \| 'membro' \| null }` | administrador |
+| `/api/usuarios` | `PATCH` alterar | `{ uid, nome?, admin?, ativo?, permissoes?, comissao? }` | administrador |
+| `/api/usuarios` | `PUT` primeiro acesso | — | qualquer conta logada: cria o administrador inicial (seção 4); quem já tem cadastro recebe 200 |
 
 > Os PDFs dos Cadernos **não** são carregados no app: a consulta é feita no SEI. O app guarda só o nº SEI
 > (`numeroSEI`) e as páginas citadas.
-| `/api/perfis` | `POST` dar/trocar, `DELETE` remover | `{ email, perfil }` / `{ email }` | admin |
-| `/api/primeiro-admin` | `POST` | — | qualquer conta logada com o e-mail de `ADMIN_INICIAL_EMAIL`, só enquanto não houver admin (seção 4) |
 
 - `dataLimitePropostas` (`AAAA-MM-DD`): referência da D2 (Anexo IV, 3.3.1, IV). Depois que alguma proposta do
   chamamento já tem totais calculados, não pode mais mudar → **409**.
@@ -169,24 +175,24 @@ passa por uma função `/api`, que:
 
 ### Endpoint da Etapa 4a (sessão da Comissão)
 
-| Endpoint | Métodos | Corpo (JSON) | Perfil |
+| Endpoint | Métodos | Corpo (JSON) | Permissão |
 |---|---|---|---|
-| `/api/sessao` | `POST` abrir | `{ chamamentoId, data, pauta: [propostaId], presentes?: [uid], declaracoes?: [{ uid, semImpedimento, motivo? }] }` | presidente |
-| `/api/sessao` | `PATCH` com `acao` | `{ chamamentoId, sessaoId, acao: 'presentes' \| 'declaracoes' \| 'foco' \| 'encerrar', ... }` | presidente e relator (`encerrar`: só presidente) |
+| `/api/sessao` | `POST` abrir | `{ chamamentoId, data, pauta: [propostaId], presentes?: [uid], declaracoes?: [{ uid, semImpedimento, motivo? }] }` | `sessaoAbrirEncerrar` |
+| `/api/sessao` | `PATCH` com `acao` | `{ chamamentoId, sessaoId, acao: 'presentes' \| 'declaracoes' \| 'foco' \| 'encerrar', ... }` | `sessaoConduzir` (`encerrar`: `sessaoAbrirEncerrar`) |
 
 - Sessão em `chamamentos/{ch}/sessoes/{id}`; **uma sessão aberta por chamamento** (abrir outra → **409**).
-- Presentes precisam ter perfil da Comissão (presidente, relator, membro); só presente declara; impedimento
+- Presentes precisam ter papel na Comissão (presidente, relator ou membro, na tela Usuários); só presente declara; impedimento
   exige motivo. `foco` = `{ propostaId, subcriterio }` da pauta e da matriz (ou `null`).
 - Sessão encerrada não aceita alteração (**409**) e **a avaliação (C2) só é aceita em sessão aberta** (**409**).
 - Os esquemas zod ficam em `src/esquemas/` e são os mesmos na `/api` e nos formulários do app.
 
 ### Endpoints da Etapa 3b (avaliação)
 
-| Endpoint | Métodos | Corpo (JSON) | Perfil |
+| Endpoint | Métodos | Corpo (JSON) | Permissão |
 |---|---|---|---|
-| `/api/avaliacao` | `PUT` registrar/alterar nível | `{ chamamentoId, propostaId, codigo, nivel, justificativa, paginas?, decisao, votoDivergente?, sessaoId }` | presidente, relator, membro |
-| `/api/experiencia` | `POST` criar, `PATCH` editar, `DELETE` excluir | `{ chamamentoId, propostaId, descricao, categorias, modalidade, orgaoParceiro?, instrumento?, mrosc?, inicio, fim?, vagas?, unidades?, trabalhadores?, valorAnualCentavos?, documentos?: [{ tipo, numeroSEI, comprovaExecucaoSatisfatoria, aceito }], desconsideracoes?: [{ criterio, justificativa }] }` (`PATCH`/`DELETE` com `id`) | presidente, relator |
-| `/api/homologar` | `POST` | `{ chamamentoId, propostaId }` | presidente |
+| `/api/avaliacao` | `PUT` registrar/alterar nível | `{ chamamentoId, propostaId, codigo, nivel, justificativa, paginas?, decisao, votoDivergente?, sessaoId }` | `nivelD1` |
+| `/api/experiencia` | `POST` criar, `PATCH` editar, `DELETE` excluir | `{ chamamentoId, propostaId, descricao, categorias, modalidade, orgaoParceiro?, instrumento?, mrosc?, inicio, fim?, vagas?, unidades?, trabalhadores?, valorAnualCentavos?, documentos?: [{ tipo, numeroSEI, comprovaExecucaoSatisfatoria, aceito }], desconsideracoes?: [{ criterio, justificativa }] }` (`PATCH`/`DELETE` com `id`) | `experienciasD2` |
+| `/api/homologar` | `POST` | `{ chamamentoId, propostaId }` | `homologar` |
 
 - **C2 — nível** (`.../propostas/{p}/avaliacoes/{codigo}`): `codigo` precisa existir na matriz; `nivel` inteiro
   de 0 a 4; `paginas` (numeração interna do PA) não podem passar da página de corte do PA (Anexo III, 7.1);
@@ -217,43 +223,38 @@ a extensão `.js` (`'./d1.js'`, `'./matriz/index.js'`) e o JSON usa `with { type
 No app, use `chamarApi` de `src/lib/api.ts`: ele anexa o ID token e devolve `ErroApi` com `status`, mensagem
 e `campos` em português.
 
-### Matriz de permissões
+### Áreas e permissões
 
-| Operação | Perfis |
-|---|---|
-| C1 — cadastros (chamamentos, OSCs, propostas) | admin |
-| C2 — nível dos subcritérios da D1 | presidente, relator, membro |
-| C3 — experiências da D2 | presidente, relator |
-| C5 — homologar proposta | presidente |
-| C6 — dar e remover perfis | admin |
-| Sessão: abrir e encerrar | presidente |
-| Sessão: presentes, declarações de impedimento e foco | presidente, relator |
-| Admissibilidade (Anexo III, item 28) | presidente, relator |
-| Registrar decisão de desempate (RF-27) | presidente |
-| Reabrir proposta homologada (RF-18) | presidente |
-| Diligências (RF-28) | presidente, relator |
-| Leitura da auditoria | admin, presidente, controle |
+O administrador tem todas. Para os demais, cada permissão é ligada na tela Usuários:
 
+| Área | Permissão | O que libera |
+|---|---|---|
+| Consulta | `consultar` | ver chamamentos, avaliações, sessões, telão e relatórios (somente leitura) |
+| Cadastros | `chamamentos`, `oscs`, `propostas` | criar e editar cada cadastro |
+| Avaliação | `admissibilidade`, `nivelD1`, `experienciasD2`, `diligencias` | registrar cada etapa da avaliação |
+| Sessão e resultado | `sessaoAbrirEncerrar`, `sessaoConduzir`, `homologar`, `reabrir`, `desempate` | sessão, telão e resultado |
+
+Quem tem qualquer permissão também lê os dados. Gestão de usuários e histórico de alterações: só administrador.
 A fonte única no código é `src/domain/permissoes.ts` (um teste garante que ela bate com esta tabela).
 
 ### Telas (Etapa 4a)
 
 | Rota | Quem usa | O que faz |
 |---|---|---|
-| `/` | Comissão e admin | lista de chamamentos |
-| `/chamamentos/:ch` | Comissão e admin | painel: propostas por lote com status (pendente, apta, inapta, desclassificada, homologada) e sessões |
-| `/chamamentos/novo`, `/chamamentos/:ch/editar` | admin | chamamento e lotes |
-| `/chamamentos/:ch/propostas/nova`, `.../:p/editar` | admin | proposta (OSC, lote, protocolo, nº SEI) |
-| `/oscs` | admin | OSCs, com máscara e validação de CNPJ |
-| `/perfis` | admin | dar, trocar e remover perfis (o admin não remove o próprio) |
-| `/chamamentos/:ch/sessoes/nova` | presidente | abertura: data, presentes, declarações, pauta |
-| `/chamamentos/:ch/sessoes/:s` | Comissão (escrita: presidente e relator) | foco, presentes e declarações, encerrar |
+| `/` | todos com acesso | lista de chamamentos |
+| `/chamamentos/:ch` | todos com acesso | painel: propostas por lote com status (pendente, apta, inapta, desclassificada, homologada) e sessões |
+| `/chamamentos/novo`, `/chamamentos/:ch/editar` | `chamamentos` | chamamento e lotes |
+| `/chamamentos/:ch/propostas/nova`, `.../:p/editar` | `propostas` | proposta (OSC, lote, protocolo, nº SEI) |
+| `/oscs` | `oscs` | OSCs, com máscara e validação de CNPJ |
+| `/usuarios` | administrador | usuários, permissões por área, papel na Comissão, e-mail de senha e desativação |
+| `/chamamentos/:ch/sessoes/nova` | `sessaoAbrirEncerrar` | abertura em assistente: 1. data → 2. presentes e declarações → 3. pauta (com revisão) |
+| `/chamamentos/:ch/sessoes/:s` | todos com acesso (escrita: `sessaoConduzir`) | foco, presentes e declarações, encerrar (com confirmação) |
 
 ### Admissibilidade (Anexo III, item 28)
 
-| Endpoint | Método | Corpo (JSON) | Perfil |
+| Endpoint | Método | Corpo (JSON) | Permissão |
 |---|---|---|---|
-| `/api/admissibilidade` | `PUT` | `{ chamamentoId, propostaId, requisitos: { '28.1.I': true, ... }, irregularidadesFormais?: ['28.5.II'], observacaoIrregularidades?, planos: [{ codigo, ausente, paginaInicial, paginaFinal }], resultado: 'admitida' \| 'nao_admitida', motivacao? }` | presidente, relator |
+| `/api/admissibilidade` | `PUT` | `{ chamamentoId, propostaId, requisitos: { '28.1.I': true, ... }, irregularidadesFormais?: ['28.5.II'], observacaoIrregularidades?, planos: [{ codigo, ausente, paginaInicial, paginaFinal }], resultado: 'admitida' \| 'nao_admitida', motivacao? }` | `admissibilidade` |
 
 - Textos do 28.1 (10 requisitos), 28.2 a 28.5 ficam em `matriz_2026.json` (`admissibilidade`).
 - Página de corte de cada PA = página inicial + limite do PA (Anexo III, 7.1) − 1; a tela alerta quando excede.
@@ -266,24 +267,25 @@ A fonte única no código é `src/domain/permissoes.ts` (um teste garante que el
 
 | Rota | Escrita | O que faz |
 |---|---|---|
-| `/chamamentos/:ch/propostas/:p/admissibilidade` | presidente, relator | checklist 28.1, páginas por PA com página de corte e alerta, irregularidades formais (28.5), resultado e motivação |
-| `/chamamentos/:ch/propostas/:p/d1` | presidente, relator, membro (com sessão aberta e a proposta na pauta) | navegação PA1…PA6, painel do subcritério (escala com descritores, elementos como apoio, decisão, voto divergente, justificativa com contador, páginas com aviso de corte), alerta de nível 0 em 1.1/1.2 e rodapé com a prévia (src/domain) e o status oficial |
-| `/chamamentos/:ch/propostas/:p/d2` | presidente, relator | experiências e documentos, desconsiderar por critério (3.8.5) e linha do tempo A/B |
-| `/chamamentos/:ch/propostas/:p/d2/memoria` | — | memória de cálculo da D2 (`resultadoD2/atual`) |
+| `/chamamentos/:ch/propostas/:p/admissibilidade` | `admissibilidade` | seções: 1. checklist 28.1 (com contador), 2. páginas por PA com página de corte e alerta de atenção ao exceder, 3. irregularidades formais (28.5), 4. resultado e motivação |
+| `/chamamentos/:ch/propostas/:p/d1` | `nivelD1` (com sessão aberta e a proposta na pauta) | navegação PA1…PA6 com progresso por PA; painel do subcritério em seções (Identificação, Elementos, Escala 0–4 em cartões com o descritor sempre visível, Decisão, Justificativa e páginas); alerta de nível 0 em 1.1/1.2; rodapé fixo com a D1 parcial, a prévia, o status oficial e **Salvar** |
+| `/chamamentos/:ch/propostas/:p/d2` | `experienciasD2` | tabela de experiências; painel lateral para criar/editar (com documentos); desconsiderar por critério (3.8.5) em diálogo; excluir com confirmação; linha do tempo A (teal) / B (azul) com rótulos |
+| `/chamamentos/:ch/propostas/:p/d2/memoria` | — | memória de cálculo da D2 (`resultadoD2/atual`) em abas por critério |
 
-Quem não pode escrever vê a tela sem os botões; proposta homologada fica somente leitura. O perfil
-**controle** lê chamamentos, propostas e avaliações (firestore.rules), sem escrever.
+Quem não pode escrever vê a tela sem os botões; proposta homologada fica somente leitura. Quem tem só a
+permissão **Consulta** lê chamamentos, propostas e avaliações (firestore.rules), sem escrever.
 
 Leitura em tempo real (`onSnapshot`, `src/lib/firestore.ts`); escrita só por `chamarApi` (`src/lib/api.ts`).
-O componente `Formulario` valida com o mesmo esquema da `/api` e põe os erros 400 da `/api` nos mesmos campos.
+O componente `FormularioApi` (`src/components/ui`) valida com o mesmo esquema da `/api` e põe os erros 400 da
+`/api` nos mesmos campos.
 
 ### Resultado: classificação, homologação, reabertura e diligências (Etapa 6a)
 
-| Endpoint | Método | Corpo (JSON) | Perfil |
+| Endpoint | Método | Corpo (JSON) | Permissão |
 |---|---|---|---|
-| `/api/desempate` | `PUT` | `{ chamamentoId, loteCodigo, ordem: [propostaId, ...], justificativa }` | presidente |
-| `/api/reabrir` | `POST` | `{ chamamentoId, propostaId, motivo }` | presidente |
-| `/api/diligencias` | `POST` criar; `PATCH` com `acao` | `{ chamamentoId, propostaId, objeto, prazo }`; `{ ..., id, acao: 'responder', resposta }` ou `{ ..., id, acao: 'encerrar', conclusao }` | presidente, relator |
+| `/api/desempate` | `PUT` | `{ chamamentoId, loteCodigo, ordem: [propostaId, ...], justificativa }` | `desempate` |
+| `/api/reabrir` | `POST` | `{ chamamentoId, propostaId, motivo }` | `reabrir` |
+| `/api/diligencias` | `POST` criar; `PATCH` com `acao` | `{ chamamentoId, propostaId, objeto, prazo }`; `{ ..., id, acao: 'responder', resposta }` ou `{ ..., id, acao: 'encerrar', conclusao }` | `diligencias` |
 
 - **Classificação** (`/chamamentos/:ch/lotes/:lote/classificacao`): `classificarLote` (src/domain/classificacao.ts)
   aplica `classificar()` aos totais gravados. Ranking por NF entre aptas e completas, com PA1…PA6, D1, D2, NF e
@@ -294,10 +296,10 @@ O componente `Formulario` valida com o mesmo esquema da `/api` e põe os erros 4
   **VI** Critério 2.3. A ordem e a fonte ficam em `matriz_2026.json` (`desempate`, `fonteDesempate`). A tela e o
   quadro-resumo mostram o selo **"Desempate pelo Edital (critério N)"**. Os totais gravados trazem `d2PorCriterio`
   (pontos de C2.1…C2.4); proposta com totais anteriores ao RF-27 não usa os critérios V e VI até o próximo recálculo.
-- **Decisão da Comissão**: só quando os seis critérios não resolvem. O presidente registra a ordem com justificativa
+- **Decisão da Comissão**: só quando os seis critérios não resolvem. Quem tem a permissão `desempate` registra a ordem com justificativa
   (mín. 20 caracteres) em `chamamentos/{ch}/desempates/{id}`. A /api confere que as propostas formam exatamente um
   empate **residual** do lote (senão **409**); se o grupo ou a NF mudar depois, a decisão deixa de valer.
-- **Homologação na tela**: botão do presidente com confirmação dupla (mostra NF e status e pede "conferi").
+- **Homologação na tela**: botão (permissão `homologar`) com confirmação dupla (mostra NF e status e pede "conferi").
   Proposta com **diligência em aberto** (aberta ou respondida) não é homologada (**409**).
 - **Reabertura (RF-18)**: só proposta homologada (senão **409**); motivo obrigatório (mín. 20); grava
   `bloqueada = false`, `reabertoPor`, `reabertoEm`, `motivoReabertura` e limpa `homologadaPor/Em` (o histórico fica
@@ -316,7 +318,7 @@ Os dados são lidos uma vez no momento de gerar, e o documento é montado por c�
 | Espelho de avaliação da proposta | botão **Espelho (PDF)** no cabeçalho da proposta | PDF |
 | Quadro-resumo do lote (a mesma tabela da classificação) | tela de classificação do lote | PDF e XLSX |
 | Minuta de ata da sessão (texto editável antes de exportar) | **Minuta de ata** na tela da sessão (`/chamamentos/:ch/sessoes/:s/ata`) | PDF |
-| Trilha de auditoria | menu **Auditoria** (`/auditoria`) — admin, presidente, controle | tela e XLSX |
+| Histórico de alterações (trilha de auditoria) | menu **Histórico de alterações** (`/auditoria`) — administrador | tela e XLSX |
 
 - **Espelho**: identificação (OSC, CNPJ, lote, nº SEI, protocolo), admissibilidade, os **28 subcritérios** com nível,
   decisão, voto divergente, justificativa e páginas citadas ("Não avaliado" quando falta), totais por PA, D1,
@@ -336,31 +338,31 @@ Os dados são lidos uma vez no momento de gerar, e o documento é montado por c�
 ### Modo projeção — telão da sala (Etapa 5)
 
 - Rota **`/projecao/:ch/:sessaoId`** (o link "Abrir telão" aparece na tela da D1 e na tela da sessão).
-  Somente leitura, sem menu e sem botões de escrita; fonte grande, alto contraste e botão **Tela cheia**.
+  Somente leitura, sem menu e sem nenhuma ação; tema próprio de alto contraste (fundo branco, texto quase preto,
+  nível registrado em azul de ação com o rótulo "Nível registrado"), tipografia display para leitura a 6 m e
+  troca de foco com fade curto (desligado em "reduzir movimento"). Tela cheia: **F11** no navegador.
 - Acompanha em tempo real (`onSnapshot`) o **foco da sessão** e mostra, conforme o tipo:
   `admissibilidade` (checklist 28.1 e páginas por PA com excessos), `subcriterio` (escala com o nível
   registrado destacado, decisão, justificativa, páginas), `d2` (pontos por critério e memória resumida) ou
   `resumo` (PA1…PA6, D1, D2, NF e status). Sem foco: tela de espera com o nome do chamamento.
 - Foco = `{ tipo: 'admissibilidade' | 'subcriterio' | 'd2' | 'resumo', propostaId, subcriterio? }`, alterado
-  por **presidente e relator** (`PATCH /api/sessao`, `acao: 'foco'`) e, ao salvar um nível, pela própria avaliação.
-- Na tela da D1, presidente e relator controlam o telão: **Projetar** (subcritério, admissibilidade, D2,
+  por quem tem `sessaoConduzir` (`PATCH /api/sessao`, `acao: 'foco'`) e, ao salvar um nível, pela própria avaliação.
+- Na tela da D1, quem tem `sessaoConduzir` controla o telão: **Projetar** (subcritério, admissibilidade, D2,
   resumo) e atalhos **Alt+→** / **Alt+←** (próximo/anterior subcritério) e **Alt+R** (resumo). O indicador
   "No telão" mostra o que está sendo projetado.
 
 **Login do telão.** O computador ligado ao projetor usa um usuário próprio, só para isso:
-1. No Firebase Authentication (projeto dev ou prod), crie um usuário, por exemplo `telao@seds.go.gov.br`.
-2. Em `/perfis`, dê a ele o perfil **membro**. Ele não muda o foco, mas **pode registrar níveis da D1** se alguém
-   abrir a tela de avaliação com esse login: use-o só no computador do telão e com senha guardada pela Comissão.
-   Alternativa sem nenhuma escrita: perfil **controle** (lê tudo, não grava nada; também lê a auditoria). **Recomendado em produção** (Etapa 7).
+1. Na tela **Usuários → Novo usuário**, cadastre um usuário só para isso, por exemplo `telao@seds.go.gov.br`.
+2. Na tela **Usuários**, libere **só a permissão Consulta** (lê tudo, não grava nada). Senha guardada pela Comissão.
 3. No computador da sala, entre com esse usuário e abra o link do telão.
-Qualquer perfil logado consegue abrir a projeção; nenhum vê controles de escrita nela.
+Qualquer usuário com acesso consegue abrir a projeção; ninguém vê controles de escrita nela.
 
 ### Testar a `/api` localmente
 
 ```bash
 npm run test:api     # sobe Auth + Firestore emulados, roda tests/api/** e derruba tudo
 ```
-Os testes criam usuários com cada perfil no emulador, chamam as funções como a Vercel faria
+Os testes criam usuários com cada combinação de acesso no emulador, chamam as funções como a Vercel faria
 (`Request` → `Response`) e conferem status, documento gravado e registro de auditoria.
 Nenhum dado real é tocado: com `FIRESTORE_EMULATOR_HOST` e `FIREBASE_AUTH_EMULATOR_HOST` definidas, o
 Admin SDK usa os emuladores (definir só uma das duas é recusado, para não misturar com produção).
@@ -426,3 +428,89 @@ alfanumérico fictício (`ENSAIO…`) e 6 propostas no formato que a `/api` grav
 
 `--recriar` apaga e grava de novo; `--remover` só apaga (o chamamento e as OSCs com `ensaio: true`). O script
 recusa `--projeto prod`.
+
+## 8. Interface: Sistema de Design SEDS
+
+Fonte de verdade: [`docs/DESIGN-SYSTEM-SEDS.md`](docs/DESIGN-SYSTEM-SEDS.md). Componentes só usam tokens semânticos (nunca HEX).
+
+| Peça | Onde |
+|---|---|
+| Tokens (primitivos, semânticos, componentes) | `src/styles/tokens.css`; tema do Tailwind em `src/index.css` |
+| Componentes (botões, campos, feedback, overlays, DataTable, ícones, Brand, PageHeader) | `src/components/ui` — catálogo em **`/ui`** (só administrador) |
+| Templates (AppShell, AuthPage, ListPage, FormPage, DetailPage, WizardPage, DashboardPage) | `src/components/templates` |
+| Navegação por domínio (Sessão, Avaliação, Resultado, Cadastros, Administração) | `src/components/templates/navegacao.ts` |
+
+### Mapa de telas
+
+| Rota | Template | Tela |
+|---|---|---|
+| `/login` | AuthPage | entrada (e-mail e senha) |
+| `/` | ListPage | chamamentos (busca e ordenação) |
+| `/chamamentos/novo`, `/chamamentos/:ch/editar` | FormPage | chamamento e lotes |
+| `/chamamentos/:ch` | DetailPage | painel: resumo, propostas por lote com status, sessões |
+| `/chamamentos/:ch/propostas/nova`, `…/:p/editar` | FormPage | proposta (OSC, lote, protocolo, nº SEI) |
+| `/chamamentos/:ch/sessoes/nova` | WizardPage | abertura da sessão: 1. data → 2. presentes e declarações → 3. pauta |
+| `/chamamentos/:ch/sessoes/:s` | DetailPage | sessão: foco da projeção, presentes, pauta, encerrar |
+| `/chamamentos/:ch/sessoes/:s/ata` | FormPage | minuta de ata editável e PDF |
+| `…/propostas/:p/admissibilidade` | FormPage | checklist 28.1, páginas por PA (alerta de excesso), 28.5, resultado |
+| `…/propostas/:p/d1` | DetailPage | navegação PA1…PA6 com progresso, subcritério em seções, rodapé fixo com D1 parcial e Salvar |
+| `…/propostas/:p/d2` | ListPage | experiências (tabela + painel lateral), linha do tempo A/B |
+| `…/propostas/:p/d2/memoria` | DetailPage | memória de cálculo da D2 em abas por critério |
+| `…/propostas/:p/diligencias` | ListPage | diligências da proposta |
+| `…/propostas/:p/diligencias/nova`, `…/diligencias/:d` | FormPage | abrir; responder e encerrar |
+| `/chamamentos/:ch/lotes/:lote/classificacao` | ListPage | ranking, empates, homologar e reabrir, quadro-resumo PDF/XLSX |
+| `/projecao/:ch/:s` | (layout próprio) | telão: alto contraste, sem menu nem ações |
+| `/oscs` | ListPage | OSCs (painel lateral para cadastrar e editar) |
+| `/usuarios` | ListPage | usuários, permissões, papel na Comissão |
+| `/auditoria` | ListPage | histórico de alterações e exportação XLSX |
+| `/ui` | — | catálogo de componentes (só administrador) |
+
+### Catálogo de componentes (`/ui`)
+
+Página só do administrador (menu **Administração → Catálogo de componentes**) com todos os componentes de
+`src/components/ui` em todos os estados: botões (4 variantes, 3 tamanhos, carregando, desabilitado), campos
+(texto, área com contador, seleção, data, número, CNPJ, moeda, checkbox, rádio, chave), formulário ligado ao
+esquema da `/api`, alertas, toast, estados vazio/erro/carregando, diálogo, confirmação, painel lateral, abas,
+trilha, tabela de dados, selos de status e ícones. Use-o para conferir uma mudança visual antes de aplicá-la nas
+telas; `npm run test:e2e:ui` exige zero violações do axe nele.
+
+Testes de navegador (emuladores + Playwright + axe, WCAG 2.2 AA):
+
+```bash
+npm run test:e2e:baseline   # medição de todas as rotas (docs/auditoria-design/antes/)
+npm run test:e2e:ui         # catálogo /ui sem violações
+npm run test:e2e:etapa3     # telas migradas: teclado, axe e screenshots (docs/auditoria-design/etapa-3/)
+npm run test:e2e:etapa4     # telas operacionais: axe + screenshots e o fluxo completo (docs/auditoria-design/etapa-4/)
+FASE_ETAPA4=antes npm run test:e2e:etapa4   # só screenshots, para comparar antes/depois
+FASE_AUDITORIA=depois npm run test:e2e:baseline   # medição depois + comparativo com o antes (docs/auditoria-design/depois/)
+npm run test:e2e:uso        # testes de uso por perfil (relator, membro, presidente, controle, telão), com tempos
+npm run test:e2e:acessibilidade   # teclado, foco visível, zoom 200% e erros anunciados em todas as rotas
+```
+
+Resultados e decisões: [`docs/auditoria-design/README.md`](docs/auditoria-design/README.md) (antes × depois),
+[`pendencias.md`](docs/auditoria-design/pendencias.md) (backlog por prioridade) e o roteiro de teste com usuários
+reais em [`docs/TESTE-USABILIDADE.md`](docs/TESTE-USABILIDADE.md) (planilha: `docs/teste-usabilidade-resultados.xlsx`).
+
+O fluxo completo (sessão → admissibilidade → D1 → D2 → classificação → homologação) grava de verdade pela
+`/api` nos emuladores: só nos testes de navegador, `vite.e2e.config.ts` monta as funções de `api/` no servidor
+do Vite (`tests/e2e/apiNoVite.ts`). Nada disso entra no build nem na Vercel.
+
+### Relatórios (PDF e XLSX)
+
+Cabeçalho em toda página com a marca na hierarquia do Kit (Secretaria → Governo de Goiás) e o sistema; títulos
+em azul institucional; tabelas com cabeçalho neutral.200 e linhas alternadas em neutral.100; rodapé com o código
+de verificação. As cores (`CORES_DOCUMENTO`, `src/relatorios/documento.ts`) são lidas de `src/styles/tokens.css`:
+nenhum HEX fora dos tokens (teste `tests/design/hex.test.ts`).
+Fonte: Roboto embutida do pdfmake. **Gotham** só com os arquivos licenciados em `public/fonts/` (registrar em
+`src/relatorios/pdf.ts` e trocar `FONTE_PDF`); nunca de fonte externa.
+
+### Marcas (TODO)
+
+O app só usa **arquivos oficiais** das marcas (Kit de Divulgação). Enquanto eles não existirem, a marca aparece
+**em texto** ("SEDS | Governo de Goiás"; no login e no rodapé, "Secretaria de Estado de Desenvolvimento Social |
+Governo de Goiás"), respeitando a hierarquia do Kit (… → Secretarias → Governo de Goiás).
+
+- [ ] Colocar em `public/brand/` os arquivos oficiais da assinatura SEDS + Governo de Goiás, de preferência SVG:
+      versão para fundo claro (`light`), para fundo escuro (`dark`) e monocromática (`monochrome`).
+- [ ] Preencher `MARCAS` em `src/components/ui/Brand.tsx` com os caminhos (ex.: `light: '/brand/seds-governo-light.svg'`).
+- [ ] Validar com a Comunicação da SEDS as cores derivadas do DS (§2 e §8).

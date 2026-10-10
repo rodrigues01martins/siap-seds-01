@@ -1,7 +1,8 @@
 // Formato dos documentos lidos do Firestore pelas telas (gravados pela /api).
 
 import type { StatusD1 } from '../domain/d1'
-import type { Perfil } from '../domain/perfis'
+import type { PapelComissao } from '../domain/comissao'
+import type { Permissao } from '../domain/permissoes'
 
 export interface Lote {
   codigo: string
@@ -39,7 +40,8 @@ export interface Proposta {
 export interface PresenteSessao {
   uid: string
   email: string | null
-  perfil: Perfil
+  /** Papel na Comissão no momento da sessão. */
+  perfil: PapelComissao
 }
 
 export interface DeclaracaoSessao {
@@ -68,7 +70,12 @@ export interface Avaliacao {
   sessaoId: string
 }
 
+/** Cadastro em usuarios/{uid} (tela Usuários, /api/usuarios). */
 export interface UsuarioCadastro {
   email: string
-  perfil: Perfil | null
+  nome?: string
+  admin?: boolean
+  ativo?: boolean
+  permissoes?: Permissao[]
+  comissao?: PapelComissao | null
 }

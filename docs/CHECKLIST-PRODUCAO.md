@@ -22,8 +22,8 @@ Os passos detalhados estão no [README](../README.md) (seções 1 a 4).
 
 - [ ] *Sign-in method*: **E-mail/senha** ativo; nenhum outro provedor.
 - [ ] *Settings → User actions*: **desmarque "Enable create (sign-up)"**. Só o admin cria contas.
-      Sem isso, qualquer pessoa com a chave pública cria uma conta (sem perfil ela não lê nada, mas
-      não precisa existir).
+      Sem isso, qualquer pessoa com a chave pública cria uma conta (sem cadastro em Usuários ela não lê
+      nada, mas não precisa existir). O convite da tela Usuários continua funcionando (cria pela /api).
 - [ ] *Settings → User actions*: **"Email enumeration protection"** ativado.
 - [ ] Remover usuários de teste (ex.: `teste@`, contas pessoais usadas no desenvolvimento).
 
@@ -33,7 +33,7 @@ Os passos detalhados estão no [README](../README.md) (seções 1 a 4).
       prod** (README, seção 3). Repetir sempre que o arquivo mudar.
 - [ ] Firebase Console (prod) → *Firestore → Regras*: o texto começa com
       `// Regras do Firestore — SIAP SEDS/GO 2026` e é igual ao da `main`.
-- [ ] Nenhuma regra com `allow write: if true` ou `allow read: if true`: só leitura por perfil, escrita
+- [ ] Nenhuma regra com `allow write: if true` ou `allow read: if true`: só leitura conforme o cadastro em `usuarios`, escrita
       sempre negada (a escrita é só pela `/api`).
 
 ## 4. Matriz
@@ -41,25 +41,23 @@ Os passos detalhados estão no [README](../README.md) (seções 1 a 4).
 - [ ] O app usa a matriz do código (`src/domain/matriz/matriz_2026.json`); nada a fazer no console.
 - [ ] Opcional: registrar em `matrizes/2026` pelo terminal (`npm run seed:matriz -- --projeto prod --confirmar`).
 
-## 5. Primeiro administrador, usuários e perfis reais
+## 5. Primeiro administrador e usuários reais
 
-- [ ] **Primeiro admin** (README, seção 4): conta criada no *Authentication*, `ADMIN_INICIAL_EMAIL` na Vercel
-      (Production) com esse e-mail, Redeploy, login e **Sou o administrador inicial**.
-- [ ] Demais pessoas: *Authentication → Users → Add user* e depois, como admin, **Perfis de acesso** (`/perfis`).
-- [ ] **admin**: quem cadastra chamamento, OSCs, propostas e perfis (de preferência não é membro da Comissão).
-- [ ] **presidente**: 1 pessoa.
-- [ ] **relator**: 1 pessoa (ou mais, conforme a portaria da Comissão).
-- [ ] **membro**: demais membros da Comissão.
-- [ ] **controle**: controle interno ou auditoria (só leitura, inclusive da trilha `/auditoria`).
-- [ ] Conferir a lista em **Perfis de acesso** (`/perfis`) contra a portaria de designação da Comissão.
-- [ ] Quem sai da Comissão: remover o perfil em **Perfis de acesso** (encerra as sessões abertas da pessoa).
+- [ ] **Primeiro admin** (README, seção 4): o e-mail está em `api/_lib/adminsIniciais.ts`. Crie a conta com esse
+      e-mail no *Authentication* (prod) e entre no app: ela vira administradora sozinha.
+- [ ] *Authentication → Templates → Password reset*: texto do e-mail de convite/senha (ex.: "SIAP SEDS — crie
+      sua senha").
+- [ ] Demais pessoas: tela **Usuários → Novo usuário** (a pessoa recebe o e-mail para criar a senha).
+- [ ] Papel na Comissão de cada membro (presidente, relator, membro) conforme a portaria de designação.
+- [ ] Permissões por pessoa: só o necessário (ex.: quem cadastra não precisa avaliar; controle interno só
+      **Consulta**). Mais de um administrador é recomendado (se um ficar sem acesso, o outro resolve).
+- [ ] Quem sai da Comissão: **Gerenciar → Desativar** (bloqueia o login e encerra as sessões abertas).
 
 ## 6. Usuário do telão
 
-- [ ] Criar um usuário só para o projetor (ex.: `telao.sessao@seds.go.gov.br`) com senha forte, guardada
-      pela Comissão.
-- [ ] Perfil **controle** (recomendado: lê tudo e não grava nada). O perfil **membro** também abre o telão,
-      mas pode registrar níveis da D1 se alguém abrir a tela de avaliação com esse login.
+- [ ] **Usuários → Novo usuário** só para o projetor (ex.: `telao.sessao@seds.go.gov.br`), com senha forte
+      guardada pela Comissão.
+- [ ] Só a permissão **Consulta** (lê tudo e não grava nada).
 - [ ] Testar no computador da sala: login → tela da sessão → **Abrir projeção (telão)** → **Tela cheia**.
 
 ## 7. Backup antes e depois de cada sessão 🔁

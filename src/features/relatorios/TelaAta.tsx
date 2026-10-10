@@ -3,9 +3,13 @@
 // proposta da pauta não homologada.
 
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router'
-import { AlertaErro } from '../../componentes/AlertaErro'
-import { EstadoLeitura, Titulo, dataBr } from '../../componentes/basicos'
+import { useParams } from 'react-router'
+import { FormPage } from '../../components/templates/paginas'
+import { AlertaErroApi } from '../../components/ui/AlertaErroApi'
+import { EmptyState } from '../../components/ui/EmptyState'
+import { ErrorState } from '../../components/ui/ErrorState'
+import { Skeleton } from '../../components/ui/Skeleton'
+import { dataBr } from '../../lib/datas'
 import { nomeDeArquivo } from '../../lib/arquivo'
 import { dadosVerificadosAta, montarAtaPdf, textoInicialAta, type DadosAta } from '../../relatorios/ata'
 import { precisaMinuta } from '../../relatorios/documento'
@@ -33,21 +37,26 @@ export function TelaAta() {
     }
   }, [ch, s])
 
-  if (leitura.carregando || leitura.erro) return <EstadoLeitura carregando={leitura.carregando} erro={leitura.erro} />
-  if (!leitura.dados) return <p className="text-slate-600">Sessão não encontrada.</p>
+  if (leitura.carregando) return <Skeleton linhas={8} rotulo="Carregando dados da sessão" />
+  if (leitura.erro) return <ErrorState mensagem={leitura.erro} />
+  if (!leitura.dados) return <EmptyState titulo="Sessão não encontrada" descricao="Confira o endereço ou volte ao painel do chamamento." />
   const dados = leitura.dados
   const minuta = precisaMinuta(dados.propostas)
 
   return (
-    <>
-      <Titulo>Minuta de ata — sessão de {dataBr(dados.sessao.data)}</Titulo>
-      <p className="mb-4 text-sm text-slate-600">
-        <Link to={`/chamamentos/${ch}/sessoes/${s}`} className="underline">
-          Voltar à sessão
-        </Link>{' '}
-        · Texto gerado dos registros lidos ao abrir esta página. Recarregue a página para gerar de novo com dados atualizados.
-      </p>
-      <AlertaErro erro={erro} />
+    <FormPage
+      cabecalho={{
+        trilha: [
+          { rotulo: 'Chamamentos', para: '/' },
+          { rotulo: `Chamamento ${dados.chamamento.numero}`, para: `/chamamentos/${ch}` },
+          { rotulo: `Sessão de ${dataBr(dados.sessao.data)}`, para: `/chamamentos/${ch}/sessoes/${s}` },
+          { rotulo: 'Minuta de ata' },
+        ],
+        titulo: `Minuta de ata — sessão de ${dataBr(dados.sessao.data)}`,
+        descricao: 'Texto gerado dos registros lidos ao abrir esta página. Recarregue a página para gerar de novo com dados atualizados.',
+      }}
+    >
+      <AlertaErroApi erro={erro} />
       <EditorAta
         textoInicial={textoInicialAta(dados)}
         minuta={minuta}
@@ -60,6 +69,6 @@ export function TelaAta() {
           })
         }
       />
-    </>
+    </FormPage>
   )
 }

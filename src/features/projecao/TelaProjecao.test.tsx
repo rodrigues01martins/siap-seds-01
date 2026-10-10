@@ -2,14 +2,14 @@
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { PERFIS, type Perfil } from '../../domain/perfis'
+import type { Acesso } from '../../domain/permissoes'
 import { admissibilidadeExemplo, resultadoD2Exemplo, totaisExemplo } from '../../testes/fixturesProjecao'
 import { RotaProtegida } from '../auth/RotaProtegida'
-import { PERFIS_PROJECAO, TelaProjecao } from './TelaProjecao'
+import { TelaProjecao } from './TelaProjecao'
 
 // ---- Firestore e usuário simulados (a tela só lê) ----
 const estado = vi.hoisted(() => ({
-  perfil: 'membro' as string,
+  acesso: { admin: false, ativo: true, permissoes: ['consultar'] } as Acesso,
   documentos: {} as Record<string, unknown>,
   colecoes: {} as Record<string, unknown[]>,
 }))
@@ -26,9 +26,8 @@ vi.mock('../../lib/firestore', () => ({
 vi.mock('../auth/useUsuario', () => ({
   useUsuario: () => ({
     carregando: false,
-    usuario: { uid: 'u', email: `${estado.perfil}@seds.go.gov.br`, perfil: estado.perfil },
+    usuario: { uid: 'u', email: 'telao@seds.go.gov.br', nome: 'Telão', acesso: estado.acesso },
     sair: vi.fn(),
-    recarregarPerfil: vi.fn(),
   }),
 }))
 
@@ -61,7 +60,7 @@ function montar() {
         <Route
           path="/projecao/:ch/:sessaoId"
           element={
-            <RotaProtegida perfis={PERFIS_PROJECAO}>
+            <RotaProtegida>
               <TelaProjecao />
             </RotaProtegida>
           }
@@ -79,13 +78,29 @@ const FOCOS = [
   null,
 ]
 
+/** Acessos de quem abre a projeção: o telão (só Consulta), um avaliador e o administrador. */
+const ACESSOS: Record<string, Acesso> = {
+  telao: { admin: false, ativo: true, permissoes: ['consultar'] },
+  avaliador: { admin: false, ativo: true, permissoes: ['nivelD1', 'sessaoConduzir'] },
+  administrador: { admin: true, ativo: true, permissoes: [] },
+}
+
 beforeEach(() => {
-  estado.perfil = 'membro'
+  estado.acesso = ACESSOS.telao!
 })
 
 describe('/projecao — acesso', () => {
-  it('qualquer perfil com leitura abre a projeção (inclusive o usuário do telão, perfil membro)', () => {
-    expect([...PERFIS_PROJECAO].sort()).toEqual([...PERFIS].sort())
+  it('o usuário do telão, só com a permissão Consulta, abre a projeção', () => {
+    semear(null)
+    montar()
+    expect(screen.getByRole('heading', { name: /Chamamento 001\/2026/ })).toBeInTheDocument()
+  })
+
+  it('conta sem nenhuma permissão não abre', () => {
+    estado.acesso = { admin: false, ativo: true, permissoes: [] }
+    semear(null)
+    montar()
+    expect(screen.getByRole('heading', { name: 'Acesso não autorizado' })).toBeInTheDocument()
   })
 })
 
@@ -125,13 +140,13 @@ describe('/projecao — cabeçalho e conteúdo pelo foco', () => {
   })
 })
 
-describe('/projecao — nenhum controle de escrita, para nenhum perfil', () => {
-  const casos = PERFIS_PROJECAO.flatMap((perfil) => FOCOS.map((foco) => ({ perfil, foco })))
-  it.each(casos)('$perfil com foco $foco.tipo', ({ perfil, foco }) => {
-    estado.perfil = perfil as Perfil
+describe('/projecao — nenhum controle de escrita, para ninguém', () => {
+  const casos = Object.keys(ACESSOS).flatMap((quem) => FOCOS.map((foco) => ({ quem, foco })))
+  it.each(casos)('$quem com foco $foco.tipo', ({ quem, foco }) => {
+    estado.acesso = ACESSOS[quem]!
     semear(foco)
     const { container } = montar()
-    expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual(['Tela cheia'])
+    expect(screen.queryAllByRole('button')).toHaveLength(0)
     for (const papel of ['textbox', 'checkbox', 'radio', 'combobox', 'spinbutton', 'link'] as const) {
       expect(screen.queryAllByRole(papel)).toHaveLength(0)
     }

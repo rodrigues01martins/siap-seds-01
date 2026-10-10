@@ -2,7 +2,7 @@ rules_version = '2';
 
 // Regras do Firestore — SIAP SEDS/GO 2026.
 // O cliente NUNCA escreve: toda escrita passa pela /api (firebase-admin ignora estas regras).
-// Leitura conforme o custom claim "perfil" do ID token.
+// Leitura conforme o cadastro do usuário em usuarios/{uid} (admin, permissoes, ativo), gravado pela /api.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -10,12 +10,23 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function perfil() {
-      return request.auth.token.get('perfil', '');
+    function cadastro() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data;
     }
 
-    function temPerfil(permitidos) {
-      return logado() && perfil() in permitidos;
+    function ativo() {
+      return logado()
+        && exists(/databases/$(database)/documents/usuarios/$(request.auth.uid))
+        && cadastro().get('ativo', true) != false;
+    }
+
+    function administrador() {
+      return ativo() && cadastro().get('admin', false) == true;
+    }
+
+    // Lê os dados do app: conta ativa, administradora ou com ao menos uma permissão.
+    function leitor() {
+      return ativo() && (cadastro().get('admin', false) == true || cadastro().get('permissoes', []).size() > 0);
     }
 
     // Matriz de avaliação: qualquer usuário autenticado.
@@ -24,26 +35,26 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Chamamentos e tudo abaixo (propostas, avaliações...): Comissão, admin e controle (só leitura).
+    // Chamamentos e tudo abaixo (propostas, avaliações, sessões...).
     match /chamamentos/{documento=**} {
-      allow read: if temPerfil(['admin', 'presidente', 'relator', 'membro', 'controle']);
+      allow read: if leitor();
       allow write: if false;
     }
 
     match /oscs/{oscId} {
-      allow read: if temPerfil(['admin', 'presidente', 'relator', 'membro', 'controle']);
+      allow read: if leitor();
       allow write: if false;
     }
 
-    // Trilha de auditoria: gestão e controle.
+    // Histórico de alterações: só o administrador.
     match /auditoria/{eventoId} {
-      allow read: if temPerfil(['admin', 'presidente', 'controle']);
+      allow read: if administrador();
       allow write: if false;
     }
 
-    // Cadastro do usuário: o próprio, admin, e presidente/relator (listam a Comissão na sessão).
+    // Cadastro do usuário: o próprio (o app lê o seu acesso) e os leitores (listam a Comissão na sessão).
     match /usuarios/{uid} {
-      allow read: if logado() && (request.auth.uid == uid || temPerfil(['admin', 'presidente', 'relator']));
+      allow read: if logado() && (request.auth.uid == uid || leitor());
       allow write: if false;
     }
 
