@@ -63,6 +63,20 @@ describe('tela Usuários', () => {
     })
   })
 
+  it('Gerenciar: cliques seguidos somam as permissões, mesmo antes de a lista atualizar', async () => {
+    render(<TelaUsuarios />)
+    await userEvent.click(within(linhaDe('Assessoria')).getByRole('button', { name: 'Gerenciar' }))
+    const painel = screen.getByRole('dialog', { name: 'Assessoria' })
+    await userEvent.click(within(painel).getByRole('switch', { name: /^Ver chamamentos/ }))
+    await userEvent.click(within(painel).getByRole('switch', { name: 'OSCs' }))
+    await userEvent.click(within(painel).getByRole('switch', { name: 'Propostas' }))
+    expect(simulado.chamarApi).toHaveBeenLastCalledWith('/api/usuarios', {
+      metodo: 'PATCH',
+      corpo: { uid: 'a1', permissoes: ['consultar', 'oscs', 'propostas'] },
+    })
+    expect(within(painel).getByRole('switch', { name: 'OSCs' })).toBeChecked()
+  })
+
   it('Gerenciar: tornar administrador, papel na Comissão e e-mail de senha', async () => {
     render(<TelaUsuarios />)
     await userEvent.click(within(linhaDe('Cejanne Ribeiro')).getByRole('button', { name: 'Gerenciar' }))

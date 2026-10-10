@@ -96,7 +96,7 @@ export function TelaUsuarios() {
           }}
         />
       )}
-      {selecionado && <PainelGerenciar usuario={selecionado} euMesmo={selecionado.id === eu?.uid} onFechar={() => setAberto(null)} />}
+      {selecionado && <PainelGerenciar key={selecionado.id} usuario={selecionado} euMesmo={selecionado.id === eu?.uid} onFechar={() => setAberto(null)} />}
     </>
   )
 }
@@ -241,7 +241,11 @@ function PainelGerenciar({ usuario, euMesmo, onFechar }: { usuario: LinhaUsuario
   const [ocupado, setOcupado] = useState(false)
   const [erro, setErro] = useState<unknown>(null)
   const [aviso, setAviso] = useState<string | null>(null)
-  const permissoes = (usuario.permissoes ?? []).filter((p): p is Permissao => PERMISSOES.includes(p))
+  // Última lista enviada: o próximo clique parte dela, e não da lista na tela, que só atualiza quando o
+  // Firestore avisa. Sem isso, cliques seguidos apagavam a permissão ligada no clique anterior.
+  const [enviadas, setEnviadas] = useState<Permissao[] | null>(null)
+  const naTela = (usuario.permissoes ?? []).filter((p): p is Permissao => PERMISSOES.includes(p))
+  const permissoes = enviadas ?? naTela
   const admin = usuario.admin === true
   const ativo = usuario.ativo !== false
 
@@ -253,6 +257,7 @@ function PainelGerenciar({ usuario, euMesmo, onFechar }: { usuario: LinhaUsuario
       await chamarApi('/api/usuarios', { metodo: 'PATCH', corpo: { uid: usuario.id, ...dados } })
       if (mensagem) setAviso(mensagem)
     } catch (e) {
+      if (dados.permissoes) setEnviadas(null) // falhou: volta ao que está gravado
       setErro(e)
     } finally {
       setOcupado(false)
@@ -316,7 +321,16 @@ function PainelGerenciar({ usuario, euMesmo, onFechar }: { usuario: LinhaUsuario
           </Botao>
         }
       />
-      <Permissoes ativas={permissoes} admin={admin} ocupado={ocupado} onAlternar={(p) => alterar({ permissoes: alternarPermissao(permissoes, p) })} />
+      <Permissoes
+        ativas={permissoes}
+        admin={admin}
+        ocupado={ocupado}
+        onAlternar={(p) => {
+          const novas = alternarPermissao(permissoes, p)
+          setEnviadas(novas)
+          void alterar({ permissoes: novas })
+        }}
+      />
     </Painel>
   )
 }
