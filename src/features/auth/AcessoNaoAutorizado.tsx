@@ -1,7 +1,13 @@
-// Conta sem acesso ao app (sem cadastro, sem nenhuma permissão ou desativada) ou sem a permissão da tela.
+// Conta sem acesso ao app (sem cadastro, sem nenhuma permissão ou desativada): tela própria (AuthPage).
+// Sem a permissão de uma tela, mas com acesso ao app: aviso dentro do AppShell (sem outro header/main).
 // Não há botão de "verificar": quando o administrador libera, a tela muda sozinha.
 
-import { Link } from 'react-router'
+import { House, LogOut, RotateCw } from 'lucide-react'
+import { AuthPage } from '../../components/templates/AuthPage'
+import { Alert } from '../../components/ui/Alert'
+import { Button } from '../../components/ui/Button'
+import { PageHeader } from '../../components/ui/PageHeader'
+import { ButtonLink } from '../../components/ui/ButtonLink'
 import { podeLer } from '../../domain/permissoes'
 import { useUsuario } from './useUsuario'
 
@@ -16,31 +22,37 @@ export function AcessoNaoAutorizado() {
       ? 'Esta conta está desativada. Fale com o administrador.'
       : 'Sua conta ainda não tem acesso liberado. Peça ao administrador que libere na tela Usuários; esta página atualiza sozinha.'
 
+  if (temApp) {
+    return (
+      <>
+        <PageHeader titulo="Acesso não autorizado" />
+        <Alert tom="warning" titulo="Sem permissão para esta tela" acao={<ButtonLink para="/" variante="secondary" tamanho="sm" icone={House}>Voltar ao início</ButtonLink>}>
+          Conta {usuario?.email}. {mensagem}
+        </Alert>
+      </>
+    )
+  }
+
   return (
-    <main className="mx-auto mt-24 max-w-md rounded-lg border border-slate-200 bg-white p-8 shadow-sm">
-      <h1 className="text-xl font-semibold text-slate-900">Acesso não autorizado</h1>
-      <p className="mt-3 text-slate-600">
+    <AuthPage titulo="Acesso não autorizado">
+      <p className="text-body-md text-text-primary">
         Conta <strong>{usuario?.email}</strong>. {mensagem}
       </p>
-      {!temApp && usuario?.erro && (
-        <p role="alert" className="mt-3 rounded-md bg-amber-50 p-3 text-sm text-amber-900">
-          Detalhe: {usuario.erro}
-        </p>
+      {usuario?.erro && (
+        <div className="mt-4">
+          <Alert tom="warning" titulo="Detalhe">
+            {usuario.erro}
+          </Alert>
+        </div>
       )}
-      <div className="mt-6 flex gap-3">
-        {temApp ? (
-          <Link to="/" className="rounded-md bg-slate-900 px-4 py-2 text-white">
-            Voltar ao início
-          </Link>
-        ) : (
-          <button type="button" onClick={() => window.location.reload()} className="rounded-md bg-slate-900 px-4 py-2 text-white">
-            Recarregar
-          </button>
-        )}
-        <button type="button" onClick={() => sair()} className="rounded-md border border-slate-300 px-4 py-2">
+      <div className="mt-6 flex flex-wrap gap-3">
+        <Button icone={RotateCw} onClick={() => window.location.reload()}>
+          Recarregar
+        </Button>
+        <Button variante="secondary" icone={LogOut} onClick={() => void sair()}>
           Sair
-        </button>
+        </Button>
       </div>
-    </main>
+    </AuthPage>
   )
 }

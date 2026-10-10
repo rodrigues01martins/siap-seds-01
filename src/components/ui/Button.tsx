@@ -36,6 +36,16 @@ const TAMANHOS: Record<TamanhoBotao, string> = {
   lg: 'h-(--sds-button-height-lg) px-(--sds-button-padding-x-lg) text-body-md font-semibold',
 }
 
+/** Classes de botão (também usadas pelo ButtonLink, para links com aparência de botão). */
+export function classesBotao({ variante = 'primary', tamanho = 'md' }: { variante?: VarianteBotao; tamanho?: TamanhoBotao }): string {
+  return cx(
+    'inline-flex shrink-0 items-center justify-center gap-2 rounded-button whitespace-nowrap',
+    'transition-colors duration-fast ease-standard',
+    VARIANTES[variante],
+    TAMANHOS[tamanho],
+  )
+}
+
 export const Button = forwardRef<HTMLButtonElement, PropsBotao>(function Button(
   { variante = 'primary', tamanho = 'md', carregando = false, desabilitado = false, icone, type = 'button', className, onClick, children, ...resto },
   ref,
@@ -56,10 +66,7 @@ export const Button = forwardRef<HTMLButtonElement, PropsBotao>(function Button(
         onClick?.(evento)
       }}
       className={cx(
-        'inline-flex shrink-0 items-center justify-center gap-2 rounded-button whitespace-nowrap',
-        'transition-colors duration-fast ease-standard',
-        VARIANTES[variante],
-        TAMANHOS[tamanho],
+        classesBotao({ variante, tamanho }),
         'disabled:cursor-not-allowed disabled:border-transparent disabled:bg-button-disabled-bg disabled:text-button-disabled-fg',
         carregando && 'cursor-progress',
         className,

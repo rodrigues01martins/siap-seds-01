@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { TelaUsuarios } from './TelaUsuarios'
 
@@ -29,11 +30,17 @@ beforeEach(() => {
   ]
 })
 
-const linhaDe = (nome: string) => screen.getByText(nome).closest('li')!
+const linhaDe = (nome: string) => screen.getByText(nome).closest('tr')!
+const montar = () =>
+  render(
+    <MemoryRouter>
+      <TelaUsuarios />
+    </MemoryRouter>,
+  )
 
 describe('tela Usuários', () => {
   it('lista com números, selos e áreas liberadas', () => {
-    render(<TelaUsuarios />)
+    montar()
     expect(screen.getByText('Total de usuários').nextSibling).toHaveTextContent('3')
     expect(screen.getByText('Administradores').nextSibling).toHaveTextContent('1')
     expect(screen.getByText('Sem nenhum acesso liberado').nextSibling).toHaveTextContent('1')
@@ -45,15 +52,15 @@ describe('tela Usuários', () => {
   })
 
   it('busca por nome ou e-mail', async () => {
-    render(<TelaUsuarios />)
+    montar()
     await userEvent.type(screen.getByRole('searchbox', { name: 'Buscar por e-mail ou nome' }), 'astamp')
-    expect(screen.getByText('1 usuário')).toBeInTheDocument()
+    expect(screen.getAllByRole('row')).toHaveLength(2) // cabeçalho + 1 usuário
     expect(screen.queryByText('Cejanne Ribeiro')).not.toBeInTheDocument()
   })
 
   it('Gerenciar: ligar uma permissão grava na hora (PATCH com a lista nova)', async () => {
-    render(<TelaUsuarios />)
-    await userEvent.click(within(linhaDe('Cejanne Ribeiro')).getByRole('button', { name: 'Gerenciar' }))
+    montar()
+    await userEvent.click(within(linhaDe('Cejanne Ribeiro')).getByRole('button', { name: /^Gerenciar/ }))
     const painel = screen.getByRole('dialog', { name: 'Cejanne Ribeiro' })
     expect(within(painel).getByRole('switch', { name: 'Níveis da D1 (subcritérios)' })).toBeChecked()
     await userEvent.click(within(painel).getByRole('switch', { name: 'Homologar proposta' }))
@@ -64,8 +71,8 @@ describe('tela Usuários', () => {
   })
 
   it('Gerenciar: cliques seguidos somam as permissões, mesmo antes de a lista atualizar', async () => {
-    render(<TelaUsuarios />)
-    await userEvent.click(within(linhaDe('Assessoria')).getByRole('button', { name: 'Gerenciar' }))
+    montar()
+    await userEvent.click(within(linhaDe('Assessoria')).getByRole('button', { name: /^Gerenciar/ }))
     const painel = screen.getByRole('dialog', { name: 'Assessoria' })
     await userEvent.click(within(painel).getByRole('switch', { name: /^Ver chamamentos/ }))
     await userEvent.click(within(painel).getByRole('switch', { name: 'OSCs' }))
@@ -78,8 +85,8 @@ describe('tela Usuários', () => {
   })
 
   it('Gerenciar: tornar administrador, papel na Comissão e e-mail de senha', async () => {
-    render(<TelaUsuarios />)
-    await userEvent.click(within(linhaDe('Cejanne Ribeiro')).getByRole('button', { name: 'Gerenciar' }))
+    montar()
+    await userEvent.click(within(linhaDe('Cejanne Ribeiro')).getByRole('button', { name: /^Gerenciar/ }))
     const painel = screen.getByRole('dialog', { name: 'Cejanne Ribeiro' })
     await userEvent.click(within(painel).getByRole('button', { name: 'Tornar administrador' }))
     expect(simulado.chamarApi).toHaveBeenLastCalledWith('/api/usuarios', { metodo: 'PATCH', corpo: { uid: 'c1', admin: true } })
@@ -91,8 +98,8 @@ describe('tela Usuários', () => {
   })
 
   it('o próprio administrador não se remove nem se desativa (botões bloqueados)', async () => {
-    render(<TelaUsuarios />)
-    await userEvent.click(within(linhaDe('Juliano Rodrigues')).getByRole('button', { name: 'Gerenciar' }))
+    montar()
+    await userEvent.click(within(linhaDe('Juliano Rodrigues')).getByRole('button', { name: /^Gerenciar/ }))
     const painel = screen.getByRole('dialog', { name: 'Juliano Rodrigues' })
     expect(within(painel).getByRole('button', { name: 'Remover administrador' })).toBeDisabled()
     expect(within(painel).getByRole('button', { name: 'Desativar' })).toBeDisabled()
@@ -100,11 +107,11 @@ describe('tela Usuários', () => {
   })
 
   it('Novo usuário: cadastra (POST) e envia o e-mail para criar a senha', async () => {
-    render(<TelaUsuarios />)
+    montar()
     await userEvent.click(screen.getByRole('button', { name: 'Novo usuário' }))
     const painel = screen.getByRole('dialog', { name: 'Novo usuário' })
-    await userEvent.type(within(painel).getByLabelText('Nome'), 'Maria Souza')
-    await userEvent.type(within(painel).getByLabelText('E-mail'), 'Maria@Goias.gov.br')
+    await userEvent.type(within(painel).getByRole('textbox', { name: 'Nome' }), 'Maria Souza')
+    await userEvent.type(within(painel).getByRole('textbox', { name: 'E-mail' }), 'Maria@Goias.gov.br')
     await userEvent.click(within(painel).getByRole('switch', { name: 'Níveis da D1 (subcritérios)' }))
     await userEvent.click(within(painel).getByRole('button', { name: 'Cadastrar e enviar e-mail' }))
     expect(simulado.chamarApi).toHaveBeenCalledWith('/api/usuarios', {
@@ -112,11 +119,11 @@ describe('tela Usuários', () => {
       corpo: { nome: 'Maria Souza', email: 'maria@goias.gov.br', admin: false, comissao: null, permissoes: ['consultar', 'nivelD1'] },
     })
     await waitFor(() => expect(simulado.enviarEmailDeSenha).toHaveBeenCalledWith('maria@goias.gov.br'))
-    expect(await screen.findByRole('status')).toHaveTextContent('Enviamos para maria@goias.gov.br o e-mail para criar a senha')
+    expect(await screen.findByText(/Enviamos para maria@goias.gov.br o e-mail para criar a senha/)).toBeInTheDocument()
   })
 
   it('Novo usuário: dados inválidos mostram o erro no campo e não chamam o servidor', async () => {
-    render(<TelaUsuarios />)
+    montar()
     await userEvent.click(screen.getByRole('button', { name: 'Novo usuário' }))
     await userEvent.click(screen.getByRole('button', { name: 'Cadastrar e enviar e-mail' }))
     expect(screen.getByText('Informe um e-mail válido.')).toBeInTheDocument()

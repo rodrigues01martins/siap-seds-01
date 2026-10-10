@@ -1,8 +1,9 @@
-// Painel lateral modal (ex.: Gerenciar usuário): mesmas regras de foco do Dialog, entra pela direita.
+// Painel lateral modal (ex.: Gerenciar usuário; menu em telas pequenas): mesmas regras de foco do Dialog.
 
 import { X } from 'lucide-react'
 import { useId, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { cx } from './cx'
 import { Icone } from './Icone'
 import { useFocoPreso } from './useFocoPreso'
 
@@ -13,15 +14,17 @@ export interface PropsDrawer {
   onFechar: () => void
   children?: ReactNode
   rodape?: ReactNode
+  /** Lado de onde o painel entra (esquerda: menu de navegação em telas pequenas). */
+  lado?: 'direita' | 'esquerda'
 }
 
-export function Drawer({ aberto, titulo, descricao, onFechar, children, rodape }: PropsDrawer) {
+export function Drawer({ aberto, titulo, descricao, onFechar, children, rodape, lado = 'direita' }: PropsDrawer) {
   const ref = useRef<HTMLDivElement>(null)
   const id = useId()
   const aoTeclar = useFocoPreso(aberto, ref, onFechar)
   if (!aberto) return null
   return createPortal(
-    <div className="fixed inset-0 z-40 flex justify-end">
+    <div className="fixed inset-0 z-40 flex">
       <div data-testid="overlay" aria-hidden="true" className="absolute inset-0 bg-overlay" onClick={onFechar} />
       <div
         ref={ref}
@@ -31,7 +34,7 @@ export function Drawer({ aberto, titulo, descricao, onFechar, children, rodape }
         aria-describedby={descricao ? `${id}-descricao` : undefined}
         onKeyDown={aoTeclar}
         tabIndex={-1}
-        className="relative flex h-full w-full max-w-md flex-col bg-background-surface shadow-modal"
+        className={cx('relative flex h-full w-full max-w-md flex-col bg-background-surface shadow-modal', lado === 'esquerda' ? 'mr-auto' : 'ml-auto')}
       >
         <div className="flex items-start justify-between gap-4 border-b border-border-default px-6 py-4">
           <div>

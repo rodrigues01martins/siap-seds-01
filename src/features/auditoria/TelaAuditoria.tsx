@@ -1,11 +1,16 @@
-// /auditoria — trilha de auditoria (admin, presidente, controle; firestore.rules), somente leitura.
+// /auditoria (ListPage) — histórico de alterações (só administrador; firestore.rules), somente leitura.
 // O período vai na consulta ao Firestore (índice simples de dataHora); proposta, usuário e ação são
 // filtrados aqui. Exporta para XLSX exatamente as linhas exibidas, com o rodapé de verificação.
 
 import { collection, limit, orderBy, query, Timestamp, where, type QueryConstraint } from 'firebase/firestore'
 import { useState } from 'react'
-import { AlertaErro } from '../../componentes/AlertaErro'
-import { EstadoLeitura, Titulo } from '../../componentes/basicos'
+import { FileSpreadsheet } from 'lucide-react'
+import { ListPage } from '../../components/templates/paginas'
+import { Alert } from '../../components/ui/Alert'
+import { AlertaErroApi } from '../../components/ui/AlertaErroApi'
+import { Button } from '../../components/ui/Button'
+import { ErrorState } from '../../components/ui/ErrorState'
+import { Skeleton } from '../../components/ui/Skeleton'
 import { hojeEmGoias } from '../../esquemas/base'
 import { TIPO_XLSX, baixarArquivo, nomeDeArquivo } from '../../lib/arquivo'
 import { useConsulta } from '../../lib/firestore'
@@ -37,12 +42,17 @@ export function TelaAuditoria() {
   const exibidos = filtrarAuditoria(registros, filtros)
 
   return (
-    <>
-      <Titulo
-        acoes={
-          <button
-            type="button"
-            disabled={exibidos.length === 0 || gerando !== null}
+    <ListPage
+      cabecalho={{
+        trilha: [{ rotulo: 'Chamamentos', para: '/' }, { rotulo: 'Histórico de alterações' }],
+        titulo: 'Histórico de alterações',
+        descricao: 'Cada escrita da /api grava aqui, na mesma transação, quem fez, quando e o que mudou (antes e depois). Somente leitura.',
+        acoesSecundarias: (
+          <Button
+            variante="secondary"
+            icone={FileSpreadsheet}
+            desabilitado={exibidos.length === 0}
+            carregando={gerando !== null}
             onClick={() =>
               gerar('xlsx', async () => {
                 const { auditoriaXlsx } = await import('../../relatorios/xlsx')
@@ -50,32 +60,31 @@ export function TelaAuditoria() {
                 baixarArquivo(arquivo, nomeDeArquivo('auditoria', filtros.de ?? '', filtros.ate ?? '') + '.xlsx', TIPO_XLSX)
               })
             }
-            className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium hover:bg-slate-50 disabled:opacity-50"
           >
-            {gerando ? 'Gerando…' : 'Exportar XLSX'}
-          </button>
-        }
-      >
-        Histórico de alterações
-      </Titulo>
-      <p className="mb-4 text-sm text-slate-600">
-        Cada escrita da /api grava aqui, na mesma transação, quem fez, quando, o que mudou (antes e depois). Somente leitura.
-      </p>
+            Exportar XLSX
+          </Button>
+        ),
+      }}
+    >
       <FiltrosAuditoria inicial={filtros} onAplicar={setFiltros} />
-      <AlertaErro erro={erro} />
-      <div className="mt-4">
-        {leitura.carregando || leitura.erro ? (
-          <EstadoLeitura carregando={leitura.carregando} erro={leitura.erro} />
-        ) : (
-          <>
-            <p className="mb-2 text-sm text-slate-700" role="status">
-              {exibidos.length} de {registros.length} registro(s) do período.
-              {registros.length === LIMITE_AUDITORIA && ` Mostrando os ${LIMITE_AUDITORIA} mais recentes: escolha um período menor para ver todos.`}
-            </p>
-            <TabelaAuditoria registros={exibidos} />
-          </>
-        )}
-      </div>
-    </>
+      <AlertaErroApi erro={erro} />
+      {leitura.carregando ? (
+        <Skeleton linhas={6} rotulo="Carregando histórico" />
+      ) : leitura.erro ? (
+        <ErrorState mensagem={leitura.erro} />
+      ) : (
+        <>
+          <p className="text-body-sm text-text-secondary" role="status">
+            {exibidos.length} de {registros.length} registro(s) do período.
+          </p>
+          {registros.length === LIMITE_AUDITORIA && (
+            <Alert tom="warning" titulo="Período com muitos registros">
+              Mostrando os {LIMITE_AUDITORIA} mais recentes: escolha um período menor para ver todos.
+            </Alert>
+          )}
+          <TabelaAuditoria registros={exibidos} />
+        </>
+      )}
+    </ListPage>
   )
 }

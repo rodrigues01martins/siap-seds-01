@@ -1,6 +1,7 @@
 import { lazy, Suspense, type ReactNode } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
-import { Shell } from './componentes/Shell'
+import { AppShell } from './components/templates/AppShell'
+import { ToastProvider } from './components/ui/Toast'
 import type { Exigencia } from './domain/permissoes'
 import { TelaAdmissibilidade } from './features/admissibilidade/TelaAdmissibilidade'
 import { TelaAuditoria } from './features/auditoria/TelaAuditoria'
@@ -32,6 +33,7 @@ const so = (exige: Exigencia | null, tela: ReactNode) => <RotaProtegida exige={e
 export default function App() {
   return (
     <UsuarioProvider>
+      <ToastProvider>
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
@@ -40,7 +42,7 @@ export default function App() {
           <Route
             element={
               <RotaProtegida>
-                <Shell />
+                <AppShell />
               </RotaProtegida>
             }
           >
@@ -75,6 +77,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
+      </ToastProvider>
     </UsuarioProvider>
   )
 }

@@ -1,11 +1,21 @@
-// /usuarios (administrador): gestão de usuários. Lista com busca e números; "Gerenciar" abre o painel da
-// pessoa (administrador, papel na Comissão, e-mail de senha, desativar e permissões por área, com efeito
-// imediato); "Novo usuário" cria a conta e envia o e-mail para a pessoa criar a própria senha.
+// /usuarios (ListPage, administrador): gestão de usuários. Números no topo, tabela com busca; "Gerenciar" abre o
+// painel da pessoa (administrador, papel na Comissão, e-mail de senha, desativar e permissões por área, com
+// efeito imediato); "Novo usuário" cria a conta e envia o e-mail para a pessoa criar a própria senha.
 // Toda gravação passa por /api/usuarios (com histórico).
 
-import { useState, type ReactNode } from 'react'
-import { AlertaErro } from '../../componentes/AlertaErro'
-import { Botao, EstadoLeitura, Titulo } from '../../componentes/basicos'
+import { KeyRound, ShieldCheck, ShieldOff, UserPlus, UserRoundCog, UserRoundX, UserRoundCheck } from 'lucide-react'
+import { useState } from 'react'
+import { ListPage } from '../../components/templates/paginas'
+import { Alert } from '../../components/ui/Alert'
+import { AlertaErroApi } from '../../components/ui/AlertaErroApi'
+import { Button } from '../../components/ui/Button'
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
+import { DataTable } from '../../components/ui/DataTable'
+import { Drawer } from '../../components/ui/Drawer'
+import { Select } from '../../components/ui/Select'
+import { Badge } from '../../components/ui/StatusBadge'
+import { Switch } from '../../components/ui/Switch'
+import { TextField } from '../../components/ui/TextField'
 import { PAPEIS_COMISSAO, ROTULO_PAPEL, type PapelComissao } from '../../domain/comissao'
 import { AREAS, PERMISSOES, type Permissao } from '../../domain/permissoes'
 import { camposDoErro } from '../../esquemas/base'
@@ -15,77 +25,106 @@ import { useColecao } from '../../lib/firestore'
 import type { UsuarioCadastro } from '../../lib/tipos'
 import { enviarEmailDeSenha } from '../auth/senha'
 import { useUsuario } from '../auth/useUsuario'
-import {
-  alternarPermissao,
-  areasLiberadas,
-  contagemPermissoes,
-  filtrarUsuarios,
-  nomeDe,
-  ordenarUsuarios,
-  resumoUsuarios,
-  type LinhaUsuario,
-} from './usuarios'
+import { alternarPermissao, areasLiberadas, contagemPermissoes, nomeDe, ordenarUsuarios, resumoUsuarios, type LinhaUsuario } from './usuarios'
+
+const OPCOES_PAPEL = PAPEIS_COMISSAO.map((p) => ({ valor: p, rotulo: ROTULO_PAPEL[p] }))
 
 export function TelaUsuarios() {
   const { usuario: eu } = useUsuario()
   const leitura = useColecao<UsuarioCadastro>('usuarios')
-  const [busca, setBusca] = useState('')
   const [aberto, setAberto] = useState<string | 'novo' | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
 
   const todos = ordenarUsuarios(leitura.dados)
-  const visiveis = filtrarUsuarios(todos, busca)
   const numeros = resumoUsuarios(todos)
   const selecionado = todos.find((u) => u.id === aberto) ?? null
 
   return (
-    <>
-      <Titulo
-        acoes={
-          <button type="button" onClick={() => setAberto('novo')} className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white">
+    <ListPage
+      cabecalho={{
+        trilha: [{ rotulo: 'Chamamentos', para: '/' }, { rotulo: 'Usuários' }],
+        titulo: 'Usuários',
+        descricao: 'Cadastre usuários e libere o acesso de cada um por área. As mudanças valem na hora.',
+        acaoPrimaria: (
+          <Button icone={UserPlus} onClick={() => setAberto('novo')}>
             Novo usuário
-          </button>
-        }
-      >
-        Usuários
-      </Titulo>
-      <p className="-mt-2 mb-4 text-sm text-slate-600">Cadastre usuários e libere o acesso de cada um por área.</p>
-
+          </Button>
+        ),
+      }}
+    >
       {aviso && (
-        <p role="status" className="mb-4 rounded-md bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+        <Alert tom="success" titulo="Usuário cadastrado" onFechar={() => setAviso(null)}>
           {aviso}
-        </p>
+        </Alert>
       )}
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-4">
-        <Numero rotulo="Total de usuários" valor={numeros.total} />
-        <Numero rotulo="Administradores" valor={numeros.administradores} />
-        <Numero rotulo="Sem nenhum acesso liberado" valor={numeros.semAcesso} />
-        <Numero rotulo="Desativados" valor={numeros.desativados} />
-      </div>
+      <ul aria-label="Resumo" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {(
+          [
+            ['Total de usuários', numeros.total],
+            ['Administradores', numeros.administradores],
+            ['Sem nenhum acesso liberado', numeros.semAcesso],
+            ['Desativados', numeros.desativados],
+          ] as const
+        ).map(([rotulo, valor]) => (
+          <li key={rotulo} className="rounded-card border border-card-border bg-card-bg px-4 py-3 shadow-card">
+            <p className="text-label-md text-text-secondary">{rotulo}</p>
+            <p className="text-heading-2 text-text-primary">{valor}</p>
+          </li>
+        ))}
+      </ul>
 
-      <input
-        type="search"
-        aria-label="Buscar por e-mail ou nome"
-        placeholder="Buscar por e-mail ou nome…"
-        value={busca}
-        onChange={(e) => setBusca(e.target.value)}
-        className="mb-4 w-full rounded-md border border-slate-300 px-3 py-2"
+      <DataTable<LinhaUsuario>
+        rotulo="Usuários cadastrados"
+        linhas={todos}
+        chave={(u) => u.id}
+        carregando={leitura.carregando}
+        erro={leitura.erro}
+        busca={{ rotulo: 'Buscar por e-mail ou nome', texto: (u) => `${u.nome ?? ''} ${u.email}` }}
+        vazio={{ titulo: 'Nenhum usuário encontrado' }}
+        colunas={[
+          {
+            id: 'nome',
+            titulo: 'Usuário',
+            ordenar: (u) => nomeDe(u),
+            celula: (u) => (
+              <>
+                <span className="flex flex-wrap items-center gap-2 font-semibold">
+                  {nomeDe(u)}
+                  {u.admin && <Badge tom="info">Admin</Badge>}
+                  {u.id === eu?.uid && <Badge tom="neutral">Você</Badge>}
+                  {u.ativo === false && <Badge tom="error">Desativado</Badge>}
+                </span>
+                <span className="block text-caption text-text-muted">{u.email}</span>
+              </>
+            ),
+          },
+          {
+            id: 'areas',
+            titulo: 'Áreas liberadas',
+            celula: (u) => {
+              const areas = areasLiberadas(u)
+              if (areas === 'todas') return 'Todas as áreas'
+              if (areas.length === 0) return <em className="text-text-muted">Nenhuma área</em>
+              return (
+                <span className="flex flex-wrap gap-1">
+                  {areas.map((a) => (
+                    <Badge key={a} tom="neutral">
+                      {a}
+                    </Badge>
+                  ))}
+                </span>
+              )
+            },
+          },
+          { id: 'permissoes', titulo: 'Permissões', celula: (u) => contagemPermissoes(u) },
+        ]}
+        acoes={(u) => (
+          <Button variante="tertiary" tamanho="sm" icone={UserRoundCog} aria-label={`Gerenciar ${nomeDe(u)}`} onClick={() => setAberto(u.id)}>
+            Gerenciar
+          </Button>
+        )}
       />
-
-      <EstadoLeitura carregando={leitura.carregando} erro={leitura.erro} />
-      {!leitura.carregando && !leitura.erro && (
-        <section aria-label="Lista de usuários" className="rounded-lg border border-slate-200 bg-white">
-          <p className="border-b border-slate-200 px-4 py-2 text-xs font-semibold uppercase text-slate-500">
-            {visiveis.length} {visiveis.length === 1 ? 'usuário' : 'usuários'}
-          </p>
-          <ul>
-            {visiveis.map((u) => (
-              <ItemUsuario key={u.id} usuario={u} euMesmo={u.id === eu?.uid} onGerenciar={() => setAberto(u.id)} />
-            ))}
-          </ul>
-        </section>
-      )}
 
       {aberto === 'novo' && (
         <PainelNovo
@@ -97,143 +136,42 @@ export function TelaUsuarios() {
         />
       )}
       {selecionado && <PainelGerenciar key={selecionado.id} usuario={selecionado} euMesmo={selecionado.id === eu?.uid} onFechar={() => setAberto(null)} />}
-    </>
-  )
-}
-
-function Numero({ rotulo, valor }: { rotulo: string; valor: number }) {
-  return (
-    <div className="rounded-lg border border-slate-200 bg-white px-4 py-3">
-      <p className="text-xs text-slate-500">{rotulo}</p>
-      <p className="text-2xl font-semibold">{valor}</p>
-    </div>
-  )
-}
-
-function Selo({ children, cor = 'slate' }: { children: ReactNode; cor?: 'slate' | 'verde' | 'vermelho' }) {
-  const cores = { slate: 'bg-slate-100 text-slate-700', verde: 'bg-emerald-100 text-emerald-800', vermelho: 'bg-red-100 text-red-800' }
-  return <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${cores[cor]}`}>{children}</span>
-}
-
-function ItemUsuario({ usuario, euMesmo, onGerenciar }: { usuario: LinhaUsuario; euMesmo: boolean; onGerenciar: () => void }) {
-  const areas = areasLiberadas(usuario)
-  return (
-    <li className="flex flex-wrap items-center gap-3 border-b border-slate-100 px-4 py-3 last:border-b-0">
-      <div className="min-w-56 flex-1">
-        <p className="flex flex-wrap items-center gap-2 font-medium">
-          {nomeDe(usuario)}
-          {usuario.admin && <Selo cor="verde">Admin</Selo>}
-          {euMesmo && <Selo>Você</Selo>}
-          {usuario.ativo === false && <Selo cor="vermelho">Desativado</Selo>}
-        </p>
-        <p className="text-sm text-slate-500">{usuario.email}</p>
-      </div>
-      <div className="flex flex-1 flex-wrap gap-1 text-sm text-slate-600">
-        {areas === 'todas' ? 'Todas as áreas' : areas.length === 0 ? <em>Nenhuma área</em> : areas.map((a) => <Selo key={a}>{a}</Selo>)}
-      </div>
-      <span className="w-24 text-sm text-slate-600">{contagemPermissoes(usuario)}</span>
-      <Botao onClick={onGerenciar}>Gerenciar</Botao>
-    </li>
-  )
-}
-
-/** Painel lateral (direita) com fundo escurecido. */
-function Painel({ titulo, subtitulo, onFechar, children }: { titulo: string; subtitulo?: ReactNode; onFechar: () => void; children: ReactNode }) {
-  return (
-    <div className="fixed inset-0 z-20 flex justify-end bg-slate-900/40" onClick={onFechar}>
-      <div
-        role="dialog"
-        aria-label={titulo}
-        className="h-full w-full max-w-md overflow-y-auto bg-white p-6 shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="mb-4 flex items-start justify-between gap-2">
-          <div>
-            <h2 className="text-lg font-semibold">{titulo}</h2>
-            {subtitulo && <div className="text-sm text-slate-500">{subtitulo}</div>}
-          </div>
-          <button type="button" onClick={onFechar} aria-label="Fechar" className="text-xl text-slate-500">
-            ×
-          </button>
-        </div>
-        <div className="space-y-4">{children}</div>
-      </div>
-    </div>
-  )
-}
-
-function Bloco({ titulo, descricao, acao }: { titulo: string; descricao: ReactNode; acao?: ReactNode }) {
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 p-3">
-      <div>
-        <p className="text-xs font-semibold uppercase text-slate-500">{titulo}</p>
-        <div className="text-sm">{descricao}</div>
-      </div>
-      {acao}
-    </div>
-  )
-}
-
-function Chave({ ligada, rotulo, onAlternar, desabilitada }: { ligada: boolean; rotulo: string; onAlternar: () => void; desabilitada?: boolean }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={ligada}
-      aria-label={rotulo}
-      disabled={desabilitada}
-      onClick={onAlternar}
-      className={`relative h-6 w-11 shrink-0 rounded-full transition disabled:opacity-50 ${ligada ? 'bg-emerald-600' : 'bg-slate-300'}`}
-    >
-      <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition ${ligada ? 'left-5' : 'left-0.5'}`} />
-    </button>
+    </ListPage>
   )
 }
 
 /** Permissões por área, com a contagem de cada área. Administrador: tudo ligado e bloqueado. */
 function Permissoes({ ativas, admin, onAlternar, ocupado }: { ativas: readonly Permissao[]; admin: boolean; onAlternar: (p: Permissao) => void; ocupado?: boolean }) {
   return (
-    <>
+    <div className="space-y-4">
       {AREAS.map((area) => {
         const ligadas = area.permissoes.filter((p) => admin || ativas.includes(p.id)).length
         return (
-          <fieldset key={area.id} className="rounded-lg border border-slate-200">
-            <legend className="sr-only">{area.rotulo}</legend>
-            <div className="flex justify-between border-b border-slate-100 px-3 py-2 text-sm font-semibold">
-              <span>{area.rotulo}</span>
-              <span className="text-slate-500">
-                {ligadas}/{area.permissoes.length}
-              </span>
+          <fieldset key={area.id} className="rounded-card border border-card-border p-4">
+            <legend className="px-1 text-label-md text-text-primary">
+              {area.rotulo} <span className="text-text-secondary">({ligadas}/{area.permissoes.length})</span>
+            </legend>
+            <div className="space-y-3">
+              {area.permissoes.map((p) => (
+                <Switch key={p.id} rotulo={p.rotulo} ligado={admin || ativas.includes(p.id)} desabilitado={admin || ocupado} onMudar={() => onAlternar(p.id)} />
+              ))}
             </div>
-            {area.permissoes.map((p) => (
-              <div key={p.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
-                <span>{p.rotulo}</span>
-                <Chave ligada={admin || ativas.includes(p.id)} rotulo={p.rotulo} desabilitada={admin || ocupado} onAlternar={() => onAlternar(p.id)} />
-              </div>
-            ))}
           </fieldset>
         )
       })}
-    </>
+    </div>
   )
 }
 
-function SeletorPapel({ valor, onMudar, desabilitado }: { valor: PapelComissao | null; onMudar: (v: PapelComissao | null) => void; desabilitado?: boolean }) {
+function Bloco({ titulo, descricao, children }: { titulo: string; descricao: string; children: React.ReactNode }) {
   return (
-    <select
-      aria-label="Papel na Comissão"
-      value={valor ?? ''}
-      disabled={desabilitado}
-      onChange={(e) => onMudar((e.target.value || null) as PapelComissao | null)}
-      className="rounded-md border border-slate-300 px-2 py-1 text-sm"
-    >
-      <option value="">Nenhum</option>
-      {PAPEIS_COMISSAO.map((p) => (
-        <option key={p} value={p}>
-          {ROTULO_PAPEL[p]}
-        </option>
-      ))}
-    </select>
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-card-border p-4">
+      <div>
+        <p className="text-label-md text-text-primary">{titulo}</p>
+        <p className="text-body-sm text-text-secondary">{descricao}</p>
+      </div>
+      {children}
+    </div>
   )
 }
 
@@ -241,6 +179,7 @@ function PainelGerenciar({ usuario, euMesmo, onFechar }: { usuario: LinhaUsuario
   const [ocupado, setOcupado] = useState(false)
   const [erro, setErro] = useState<unknown>(null)
   const [aviso, setAviso] = useState<string | null>(null)
+  const [confirmarDesativar, setConfirmarDesativar] = useState(false)
   // Última lista enviada: o próximo clique parte dela, e não da lista na tela, que só atualiza quando o
   // Firestore avisa. Sem isso, cliques seguidos apagavam a permissão ligada no clique anterior.
   const [enviadas, setEnviadas] = useState<Permissao[] | null>(null)
@@ -276,62 +215,73 @@ function PainelGerenciar({ usuario, euMesmo, onFechar }: { usuario: LinhaUsuario
   }
 
   return (
-    <Painel
+    <Drawer
+      aberto
       titulo={nomeDe(usuario)}
+      descricao={`${usuario.email} · ${admin ? 'Administrador: todas as permissões' : `${permissoes.length} de ${PERMISSOES.length} permissões ativas`}`}
       onFechar={onFechar}
-      subtitulo={
-        <>
-          {usuario.email}
-          <br />
-          {admin ? 'Administrador: todas as permissões' : `${permissoes.length} de ${PERMISSOES.length} permissões ativas`}
-        </>
-      }
     >
-      <AlertaErro erro={erro} />
-      {aviso && (
-        <p role="status" className="text-sm text-emerald-800">
-          {aviso}
-        </p>
-      )}
-      <Bloco
-        titulo="Função"
-        descricao={admin ? 'Administrador' : 'Usuário'}
-        acao={
-          <Botao desabilitado={ocupado || (euMesmo && admin)} onClick={() => alterar({ admin: !admin })}>
+      <div className="space-y-4">
+        <AlertaErroApi erro={erro} />
+        {aviso && (
+          <Alert tom="success" titulo="Feito">
+            {aviso}
+          </Alert>
+        )}
+        <Bloco titulo="Função" descricao={admin ? 'Administrador' : 'Usuário'}>
+          <Button variante="secondary" tamanho="sm" icone={admin ? ShieldOff : ShieldCheck} desabilitado={ocupado || (euMesmo && admin)} onClick={() => void alterar({ admin: !admin })}>
             {admin ? 'Remover administrador' : 'Tornar administrador'}
-          </Botao>
-        }
-      />
-      <Bloco
-        titulo="Senha"
-        descricao="Definida pelo próprio usuário"
-        acao={<Botao onClick={enviarSenha}>Enviar e-mail para redefinir senha</Botao>}
-      />
-      <Bloco
-        titulo="Papel na Comissão"
-        descricao="Aparece na sessão e na ata"
-        acao={<SeletorPapel valor={usuario.comissao ?? null} desabilitado={ocupado} onMudar={(comissao) => alterar({ comissao })} />}
-      />
-      <Bloco
-        titulo="Conta"
-        descricao={ativo ? 'Ativa' : 'Desativada: não entra no app'}
-        acao={
-          <Botao perigo={ativo} desabilitado={ocupado || euMesmo} onClick={() => alterar({ ativo: !ativo }, ativo ? 'Conta desativada.' : 'Conta reativada.')}>
-            {ativo ? 'Desativar' : 'Reativar'}
-          </Botao>
-        }
-      />
-      <Permissoes
-        ativas={permissoes}
-        admin={admin}
-        ocupado={ocupado}
-        onAlternar={(p) => {
-          const novas = alternarPermissao(permissoes, p)
-          setEnviadas(novas)
-          void alterar({ permissoes: novas })
+          </Button>
+        </Bloco>
+        <Bloco titulo="Senha" descricao="Definida pelo próprio usuário">
+          <Button variante="secondary" tamanho="sm" icone={KeyRound} onClick={() => void enviarSenha()}>
+            Enviar e-mail para redefinir senha
+          </Button>
+        </Bloco>
+        <Select
+          rotulo="Papel na Comissão"
+          ajuda="Aparece na sessão e na ata; não dá permissão."
+          vazio="Nenhum"
+          opcoes={OPCOES_PAPEL}
+          value={usuario.comissao ?? ''}
+          desabilitado={ocupado}
+          onChange={(e) => void alterar({ comissao: (e.target.value || null) as PapelComissao | null })}
+        />
+        <Bloco titulo="Conta" descricao={ativo ? 'Ativa' : 'Desativada: não entra no app'}>
+          {ativo ? (
+            <Button variante="destructive" tamanho="sm" icone={UserRoundX} desabilitado={ocupado || euMesmo} onClick={() => setConfirmarDesativar(true)}>
+              Desativar
+            </Button>
+          ) : (
+            <Button variante="secondary" tamanho="sm" icone={UserRoundCheck} desabilitado={ocupado} onClick={() => void alterar({ ativo: true }, 'Conta reativada.')}>
+              Reativar
+            </Button>
+          )}
+        </Bloco>
+        <Permissoes
+          ativas={permissoes}
+          admin={admin}
+          ocupado={ocupado}
+          onAlternar={(p) => {
+            const novas = alternarPermissao(permissoes, p)
+            setEnviadas(novas)
+            void alterar({ permissoes: novas })
+          }}
+        />
+      </div>
+      <ConfirmDialog
+        aberto={confirmarDesativar}
+        titulo={`Desativar ${nomeDe(usuario)}?`}
+        mensagem="A pessoa perde o acesso ao app na hora e as sessões abertas são encerradas. Dá para reativar depois."
+        rotuloConfirmar="Desativar"
+        confirmando={ocupado}
+        onCancelar={() => setConfirmarDesativar(false)}
+        onConfirmar={() => {
+          setConfirmarDesativar(false)
+          void alterar({ ativo: false }, 'Conta desativada.')
         }}
       />
-    </Painel>
+    </Drawer>
   )
 }
 
@@ -369,40 +319,38 @@ function PainelNovo({ onFechar, onCriado }: { onFechar: () => void; onCriado: (m
     }
   }
 
-  const campoTexto = (rotulo: string, valor: string, mudar: (v: string) => void, chave: string, tipo = 'text') => (
-    <label className="block">
-      <span className="text-sm font-medium text-slate-700">{rotulo}</span>
-      <input
-        type={tipo}
-        value={valor}
-        onChange={(e) => mudar(e.target.value)}
-        aria-invalid={campos[chave] ? true : undefined}
-        className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
-      />
-      {campos[chave] && <span className="text-sm text-red-700">{campos[chave]}</span>}
-    </label>
-  )
-
   return (
-    <Painel titulo="Novo usuário" subtitulo="A pessoa recebe um e-mail para criar a própria senha." onFechar={onFechar}>
-      <AlertaErro erro={erro} />
-      {campoTexto('Nome', nome, setNome, 'nome')}
-      {campoTexto('E-mail', email, setEmail, 'email', 'email')}
-      <Bloco titulo="Papel na Comissão" descricao="Aparece na sessão e na ata" acao={<SeletorPapel valor={comissao} onMudar={setComissao} />} />
-      <Bloco
-        titulo="Função"
-        descricao={admin ? 'Administrador (todas as permissões)' : 'Usuário'}
-        acao={<Chave ligada={admin} rotulo="Administrador" onAlternar={() => setAdmin(!admin)} />}
-      />
-      <Permissoes ativas={permissoes} admin={admin} onAlternar={(p) => setPermissoes(alternarPermissao(permissoes, p))} />
-      <button
-        type="button"
-        onClick={cadastrar}
-        disabled={enviando}
-        className="w-full rounded-md bg-slate-900 px-4 py-2 font-medium text-white disabled:opacity-60"
-      >
-        {enviando ? 'Cadastrando…' : 'Cadastrar e enviar e-mail'}
-      </button>
-    </Painel>
+    <Drawer
+      aberto
+      titulo="Novo usuário"
+      descricao="A pessoa recebe um e-mail para criar a própria senha."
+      onFechar={onFechar}
+      rodape={
+        <>
+          <Button variante="secondary" onClick={onFechar}>
+            Cancelar
+          </Button>
+          <Button icone={UserPlus} carregando={enviando} onClick={() => void cadastrar()}>
+            Cadastrar e enviar e-mail
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        <AlertaErroApi erro={erro} />
+        <TextField rotulo="Nome" obrigatorio value={nome} onChange={(e) => setNome(e.target.value)} erro={campos.nome} />
+        <TextField rotulo="E-mail" type="email" obrigatorio value={email} onChange={(e) => setEmail(e.target.value)} erro={campos.email} />
+        <Select
+          rotulo="Papel na Comissão"
+          ajuda="Aparece na sessão e na ata; não dá permissão."
+          vazio="Nenhum"
+          opcoes={OPCOES_PAPEL}
+          value={comissao ?? ''}
+          onChange={(e) => setComissao((e.target.value || null) as PapelComissao | null)}
+        />
+        <Switch rotulo="Administrador (todas as permissões e a gestão de usuários)" ligado={admin} onMudar={setAdmin} />
+        <Permissoes ativas={permissoes} admin={admin} onAlternar={(p) => setPermissoes(alternarPermissao(permissoes, p))} />
+      </div>
+    </Drawer>
   )
 }

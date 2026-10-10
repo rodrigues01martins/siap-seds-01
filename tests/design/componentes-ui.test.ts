@@ -4,7 +4,7 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-const PASTAS = [join('src', 'components', 'ui'), join('src', 'features', 'catalogo')]
+const PASTAS = [join('src', 'components', 'ui'), join('src', 'components', 'templates'), join('src', 'features', 'catalogo')]
 const arquivos = PASTAS.flatMap((pasta) =>
   readdirSync(join(process.cwd(), pasta))
     .filter((a) => /\.(ts|tsx)$/.test(a) && !a.includes('.test.'))
