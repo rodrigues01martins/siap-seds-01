@@ -16,7 +16,8 @@ const PASTA = join('docs', 'auditoria-design', 'depois')
 const PROPOSTA = propostaE2E(montarEnsaio('2026-11-10').propostas)
 const ROTAS = [
   ...rotasE2E(PROPOSTA),
-  { slug: 'catalogo-ui', caminho: '/ui', exige: 'admin' },
+  // Endereço inexistente (o antigo catálogo /ui, removido): a página "não encontrado" também é medida.
+  { slug: 'nao-encontrado', caminho: '/ui', exige: null },
   { slug: 'diligencia-nova', caminho: `/chamamentos/ensaio-2026/propostas/${PROPOSTA}/diligencias/nova`, exige: 'diligencias' },
 ]
 
@@ -27,10 +28,7 @@ interface Resultado {
   zoom: { rolagemHorizontal: number; cortados: string[] }
 }
 /** Achados conhecidos, de severidade abaixo de alta, registrados em docs/auditoria-design/pendencias.md. */
-const CONHECIDOS: Record<string, string[]> = {
-  // Checkbox no estado de erro: o contorno vermelho de 1 px cobre o anel de foco (só o catálogo usa esse estado).
-  'catalogo-ui': ['input[checkbox] "campor1b"'],
-}
+const CONHECIDOS: Record<string, string[]> = {}
 
 const resultados: Resultado[] = []
 const erros: { formulario: string; anunciado: boolean; mensagem: string }[] = []
@@ -67,6 +65,11 @@ test('todas as rotas: teclado, foco visível e zoom 200%', async ({ browser, bas
     await pagina.setViewportSize({ width: 1280, height: 900 })
     await pagina.goto(rota.caminho)
     await esperarTela(pagina)
+    if (rota.slug === 'nao-encontrado') {
+      // O catálogo /ui foi removido (Manutenção 2): o endereço mostra a página "não encontrado" do app.
+      await expect(pagina.getByRole('heading', { level: 1, name: 'Página não encontrada' })).toBeVisible()
+      await expect(pagina.getByRole('navigation', { name: 'Menu principal' }).getByRole('link', { name: /Catálogo/ })).toHaveCount(0)
+    }
     // A projeção (telão) não tem nenhum elemento interativo, por desenho.
     const teclado = rota.slug === 'projecao' ? null : await percorrerComTeclado(pagina)
     await pagina.setViewportSize({ width: 640, height: 450 })

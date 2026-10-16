@@ -25,7 +25,7 @@ formulários (agora ficam numa região `aria-live`).
 
 | # | Pendência | Detalhe | Sugestão |
 |---|---|---|---|
-| M1 | Checkbox no estado de erro esconde o anel de foco | O contorno vermelho de 1 px (`outline-1`) vence o anel de 2 px. Só o catálogo `/ui` usa esse estado hoje (`depois/acessibilidade.md`). | Trocar o contorno de erro por borda ou usar `focus-visible:outline-2 focus-visible:outline-focus-ring`. |
+| M1 | Checkbox no estado de erro esconde o anel de foco | O contorno vermelho de 1 px (`outline-1`) vence o anel de 2 px. Nenhuma tela usa esse estado hoje (era visto só no catálogo `/ui`, removido na Manutenção 2); vale para uso futuro. | Trocar o contorno de erro por borda ou usar `focus-visible:outline-2 focus-visible:outline-focus-ring`. |
 | M2 | Cores derivadas do DS sem validação | Os HEX de marca (§3 e §8 do DS) foram derivados da identidade visual. | Validar com a Comunicação; se mudarem, basta trocar os primitivos em `tokens.css` (os relatórios leem de lá). |
 | M3 | Tabelas largas rolam na horizontal | Painel do chamamento (ações por proposta), D2 e classificação, a 768 px e no zoom 200%. Funciona e é permitido (WCAG 1.4.10), mas é apertado. | Agrupar as ações por linha num menu ("Avaliar ▾") e esconder colunas secundárias abaixo de `lg`. |
 | M4 | Documento do DS incompleto | `docs/DESIGN-SYSTEM-SEDS.md` termina no meio da seção 13. Seções citadas nos pedidos (18–21, 28, 36, 43, 44, 51–54) não estão no arquivo. | Completar o documento; revisar as telas contra as seções que faltam. |
@@ -34,9 +34,10 @@ formulários (agora ficam numa região `aria-live`).
 
 ## Baixa
 
+Resolvido pela Manutenção 2: o catálogo `/ui` (antiga B1, tela sem template) foi removido do sistema.
+
 | # | Pendência | Detalhe | Sugestão |
 |---|---|---|---|
-| B1 | Catálogo `/ui` sem template | Única tela do app fora dos templates (a projeção não usa template por desenho). É interna, só do administrador. | Envolver em `DetailPage` com trilha "Administração › Catálogo". |
 | B2 | 31 elementos de contraste "a revisar" no axe | O axe não decide sozinho: rodapé fixo da D1 (sobreposto ao conteúdo) e textos do gráfico SVG da D2. **Revisados à mão:** passam (texto do rodapé #242424 sobre #FFFFFF; rótulos brancos sobre teal 5,4:1 e azul 6,4:1; anos #666666 sobre #FFFFFF 5,7:1). Eram 111 no "antes". | Nada a fazer; repetir a revisão se as cores do gráfico mudarem. |
 | B3 | "Acesso não autorizado" dentro do app sem template | Mensagem curta com PageHeader e alerta. | Usar `DetailPage` quando houver uma revisão de textos. |
 | B4 | Utilitários de teste duplicados | `etapa3.spec.ts` e `etapa4.spec.ts` têm cópias de funções que hoje estão em `tests/e2e/apoio.ts`. | Passar a importar de `apoio.ts`. |

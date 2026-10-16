@@ -3,7 +3,7 @@
 // o relatorio.md (violações por rota, HEX soltos, classes de paleta e fontes).
 // Uso: npm run test:e2e:baseline (fase "antes"); FASE_AUDITORIA=depois para medir de novo — aí o relatório
 // também compara com docs/auditoria-design/antes/ (axe por rota, HEX soltos, classes de paleta, telas sem
-// template) e mede rotas novas (catálogo /ui, nova diligência).
+// template) e mede rotas novas (nova diligência).
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
@@ -23,7 +23,6 @@ const ROTAS_NOVAS: RotaE2E[] =
   FASE === 'antes'
     ? []
     : [
-        { slug: 'catalogo-ui', caminho: '/ui', exige: 'admin' },
         { slug: 'diligencia-nova', caminho: `/chamamentos/ensaio-2026/propostas/${PROPOSTA}/diligencias/nova`, exige: 'diligencias' },
       ]
 

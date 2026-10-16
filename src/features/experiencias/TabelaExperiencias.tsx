@@ -240,7 +240,7 @@ export function TabelaExperiencias({ experiencias, somenteLeitura, onEditar, onE
           },
           {
             id: 'valor',
-            titulo: 'Valor anual',
+            titulo: 'Valor anual atualizado',
             alinhar: 'direita',
             ordenar: (e) => e.valorAnualCentavos ?? 0,
             celula: (e) => <span className="whitespace-nowrap">{e.valorAnualCentavos == null ? '—' : formatarReais(e.valorAnualCentavos)}</span>,

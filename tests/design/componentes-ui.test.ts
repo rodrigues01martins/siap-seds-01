@@ -1,10 +1,10 @@
-// Regra 6 do CLAUDE.md na biblioteca de componentes (e no catálogo /ui): só tokens semânticos
+// Regra 6 do CLAUDE.md na biblioteca de componentes e nos templates: só tokens semânticos
 // (classes do tema ligadas a src/styles/tokens.css) — nenhum HEX e nenhuma cor da paleta padrão do Tailwind.
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-const PASTAS = [join('src', 'components', 'ui'), join('src', 'components', 'templates'), join('src', 'features', 'catalogo')]
+const PASTAS = [join('src', 'components', 'ui'), join('src', 'components', 'templates')]
 const arquivos = PASTAS.flatMap((pasta) =>
   readdirSync(join(process.cwd(), pasta))
     .filter((a) => /\.(ts|tsx)$/.test(a) && !a.includes('.test.'))
@@ -13,7 +13,7 @@ const arquivos = PASTAS.flatMap((pasta) =>
 const PALETA =
   /\b(?:bg|text|border|ring|outline|fill|stroke|from|to|via|divide|placeholder|accent|decoration|shadow)-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|black|white)(?:-\d{2,3})?(?:\/\d+)?\b/
 
-describe('src/components/ui e o catálogo só usam tokens semânticos', () => {
+describe('src/components/ui e os templates só usam tokens semânticos', () => {
   it('existem componentes para conferir', () => {
     expect(arquivos.length).toBeGreaterThan(10)
   })

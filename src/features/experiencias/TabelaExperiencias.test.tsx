@@ -108,11 +108,17 @@ describe('Formulário de experiência', () => {
     expect(onSalvar).not.toHaveBeenCalled()
   })
 
+  it('valor anual "atualizado": rótulo e ajuda dizem que o valor já vem atualizado conforme o Edital', () => {
+    render(<FormExperiencia onSalvar={vi.fn()} />)
+    const campo = screen.getByLabelText('Valor anual atualizado (R$)')
+    expect(campo).toHaveAccessibleDescription('Informe o valor já atualizado conforme o Edital (Anexo IV, 3.5.1, IV)')
+  })
+
   it('valor anual em reais vira centavos; documentos entram na lista', async () => {
     const onSalvar = vi.fn().mockResolvedValue(undefined)
     render(<FormExperiencia onSalvar={onSalvar} />)
     await preencherMinimo()
-    await userEvent.type(screen.getByLabelText('Valor anual (R$)'), '12.000.000,00')
+    await userEvent.type(screen.getByLabelText('Valor anual atualizado (R$)'), '12.000.000,00')
     await userEvent.click(screen.getByRole('button', { name: 'Adicionar documento' }))
     await userEvent.type(screen.getByLabelText('Tipo do documento 1'), 'Atestado de capacidade técnica')
     await userEvent.type(screen.getByLabelText('Nº SEI do documento 1'), '000067890')

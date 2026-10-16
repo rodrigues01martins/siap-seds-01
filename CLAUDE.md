@@ -23,7 +23,7 @@ Eliminatórias: D1 < 67,2 → inapta; nível 0 em 1.1 ou 1.2 → desclassificada
 6. Componentes só usam tokens semânticos; nunca cores HEX diretas. Fonte de verdade visual:
    docs/DESIGN-SYSTEM-SEDS.md (Sistema de Design SEDS — Web Corporativo 1.0).
    Tokens em src/styles/tokens.css (3 níveis) e tema em src/index.css; biblioteca em src/components/ui
-   (catálogo em /ui, só administrador); ícones só de lucide-react (componente Icone, 16/20/24).
+   (testes de cada componente ao lado); ícones só de lucide-react (componente Icone, 16/20/24).
    Telas usam os templates de src/components/templates (AppShell, AuthPage, ListPage, FormPage, DetailPage,
    WizardPage, DashboardPage), PageHeader com no máximo UMA ação primária por área, e FormularioApi nos
    formulários ligados à /api. Marcas: só arquivos oficiais em public/brand/ (Brand.tsx); sem eles, texto.
@@ -38,6 +38,8 @@ Eliminatórias: D1 < 67,2 → inapta; nível 0 em 1.1 ou 1.2 → desclassificada
 - Relatórios (espelho, quadro-resumo, ata) e a exportação da auditoria são gerados no navegador (pdfmake,
   exceljs), sem gravar nada. Rodapé com código de verificação = SHA-256 dos dados usados; "MINUTA" se houver
   proposta não homologada no documento.
+- O catálogo de componentes não faz parte do sistema; a documentação de componentes é mantida fora do
+  repositório. Decisão de 15/10/2026. (Rota inexistente, como /ui, mostra a página "não encontrado".)
 
 ## Acesso (perfil único: Administrador)
 - Cadastro em usuarios/{uid}: nome, email, admin, permissoes, ativo e comissao (papel na Comissão:
@@ -90,7 +92,6 @@ desempate registra a ordem com justificativa (api/desempate.ts, auditado; 409 pa
 npm run dev | npm run build | npm test | npm run typecheck
 npm run test:regras | npm run test:api (emuladores, Java 21+) | npm run emuladores
 npm run test:e2e:baseline (Playwright + axe nos emuladores; FASE_AUDITORIA=antes|depois → docs/auditoria-design/)
-npm run test:e2e:ui (axe no catálogo /ui, WCAG 2.2 AA, sem violações)
 npm run test:e2e:etapa3 (telas migradas: teclado, axe 1280/768 e screenshots → docs/auditoria-design/etapa-3/)
 npm run test:e2e:etapa4 (telas operacionais: axe, screenshots antes/depois e fluxo completo pela /api nos emuladores)
 npm run test:e2e:uso (testes de uso por perfil, com tempos) | npm run test:e2e:acessibilidade (teclado, foco, zoom 200%, aria-live)

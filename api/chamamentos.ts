@@ -1,7 +1,8 @@
 // POST /api/chamamentos (criar) e PATCH /api/chamamentos (editar). Perfil: admin.
 // dataLimitePropostas é a referência da D2 (Anexo IV, 3.3.1, IV): não muda depois que alguma
 // proposta já tem totais calculados. justificativaMinima configura o mínimo da justificativa (C2).
-// processoSei, indiceCorrecao e dataBaseCorrecao (correção monetária dos valores da D2): Etapa 4a.
+// processoSei: Etapa 4a. Sem índice de correção nem data-base (Manutenção 1): os valores da D2 já chegam
+// atualizados conforme o Edital; o esquema estrito recusa esses campos.
 
 import { esquemaCriarChamamento, esquemaEditarChamamento } from '../src/esquemas/cadastros.js'
 import { obterAdmin } from './_lib/admin.js'

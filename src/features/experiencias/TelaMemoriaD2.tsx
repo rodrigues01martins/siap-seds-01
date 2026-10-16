@@ -13,7 +13,7 @@ import { Tabs } from '../../components/ui/Tabs'
 import { CRITERIOS_D2, type ResultadoCriterio, type ResultadoD2 } from '../../domain/d2'
 import { formatarNumero } from '../../domain/formatacao'
 import { useColecao, useDocumento } from '../../lib/firestore'
-import { legivel } from '../../relatorios/memoriaD2'
+import { legivel, memoriaExibida } from '../../relatorios/memoriaD2'
 import { cabecalhoDaProposta, ContextoProposta, useDadosProposta } from '../avaliacao/CabecalhoProposta'
 
 const pontos = (r: ResultadoCriterio) => `${formatarNumero(r.pontos)} / ${formatarNumero(r.maximo)}`
@@ -35,7 +35,7 @@ function Criterio({ resultado, nomes, nivel = 2 }: { resultado: ResultadoCriteri
       />
       <Subtitulo className="mt-6 text-label-md text-text-secondary">Cálculo passo a passo</Subtitulo>
       <ol className="mt-2 list-inside list-decimal space-y-1 text-body-md text-text-primary">
-        {resultado.memoria.map((linha, i) => (
+        {memoriaExibida(resultado).map((linha, i) => (
           <li key={i}>{legivel(linha, nomes)}</li>
         ))}
       </ol>

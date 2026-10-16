@@ -12,7 +12,7 @@ import { MATRIZ_2026, type Matriz } from '../domain/matriz/index.js'
 import type { TotaisProposta } from '../domain/proposta.js'
 import { ROTULO_STATUS, type StatusPainel } from '../domain/statusProposta.js'
 import { montarPdf, precisaMinuta, tabela, type Rodape } from './documento.js'
-import { criteriosDaMemoria, legivel } from './memoriaD2.js'
+import { criteriosDaMemoria, legivel, memoriaExibida } from './memoriaD2.js'
 
 export interface AvaliacaoEspelho {
   nivel: number
@@ -197,7 +197,7 @@ function secaoD2(dados: DadosEspelho, matriz: Matriz): Content[] {
           bold: true,
         },
         { text: `Experiências usadas: ${r.usadas.length === 0 ? 'nenhuma' : r.usadas.map((id) => nomes[id] ?? id).join('; ')}`, style: 'pequeno' },
-        { ol: r.memoria.map((linha) => legivel(linha, nomes)) },
+        { ol: memoriaExibida(r).map((linha) => legivel(linha, nomes)) },
       ],
     })),
   ]

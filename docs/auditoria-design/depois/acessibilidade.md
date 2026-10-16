@@ -7,29 +7,28 @@ Zoom 200% = viewport CSS de 640×450 (1280×900 ampliado). Tabelas podem rolar d
 
 | Rota | 1º Tab = pular | Alcançados pelo Tab | Foco sem anel | Rolagem horizontal a 200% | Cortado a 200% |
 |---|---|---|---|---|---|
-| inicio | sim | 24/24 | 0 | 0 px | 0 |
-| painel-chamamento | sim | 61/61 | 0 | 0 px | 0 |
-| chamamento-novo | sim | 23/23 | 0 | 0 px | 0 |
-| chamamento-editar | sim | 34/34 | 0 | 0 px | 0 |
-| proposta-nova | sim | 25/25 | 0 | 0 px | 0 |
-| proposta-editar | sim | 25/25 | 0 | 0 px | 0 |
-| sessao-nova | sim | 20/20 | 0 | 0 px | 0 |
-| sessao | sim | 32/32 | 0 | 0 px | 0 |
-| ata | sim | 22/22 | 0 | 0 px | 0 |
-| admissibilidade | sim | 60/60 | 0 | 0 px | 0 |
-| d1 | sim | 72/72 | 0 | 0 px | 0 |
-| d2 | sim | 40/40 | 0 | 0 px | 0 |
-| d2-memoria | sim | 27/27 | 0 | 0 px | 0 |
-| diligencias | sim | 33/33 | 0 | 0 px | 0 |
-| classificacao | sim | 25/25 | 0 | 0 px | 0 |
-| oscs | sim | 21/21 | 0 | 0 px | 0 |
-| usuarios | sim | 24/24 | 0 | 0 px | 0 |
-| auditoria | sim | 17/17 | 0 | 0 px | 0 |
+| inicio | sim | 23/23 | 0 | 0 px | 0 |
+| painel-chamamento | sim | 60/60 | 0 | 0 px | 0 |
+| chamamento-novo | sim | 20/20 | 0 | 0 px | 0 |
+| chamamento-editar | sim | 31/31 | 0 | 0 px | 0 |
+| proposta-nova | sim | 24/24 | 0 | 0 px | 0 |
+| proposta-editar | sim | 24/24 | 0 | 0 px | 0 |
+| sessao-nova | sim | 19/19 | 0 | 0 px | 0 |
+| sessao | sim | 31/31 | 0 | 0 px | 0 |
+| ata | sim | 21/21 | 0 | 0 px | 0 |
+| admissibilidade | sim | 59/59 | 0 | 0 px | 0 |
+| d1 | sim | 71/71 | 0 | 0 px | 0 |
+| d2 | sim | 39/39 | 0 | 0 px | 0 |
+| d2-memoria | sim | 26/26 | 0 | 0 px | 0 |
+| diligencias | sim | 32/32 | 0 | 0 px | 0 |
+| classificacao | sim | 24/24 | 0 | 0 px | 0 |
+| oscs | sim | 20/20 | 0 | 0 px | 0 |
+| usuarios | sim | 23/23 | 0 | 0 px | 0 |
+| auditoria | sim | 16/16 | 0 | 0 px | 0 |
 | projecao | — (sem elementos interativos, por desenho) | — | — | 0 px | 0 |
-| catalogo-ui | sim | 94/94 | 1 | 0 px | 0 |
-| diligencia-nova | sim | 23/23 | 0 | 0 px | 0 |
+| nao-encontrado | sim | 10/10 | 0 | 0 px | 0 |
+| diligencia-nova | sim | 22/22 | 0 | 0 px | 0 |
 
-- catalogo-ui: foco sem anel: input[checkbox] "campor1b" (conhecido, média — pendencias.md)
 
 ## Mensagens de erro anunciadas
 

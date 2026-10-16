@@ -22,6 +22,7 @@ Matriz de Avaliação (Anexo IV). Regras de arquitetura e convenções: veja [`C
 | `npm run backup -- --projeto dev\|prod [--chamamento ID]` | Backup em JSON datado (seção 7) |
 | `npm run restaurar -- --projeto dev --arquivo ...` | Restaura um backup **só no dev** (seção 7) |
 | `npm run ensaio -- --projeto dev [--recriar\|--remover]` | Dados fictícios para ensaiar a sessão (seção 7) |
+| `npm run remover-campos-correcao -- --projeto dev [--simular]` | Apaga índice de correção e data-base dos chamamentos antigos (seção 7) |
 
 Dia da sessão: [`docs/ROTEIRO-SESSAO.md`](docs/ROTEIRO-SESSAO.md). Antes de usar em produção:
 [`docs/CHECKLIST-PRODUCAO.md`](docs/CHECKLIST-PRODUCAO.md).
@@ -158,7 +159,7 @@ passa por uma função `/api`, que:
 
 | Endpoint | Métodos | Corpo (JSON) | Permissão |
 |---|---|---|---|
-| `/api/chamamentos` | `POST` criar, `PATCH` editar | `{ numero, titulo, processoSei, dataLimitePropostas, indiceCorrecao?, dataBaseCorrecao?, justificativaMinima?, lotes: [{ codigo, descricao }] }` (`PATCH` com `id`) | `chamamentos` |
+| `/api/chamamentos` | `POST` criar, `PATCH` editar | `{ numero, titulo, processoSei, dataLimitePropostas, justificativaMinima?, lotes: [{ codigo, descricao }] }` (`PATCH` com `id`) | `chamamentos` |
 | `/api/oscs` | `POST` criar, `PATCH` editar | `{ cnpj, razaoSocial, nomeFantasia? }` — CNPJ numérico ou alfanumérico | `oscs` |
 | `/api/propostas` | `POST` criar, `PATCH` editar | `{ chamamentoId, loteCodigo, oscCnpj, protocolo, numeroSEI, observacao? }` (`PATCH` com `propostaId`) | `propostas` |
 | `/api/usuarios` | `POST` novo usuário | `{ nome, email, admin, permissoes: [...], comissao: 'presidente' \| 'relator' \| 'membro' \| null }` | administrador |
@@ -171,7 +172,10 @@ passa por uma função `/api`, que:
 - `dataLimitePropostas` (`AAAA-MM-DD`): referência da D2 (Anexo IV, 3.3.1, IV). Depois que alguma proposta do
   chamamento já tem totais calculados, não pode mais mudar → **409**.
 - `justificativaMinima` (inteiro de 0 a 2.000, opcional): mínimo de caracteres da justificativa do nível (padrão 20).
-- `indiceCorrecao` e `dataBaseCorrecao` (opcionais, sempre juntos): correção monetária dos valores da D2.
+- Não há índice de correção monetária nem data-base: os valores da D2 (2.3.3, valor anual) são informados pela
+  Comissão **já atualizados conforme o Edital** (Anexo IV, 3.5.1, IV); a memória de cálculo e o espelho dizem isso.
+  Enviar `indiceCorrecao` ou `dataBaseCorrecao` dá **400** ("Campo não permitido."). Para apagar esses campos de
+  chamamentos antigos: `npm run remover-campos-correcao` (seção 7).
 
 ### Endpoint da Etapa 4a (sessão da Comissão)
 
@@ -429,6 +433,18 @@ alfanumérico fictício (`ENSAIO…`) e 6 propostas no formato que a `/api` grav
 `--recriar` apaga e grava de novo; `--remover` só apaga (o chamamento e as OSCs com `ensaio: true`). O script
 recusa `--projeto prod`.
 
+### Limpeza dos campos de correção monetária (Manutenção 1)
+
+O chamamento não tem mais índice de correção nem data-base. Chamamentos gravados antes guardam esses campos;
+eles não aparecem em nenhuma tela, mas podem ser apagados (cada chamamento alterado vai para a auditoria):
+
+```bash
+FIREBASE_SERVICE_ACCOUNT='{...}' npm run remover-campos-correcao -- --projeto dev --simular   # só lista
+FIREBASE_SERVICE_ACCOUNT='{...}' npm run remover-campos-correcao -- --projeto dev             # apaga
+FIREBASE_SERVICE_ACCOUNT='{...}' npm run remover-campos-correcao -- --projeto prod --simular  # conferir prod
+FIREBASE_SERVICE_ACCOUNT='{...}' npm run remover-campos-correcao -- --projeto prod --confirmar
+```
+
 ## 8. Interface: Sistema de Design SEDS
 
 Fonte de verdade: [`docs/DESIGN-SYSTEM-SEDS.md`](docs/DESIGN-SYSTEM-SEDS.md). Componentes só usam tokens semânticos (nunca HEX).
@@ -436,7 +452,7 @@ Fonte de verdade: [`docs/DESIGN-SYSTEM-SEDS.md`](docs/DESIGN-SYSTEM-SEDS.md). Co
 | Peça | Onde |
 |---|---|
 | Tokens (primitivos, semânticos, componentes) | `src/styles/tokens.css`; tema do Tailwind em `src/index.css` |
-| Componentes (botões, campos, feedback, overlays, DataTable, ícones, Brand, PageHeader) | `src/components/ui` — catálogo em **`/ui`** (só administrador) |
+| Componentes (botões, campos, feedback, overlays, DataTable, ícones, Brand, PageHeader) | `src/components/ui` (testes de cada componente ao lado) |
 | Templates (AppShell, AuthPage, ListPage, FormPage, DetailPage, WizardPage, DashboardPage) | `src/components/templates` |
 | Navegação por domínio (Sessão, Avaliação, Resultado, Cadastros, Administração) | `src/components/templates/navegacao.ts` |
 
@@ -463,22 +479,16 @@ Fonte de verdade: [`docs/DESIGN-SYSTEM-SEDS.md`](docs/DESIGN-SYSTEM-SEDS.md). Co
 | `/oscs` | ListPage | OSCs (painel lateral para cadastrar e editar) |
 | `/usuarios` | ListPage | usuários, permissões, papel na Comissão |
 | `/auditoria` | ListPage | histórico de alterações e exportação XLSX |
-| `/ui` | — | catálogo de componentes (só administrador) |
+| qualquer outro endereço (ex.: `/ui`) | DetailPage | página "não encontrado", com o endereço pedido e o link para o início |
 
-### Catálogo de componentes (`/ui`)
-
-Página só do administrador (menu **Administração → Catálogo de componentes**) com todos os componentes de
-`src/components/ui` em todos os estados: botões (4 variantes, 3 tamanhos, carregando, desabilitado), campos
-(texto, área com contador, seleção, data, número, CNPJ, moeda, checkbox, rádio, chave), formulário ligado ao
-esquema da `/api`, alertas, toast, estados vazio/erro/carregando, diálogo, confirmação, painel lateral, abas,
-trilha, tabela de dados, selos de status e ícones. Use-o para conferir uma mudança visual antes de aplicá-la nas
-telas; `npm run test:e2e:ui` exige zero violações do axe nele.
+O catálogo de componentes (`/ui`) foi removido (Manutenção 2): a documentação de componentes fica fora do
+repositório. Os componentes de `src/components/ui` continuam, com os testes de cada um (Testing Library), e a
+referência visual é `docs/DESIGN-SYSTEM-SEDS.md`.
 
 Testes de navegador (emuladores + Playwright + axe, WCAG 2.2 AA):
 
 ```bash
 npm run test:e2e:baseline   # medição de todas as rotas (docs/auditoria-design/antes/)
-npm run test:e2e:ui         # catálogo /ui sem violações
 npm run test:e2e:etapa3     # telas migradas: teclado, axe e screenshots (docs/auditoria-design/etapa-3/)
 npm run test:e2e:etapa4     # telas operacionais: axe + screenshots e o fluxo completo (docs/auditoria-design/etapa-4/)
 FASE_ETAPA4=antes npm run test:e2e:etapa4   # só screenshots, para comparar antes/depois
