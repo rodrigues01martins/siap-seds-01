@@ -177,7 +177,7 @@ export function FormExperiencia({ inicial, onSalvar, acoesSecundarias }: Props) 
           <CampoTexto nome="vagas" rotulo="Vagas" tipo="number" />
           <CampoTexto nome="unidades" rotulo="Unidades" tipo="number" />
           <CampoTexto nome="trabalhadores" rotulo="Trabalhadores" tipo="number" />
-          <CampoTexto nome="valorAnual" rotulo="Valor anual (R$)" ajuda="Já atualizado pelo índice do edital." />
+          <CampoTexto nome="valorAnual" rotulo="Valor anual atualizado (R$)" ajuda="Informe o valor já atualizado conforme o Edital (Anexo IV, 3.5.1, IV)" />
         </div>
       </Grupo>
       <Documentos />

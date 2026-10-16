@@ -26,7 +26,8 @@
     "test:e2e:etapa3": "firebase emulators:exec --only auth,firestore --project demo-siap-seds \"playwright test tests/e2e/etapa3.spec.ts\"",
     "test:e2e:etapa4": "firebase emulators:exec --only auth,firestore --project demo-siap-seds \"playwright test tests/e2e/etapa4.spec.ts\"",
     "test:e2e:uso": "firebase emulators:exec --only auth,firestore --project demo-siap-seds \"playwright test tests/e2e/uso.spec.ts\"",
-    "test:e2e:acessibilidade": "firebase emulators:exec --only auth,firestore --project demo-siap-seds \"playwright test tests/e2e/acessibilidade.spec.ts\""
+    "test:e2e:acessibilidade": "firebase emulators:exec --only auth,firestore --project demo-siap-seds \"playwright test tests/e2e/acessibilidade.spec.ts\"",
+    "remover-campos-correcao": "tsx scripts/remover-campos-correcao.ts"
   },
   "dependencies": {
     "exceljs": "^4.4.0",

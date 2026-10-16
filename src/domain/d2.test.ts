@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  AVISO_VALORES_ATUALIZADOS,
   calcularC21,
   calcularC22,
   calcularC23,
@@ -308,6 +309,13 @@ describe('C2.3 — 2.3.3: escala financeira anual (A e B), em centavos', () => {
     ])
     expect(r.valorApurado).toBe(R$(5_000_000))
     expect(r.pontos).toBe(0.25)
+  })
+
+  it('memória começa avisando que os valores já vêm atualizados conforme o Edital (sem correção no sistema)', () => {
+    const r = pontos233([exp({ valorAnualCentavos: R$(12_000_000) })])
+    expect(r.memoria[0]).toBe(`${AVISO_VALORES_ATUALIZADOS}.`)
+    expect(r.memoria.join('\n')).not.toMatch(/IPCA|corre[çc][ãa]o|data-base/i)
+    expect(r.pontos).toBe(0.75) // a regra de pontuação não muda
   })
 
   it('rejeita valor que não seja inteiro em centavos', () => {

@@ -63,7 +63,6 @@ export function PainelChamamento() {
       resumo={[
         { termo: 'Processo SEI', valor: c.processoSei ?? '—' },
         { termo: 'Data limite das propostas', valor: dataBr(c.dataLimitePropostas) },
-        { termo: 'Correção monetária', valor: c.indiceCorrecao ? `${c.indiceCorrecao} (base ${dataBr(c.dataBaseCorrecao)})` : '—' },
         { termo: 'Propostas', valor: propostas.dados.length },
       ]}
     >

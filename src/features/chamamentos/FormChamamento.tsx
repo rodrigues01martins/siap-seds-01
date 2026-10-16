@@ -57,8 +57,6 @@ const VAZIO = {
   titulo: '',
   processoSei: '',
   dataLimitePropostas: '',
-  indiceCorrecao: '',
-  dataBaseCorrecao: '',
   justificativaMinima: '',
   lotes: [{ codigo: '', descricao: '' }],
 }
@@ -107,11 +105,9 @@ export function FormChamamento() {
             <CampoTexto nome="titulo" rotulo="Título" obrigatorio className="sm:col-span-2" />
           </div>
         </Card>
-        <Card titulo="Prazos e correção monetária">
-          <div className="grid gap-4 sm:grid-cols-3">
+        <Card titulo="Prazos">
+          <div className="grid gap-4 sm:grid-cols-2">
             <CampoTexto nome="dataLimitePropostas" rotulo="Data limite das propostas" tipo="date" obrigatorio ajuda="Referência da D2; não muda depois que a avaliação começa." />
-            <CampoTexto nome="indiceCorrecao" rotulo="Índice de correção" ajuda="Ex.: IPCA (opcional)." />
-            <CampoTexto nome="dataBaseCorrecao" rotulo="Data-base da correção" tipo="date" />
             <CampoTexto nome="justificativaMinima" rotulo="Mínimo de caracteres da justificativa" tipo="number" ajuda="Opcional; padrão 20." />
           </div>
         </Card>

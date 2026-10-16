@@ -8,6 +8,9 @@ import { MATRIZ_2026, type CriterioComFaixas, type Matriz } from './matriz/index
 
 export type CategoriaExperiencia = 'A' | 'B' | 'C' | 'D'
 
+/** 2.3.3: o app não aplica índice de correção; a Comissão informa os valores já atualizados (Anexo IV, 3.5.1, IV). */
+export const AVISO_VALORES_ATUALIZADOS = 'Valores informados pela Comissão já atualizados conforme o Edital'
+
 export const CRITERIOS_D2 = ['C2.1', 'C2.2', 'C2.3', 'C2.4'] as const
 export type CodigoCriterioD2 = (typeof CRITERIOS_D2)[number]
 
@@ -40,7 +43,7 @@ export interface Experiencia {
   unidades?: number | null
   /** Trabalhadores diretamente vinculados à operação. */
   trabalhadores?: number | null
-  /** Volume anual de recursos, já atualizado monetariamente, em centavos. */
+  /** Volume anual de recursos em centavos, informado pela Comissão já atualizado conforme o Edital (3.5.1, IV). */
   valorAnualCentavos?: number | null
   /** Execução satisfatória documentalmente comprovada (Critério 2.4). */
   execucaoSatisfatoria?: boolean
@@ -372,7 +375,9 @@ export function calcularC23(
 
   const elegiveis = (consideradas: string[]) => experiencias.filter((e) => temCategoria(e, consideradas))
   const r232 = apurarSimultaneo('2.3.2', c232, elegiveis(c232.categoriasConsideradas), 'trabalhadores', dataLimite)
-  const r233 = apurarSimultaneo('2.3.3', c233, elegiveis(c233.categoriasConsideradas), 'valorAnualCentavos', dataLimite)
+  const apurado233 = apurarSimultaneo('2.3.3', c233, elegiveis(c233.categoriasConsideradas), 'valorAnualCentavos', dataLimite)
+  // O sistema não corrige valores: a memória registra que eles já vêm atualizados (a pontuação não muda).
+  const r233 = { ...apurado233, memoria: [`${AVISO_VALORES_ATUALIZADOS}.`, ...apurado233.memoria] }
 
   const pontos = Math.min(r231.pontos + r232.pontos + r233.pontos, criterio.maximo)
   return {

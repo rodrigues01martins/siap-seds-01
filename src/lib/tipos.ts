@@ -14,8 +14,6 @@ export interface Chamamento {
   titulo: string
   processoSei?: string
   dataLimitePropostas?: string
-  indiceCorrecao?: string
-  dataBaseCorrecao?: string
   justificativaMinima?: number
   lotes: Lote[]
 }

@@ -21,31 +21,25 @@ const processoSei = z
   .trim()
   .min(1, 'Informe o número do processo SEI.')
   .max(40, 'Use no máximo 40 caracteres.')
-const indiceCorrecao = z.string().trim().min(2, 'Informe o índice (ex.: IPCA).').max(40, 'Use no máximo 40 caracteres.')
 const justificativaMinima = z
   .number({ error: 'Use um número inteiro.' })
   .int('Use um número inteiro.')
   .min(0, 'Use um número de 0 a 2.000.')
   .max(2000, 'Use um número de 0 a 2.000.')
 
-/** Índice e data-base da correção monetária (valores da D2) andam juntos. */
-function indiceComDataBase(dados: { indiceCorrecao?: string; dataBaseCorrecao?: string }): boolean {
-  return (dados.indiceCorrecao === undefined) === (dados.dataBaseCorrecao === undefined)
-}
-const erroIndice = { path: ['dataBaseCorrecao'], message: 'Informe o índice e a data-base juntos.' }
+// Sem índice de correção monetária nem data-base: os valores da D2 já são informados atualizados conforme o
+// Edital (Anexo IV, 3.5.1, IV). Os esquemas são estritos: enviar esses campos dá 400 "Campo não permitido."
 
 const camposChamamento = {
   numero,
   titulo,
   processoSei,
   dataLimitePropostas: dataIso,
-  indiceCorrecao: opcional(indiceCorrecao),
-  dataBaseCorrecao: opcional(dataIso),
   justificativaMinima: opcional(justificativaMinima),
   lotes,
 }
 
-export const esquemaCriarChamamento = z.strictObject(camposChamamento).refine(indiceComDataBase, erroIndice)
+export const esquemaCriarChamamento = z.strictObject(camposChamamento)
 
 export const esquemaEditarChamamento = z
   .strictObject({
@@ -54,13 +48,10 @@ export const esquemaEditarChamamento = z
     titulo: titulo.optional(),
     processoSei: processoSei.optional(),
     dataLimitePropostas: dataIso.optional(),
-    indiceCorrecao: opcional(indiceCorrecao),
-    dataBaseCorrecao: opcional(dataIso),
     justificativaMinima: opcional(justificativaMinima),
     lotes: lotes.optional(),
   })
   .refine(algumCampoAlem(['id']), 'Informe ao menos um campo para alterar.')
-  .refine(indiceComDataBase, erroIndice)
 
 // ---------- OSC ----------
 

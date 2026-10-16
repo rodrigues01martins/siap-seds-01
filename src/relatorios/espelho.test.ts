@@ -6,6 +6,7 @@ import { consolidarProposta } from '../domain/proposta'
 import { renderizarPdf } from '../testes/renderizarPdf'
 import { marcaDagua, textoDoPdf, textoDoRodape } from '../testes/textoPdf'
 import type { Rodape } from './documento'
+import { AVISO_VALORES_ATUALIZADOS } from '../domain/d2'
 import { dadosVerificadosEspelho, linhasDoEspelho, montarEspelho, type DadosEspelho } from './espelho'
 
 const PLANOS = MATRIZ_2026.dimensao1.planos
@@ -135,3 +136,16 @@ it('gera um PDF válido (pdfmake)', async () => {
   const pdf = await renderizarPdf(montarEspelho(dados(), RODAPE))
   expect(pdf.subarray(0, 5).toString()).toBe('%PDF-')
 }, 20_000)
+
+describe('espelho — 2.3.3 com valores já atualizados (Manutenção 1)', () => {
+  it('mostra o aviso uma vez na 2.3.3, mesmo com memória gravada antes da mudança', () => {
+    const atual = dados()
+    const c233 = atual.d2!.criterios['C2.3'].subcriterios['2.3.3']
+    const antiga = { ...c233, memoria: c233.memoria.filter((l) => !l.startsWith(AVISO_VALORES_ATUALIZADOS)) }
+    for (const d2 of [atual.d2!, { ...atual.d2!, criterios: { ...atual.d2!.criterios, 'C2.3': { ...atual.d2!.criterios['C2.3'], subcriterios: { ...atual.d2!.criterios['C2.3'].subcriterios, '2.3.3': antiga } } } }]) {
+      const texto = textoDoPdf(montarEspelho({ ...atual, d2 }, RODAPE))
+      expect(texto.split(AVISO_VALORES_ATUALIZADOS).length - 1).toBe(1)
+      expect(texto).not.toMatch(/IPCA|corre[çc][ãa]o monet|data-base/i)
+    }
+  })
+})
