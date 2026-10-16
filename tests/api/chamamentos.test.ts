@@ -74,25 +74,23 @@ describe('/api/chamamentos — validação', () => {
     expect(await ler(`chamamentos/${ok.corpo?.id as string}`)).toMatchObject({ justificativaMinima: 50 })
   })
 
-  it('processo SEI, índice e data-base de correção (Etapa 4a)', async () => {
-    const r = await chamar(rota, 'POST', { ...VALIDO, processoSei: ' ', dataBaseCorrecao: '2026-13-01' }, admin.token)
+  it('processo SEI obrigatório (Etapa 4a)', async () => {
+    const r = await chamar(rota, 'POST', { ...VALIDO, processoSei: ' ' }, admin.token)
     expect(r.status).toBe(400)
-    expect(r.corpo?.campos).toMatchObject({
-      processoSei: 'Informe o número do processo SEI.',
-      dataBaseCorrecao: 'Data inválida (use AAAA-MM-DD).',
-    })
-    const ok = await chamar(rota, 'POST', { ...VALIDO, indiceCorrecao: 'IPCA', dataBaseCorrecao: '2026-01-01' }, admin.token)
-    expect(ok.status).toBe(201)
-    expect(await ler(`chamamentos/${ok.corpo?.id as string}`)).toMatchObject({
-      processoSei: '202610319003258',
-      indiceCorrecao: 'IPCA',
-      dataBaseCorrecao: '2026-01-01',
-    })
+    expect(r.corpo?.campos).toMatchObject({ processoSei: 'Informe o número do processo SEI.' })
   })
 
-  it('índice sem data-base (ou o contrário) → 400', async () => {
-    const r = await chamar(rota, 'POST', { ...VALIDO, indiceCorrecao: 'IPCA' }, admin.token)
-    expect(r).toMatchObject({ status: 400, corpo: { campos: { dataBaseCorrecao: 'Informe o índice e a data-base juntos.' } } })
+  it('índice de correção e data-base foram removidos (Manutenção 1): POST e PATCH → 400, nada gravado', async () => {
+    const r = await chamar(rota, 'POST', { ...VALIDO, indiceCorrecao: 'IPCA', dataBaseCorrecao: '2026-01-01' }, admin.token)
+    expect(r).toMatchObject({ status: 400, corpo: { campos: { indiceCorrecao: 'Campo não permitido.', dataBaseCorrecao: 'Campo não permitido.' } } })
+    const ok = await chamar(rota, 'POST', VALIDO, admin.token)
+    expect(ok.status).toBe(201)
+    const id = ok.corpo?.id as string
+    const p = await chamar(rota, 'PATCH', { id, indiceCorrecao: 'IPCA' }, admin.token)
+    expect(p).toMatchObject({ status: 400, corpo: { campos: { indiceCorrecao: 'Campo não permitido.' } } })
+    const gravado = await ler(`chamamentos/${id}`)
+    expect(gravado).not.toHaveProperty('indiceCorrecao')
+    expect(gravado).not.toHaveProperty('dataBaseCorrecao')
   })
 
   it('campo não previsto → 400', async () => {
