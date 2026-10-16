@@ -22,7 +22,6 @@
     "restaurar": "tsx scripts/restaurar-firestore.ts",
     "ensaio": "tsx scripts/ensaio.ts",
     "test:e2e:baseline": "firebase emulators:exec --only auth,firestore --project demo-siap-seds \"playwright test tests/e2e/baseline.spec.ts\"",
-    "test:e2e:ui": "firebase emulators:exec --only auth,firestore --project demo-siap-seds \"playwright test tests/e2e/catalogo.spec.ts\"",
     "test:e2e:etapa3": "firebase emulators:exec --only auth,firestore --project demo-siap-seds \"playwright test tests/e2e/etapa3.spec.ts\"",
     "test:e2e:etapa4": "firebase emulators:exec --only auth,firestore --project demo-siap-seds \"playwright test tests/e2e/etapa4.spec.ts\"",
     "test:e2e:uso": "firebase emulators:exec --only auth,firestore --project demo-siap-seds \"playwright test tests/e2e/uso.spec.ts\"",

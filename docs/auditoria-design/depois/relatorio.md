@@ -5,10 +5,10 @@ App local com os emuladores e os dados de ensaio (`scripts/lib/ensaio.ts`).
 
 ## Resumo
 
-- Telas medidas: 45 (perfis: anônimo, administrador, avaliador, consulta).
-- Screenshots: 90 em `telas/` (1280 e 768 px, página inteira).
+- Telas medidas: 44 (perfis: anônimo, administrador, avaliador, consulta).
+- Screenshots: 88 em `telas/` (1280 e 768 px, página inteira).
 - Violações axe (regra × tela): 0.
-- Regras aprovadas por tela: de 16 a 35 (prova de que o axe analisou cada tela).
+- Regras aprovadas por tela: de 16 a 34 (prova de que o axe analisou cada tela).
 - O axe detecta só parte dos critérios WCAG (contraste, nomes, estrutura). Teclado, foco visível, ordem de leitura e
   reflow em 320 px pedem revisão manual nas próximas etapas.
 
@@ -102,10 +102,6 @@ Nenhuma violação.
 Nenhuma violação.
 
 ### administrador · projecao (`/projecao/ensaio-2026/e2e-sessao-aberta`)
-
-Nenhuma violação.
-
-### administrador · catalogo-ui (`/ui`)
 
 Nenhuma violação.
 
@@ -297,7 +293,7 @@ Total: 0 usos em 0 arquivos. Serão trocadas por tokens semânticos.
 | Elementos que o axe não decidiu (contraste a revisar) | 111 | 31 | o menor possível |
 | HEX soltos fora de `tokens.css` | 13 | 0 | 0 |
 | Classes da paleta padrão do Tailwind | 490 | 0 | 0 |
-| Telas sem template (exceto por desenho) | 42 (não havia templates) | 1 | 0 |
+| Telas sem template (exceto por desenho) | 42 (não havia templates) | 0 | 0 |
 
 ### Violações axe por rota
 
@@ -323,7 +319,6 @@ Total: 0 usos em 0 arquivos. Serão trocadas por tokens semânticos.
 | administrador | usuarios | 0 | 0 | ListPage |
 | administrador | auditoria | 0 | 0 | ListPage |
 | administrador | projecao | 0 | 0 | — (layout próprio do telão (sem AppShell, por desenho)) |
-| administrador | catalogo-ui (nova) | — | 0 | **sem template** |
 | administrador | diligencia-nova (nova) | — | 0 | FormPage |
 | avaliador | inicio | 0 | 0 | ListPage |
 | avaliador | painel-chamamento | 0 | 0 | DetailPage |
@@ -352,6 +347,5 @@ Total: 0 usos em 0 arquivos. Serão trocadas por tokens semânticos.
 ### Telas sem template
 
 - administrador · projecao (`/projecao/ensaio-2026/e2e-sessao-aberta`) — layout próprio do telão (sem AppShell, por desenho)
-- administrador · catalogo-ui (`/ui`)
 - avaliador · projecao (`/projecao/ensaio-2026/e2e-sessao-aberta`) — layout próprio do telão (sem AppShell, por desenho)
 - consulta · projecao (`/projecao/ensaio-2026/e2e-sessao-aberta`) — layout próprio do telão (sem AppShell, por desenho)

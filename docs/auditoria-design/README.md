@@ -17,16 +17,16 @@ com os emuladores do Firebase e os dados de ensaio, no Chromium (Playwright) e c
 
 | Indicador | Antes | Depois | Meta |
 |---|---|---|---|
-| Telas medidas (mesmas rotas, perfis e larguras 1280/768) | 42 | 42 (+3 rotas novas) | — |
+| Telas medidas (mesmas rotas, perfis e larguras 1280/768) | 42 | 42 (+1 rota nova) | — |
 | Violações do axe na medição geral (regra × tela) | 0 | 0 | 0 |
 | Violações do axe nas telas operacionais (medição da Etapa 4) | 3 telas com contraste insuficiente (D1, diligências, ata) | 0 | 0 |
 | Elementos que o axe não decide sozinho (contraste a revisar) | 111 | 31 (revisados à mão: passam) | o menor possível |
 | Cores HEX soltas fora de `tokens.css` | 13 | **0** | 0 |
 | Classes de cor da paleta padrão do Tailwind | 490 em 40 arquivos | **0** | 0 |
-| Telas sem template | 42 (não havia templates) | 1: catálogo `/ui` (a projeção não usa template, por desenho) | 0 |
-| Teclado: rotas com todo elemento alcançável só com Tab | não medido | 20 de 20 (a projeção não tem elementos interativos) | todas |
-| Foco sempre visível (anel ≥ 2 px) | não medido | 20 de 21 rotas; 1 checkbox no catálogo (pendência M1) | todas |
-| Zoom 200% sem rolagem horizontal nem conteúdo cortado | não medido | 21 de 21 rotas | todas |
+| Telas sem template | 42 (não havia templates) | 0 (a projeção não usa template, por desenho; o catálogo `/ui` foi removido) | 0 |
+| Teclado: rotas com todo elemento alcançável só com Tab | não medido | todas (a projeção não tem elementos interativos) | todas |
+| Foco sempre visível (anel ≥ 2 px) | não medido | todas as rotas (o caso do checkbox com erro, pendência M1, não aparece em nenhuma tela) | todas |
+| Zoom 200% sem rolagem horizontal nem conteúdo cortado | não medido | todas as rotas | todas |
 | Formulários com erro anunciado pelo leitor de tela (`aria-live`) | 1 de 9 | **9 de 9** | todos |
 | Testes de uso por perfil concluídos | — | 5 de 5 (relator, membro, presidente, controle, telão) | todos |
 | Fluxo completo pela interface (sessão → homologação) | — | passa | passa |

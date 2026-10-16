@@ -253,18 +253,6 @@
   },
   {
     "perfil": "administrador",
-    "rota": "catalogo-ui",
-    "caminho": "/ui",
-    "acessivel": true,
-    "violacoes": [],
-    "aprovadas": 35,
-    "revisar": [],
-    "fonteBody": "Gotham, \"Helvetica Neue\", Arial, sans-serif",
-    "fontesCarregadas": [],
-    "template": null
-  },
-  {
-    "perfil": "administrador",
     "rota": "diligencia-nova",
     "caminho": "/chamamentos/ensaio-2026/propostas/ensaio-l1-beta/diligencias/nova",
     "acessivel": true,

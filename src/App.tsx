@@ -1,5 +1,5 @@
-import { lazy, Suspense, type ReactNode } from 'react'
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
+import type { ReactNode } from 'react'
+import { BrowserRouter, Route, Routes } from 'react-router'
 import { AppShell } from './components/templates/AppShell'
 import { ToastProvider } from './components/ui/Toast'
 import type { Exigencia } from './domain/permissoes'
@@ -16,6 +16,7 @@ import { PainelChamamento } from './features/chamamentos/PainelChamamento'
 import { TelaD2 } from './features/experiencias/TelaD2'
 import { TelaMemoriaD2 } from './features/experiencias/TelaMemoriaD2'
 import { TelaOscs } from './features/oscs/TelaOscs'
+import { NaoEncontrado } from './features/erros/NaoEncontrado'
 import { TelaDiligencia, TelaDiligencias, TelaNovaDiligencia } from './features/diligencias/TelaDiligencias'
 import { TelaProjecao } from './features/projecao/TelaProjecao'
 import { TelaAta } from './features/relatorios/TelaAta'
@@ -24,8 +25,6 @@ import { ConduzirSessao } from './features/sessoes/ConduzirSessao'
 import { NovaSessao } from './features/sessoes/NovaSessao'
 import { TelaUsuarios } from './features/usuarios/TelaUsuarios'
 
-/** Catálogo de componentes (/ui, administrador): carregado só quando aberto. */
-const TelaCatalogo = lazy(() => import('./features/catalogo/TelaCatalogo').then((m) => ({ default: m.TelaCatalogo })))
 
 /** Tela que exige uma permissão (ou o administrador); sem `exige`, basta ter acesso ao app. */
 const so = (exige: Exigencia | null, tela: ReactNode) => <RotaProtegida exige={exige ?? undefined}>{tela}</RotaProtegida>
@@ -66,17 +65,9 @@ export default function App() {
             <Route path="oscs" element={so('oscs', <TelaOscs />)} />
             <Route path="usuarios" element={so('admin', <TelaUsuarios />)} />
             <Route path="auditoria" element={so('admin', <TelaAuditoria />)} />
-            <Route
-              path="ui"
-              element={so(
-                'admin',
-                <Suspense fallback={<p className="text-body-md text-text-secondary">Carregando catálogo…</p>}>
-                  <TelaCatalogo />
-                </Suspense>,
-              )}
-            />
+            {/* Qualquer outro endereço (ex.: o antigo /ui): página "não encontrado", dentro do app. */}
+            <Route path="*" element={<NaoEncontrado />} />
           </Route>
-          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
       </ToastProvider>

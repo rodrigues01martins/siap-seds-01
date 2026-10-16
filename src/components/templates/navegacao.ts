@@ -3,7 +3,6 @@
 // Cada item só aparece para quem tem a permissão (src/domain/permissoes). Separado do React para teste.
 
 import {
-  BookOpen,
   Building2,
   ClipboardList,
   FilePlus2,
@@ -90,7 +89,6 @@ export function gruposDeNavegacao(acesso: Acesso | null, { chamamento, sessaoAbe
       itens: [
         { rotulo: 'Usuários', caminho: '/usuarios', icone: Users, exige: 'admin' },
         { rotulo: 'Histórico de alterações', caminho: '/auditoria', icone: History, exige: 'admin' },
-        { rotulo: 'Catálogo de componentes', caminho: '/ui', icone: BookOpen, exige: 'admin' },
       ],
     },
   ]

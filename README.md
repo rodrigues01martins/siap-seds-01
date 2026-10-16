@@ -452,7 +452,7 @@ Fonte de verdade: [`docs/DESIGN-SYSTEM-SEDS.md`](docs/DESIGN-SYSTEM-SEDS.md). Co
 | Peça | Onde |
 |---|---|
 | Tokens (primitivos, semânticos, componentes) | `src/styles/tokens.css`; tema do Tailwind em `src/index.css` |
-| Componentes (botões, campos, feedback, overlays, DataTable, ícones, Brand, PageHeader) | `src/components/ui` — catálogo em **`/ui`** (só administrador) |
+| Componentes (botões, campos, feedback, overlays, DataTable, ícones, Brand, PageHeader) | `src/components/ui` (testes de cada componente ao lado) |
 | Templates (AppShell, AuthPage, ListPage, FormPage, DetailPage, WizardPage, DashboardPage) | `src/components/templates` |
 | Navegação por domínio (Sessão, Avaliação, Resultado, Cadastros, Administração) | `src/components/templates/navegacao.ts` |
 
@@ -479,22 +479,16 @@ Fonte de verdade: [`docs/DESIGN-SYSTEM-SEDS.md`](docs/DESIGN-SYSTEM-SEDS.md). Co
 | `/oscs` | ListPage | OSCs (painel lateral para cadastrar e editar) |
 | `/usuarios` | ListPage | usuários, permissões, papel na Comissão |
 | `/auditoria` | ListPage | histórico de alterações e exportação XLSX |
-| `/ui` | — | catálogo de componentes (só administrador) |
+| qualquer outro endereço (ex.: `/ui`) | DetailPage | página "não encontrado", com o endereço pedido e o link para o início |
 
-### Catálogo de componentes (`/ui`)
-
-Página só do administrador (menu **Administração → Catálogo de componentes**) com todos os componentes de
-`src/components/ui` em todos os estados: botões (4 variantes, 3 tamanhos, carregando, desabilitado), campos
-(texto, área com contador, seleção, data, número, CNPJ, moeda, checkbox, rádio, chave), formulário ligado ao
-esquema da `/api`, alertas, toast, estados vazio/erro/carregando, diálogo, confirmação, painel lateral, abas,
-trilha, tabela de dados, selos de status e ícones. Use-o para conferir uma mudança visual antes de aplicá-la nas
-telas; `npm run test:e2e:ui` exige zero violações do axe nele.
+O catálogo de componentes (`/ui`) foi removido (Manutenção 2): a documentação de componentes fica fora do
+repositório. Os componentes de `src/components/ui` continuam, com os testes de cada um (Testing Library), e a
+referência visual é `docs/DESIGN-SYSTEM-SEDS.md`.
 
 Testes de navegador (emuladores + Playwright + axe, WCAG 2.2 AA):
 
 ```bash
 npm run test:e2e:baseline   # medição de todas as rotas (docs/auditoria-design/antes/)
-npm run test:e2e:ui         # catálogo /ui sem violações
 npm run test:e2e:etapa3     # telas migradas: teclado, axe e screenshots (docs/auditoria-design/etapa-3/)
 npm run test:e2e:etapa4     # telas operacionais: axe + screenshots e o fluxo completo (docs/auditoria-design/etapa-4/)
 FASE_ETAPA4=antes npm run test:e2e:etapa4   # só screenshots, para comparar antes/depois
