@@ -219,8 +219,12 @@ da OSC ou protocolo da proposta).
 | Endpoint | Métodos | Corpo (JSON) | Permissão |
 |---|---|---|---|
 | `/api/avaliacao` | `PUT` registrar/alterar nível | `{ chamamentoId, propostaId, codigo, nivel, justificativa, paginas?, decisao, votoDivergente?, sessaoId }` | `nivelD1` |
-| `/api/experiencia` | `POST` criar, `PATCH` editar, `DELETE` excluir | `{ chamamentoId, propostaId, descricao, categorias, modalidade, orgaoParceiro?, instrumento?, mrosc?, inicio, fim?, vagas?, unidades?, trabalhadores?, valorAnualCentavos?, documentos?: [{ tipo, numeroSEI, comprovaExecucaoSatisfatoria, aceito }], desconsideracoes?: [{ criterio, justificativa }] }` (`PATCH`/`DELETE` com `id`) | `experienciasD2` |
+| `/api/experiencia` | `POST` criar, `PATCH` editar, `DELETE` excluir | `{ chamamentoId, propostaId, sessaoId, descricao, categorias, modalidade, orgaoParceiro?, instrumento?, mrosc?, inicio, fim?, vagas?, unidades?, trabalhadores?, valorAnualCentavos?, documentos?: [{ tipo, numeroSEI, comprovaExecucaoSatisfatoria, aceito }], desconsideracoes?: [{ criterio, justificativa }] }` (`PATCH`/`DELETE` com `id`) | `experienciasD2` |
 | `/api/homologar` | `POST` | `{ chamamentoId, propostaId }` | `homologar` |
+
+> **Sessão obrigatória:** nível da D1, admissibilidade, experiências da D2 e desempate só são aceitos com o
+> `sessaoId` de uma sessão **aberta** do chamamento (e, exceto no desempate, com a proposta na pauta); senão **409**.
+> O `sessaoId` fica no documento e em cada registro da auditoria da operação (base do reset da sessão).
 
 - **C2 — nível** (`.../propostas/{p}/avaliacoes/{codigo}`): `codigo` precisa existir na matriz; `nivel` inteiro
   de 0 a 4; `paginas` (numeração interna do PA) não podem passar da página de corte do PA (Anexo III, 7.1);
@@ -283,7 +287,7 @@ A fonte única no código é `src/domain/permissoes.ts` (um teste garante que el
 
 | Endpoint | Método | Corpo (JSON) | Permissão |
 |---|---|---|---|
-| `/api/admissibilidade` | `PUT` | `{ chamamentoId, propostaId, requisitos: { '28.1.I': true, ... }, irregularidadesFormais?: ['28.5.II'], observacaoIrregularidades?, planos: [{ codigo, ausente, paginaInicial, paginaFinal }], resultado: 'admitida' \| 'nao_admitida', motivacao? }` | `admissibilidade` |
+| `/api/admissibilidade` | `PUT` | `{ chamamentoId, propostaId, sessaoId, requisitos: { '28.1.I': true, ... }, irregularidadesFormais?: ['28.5.II'], observacaoIrregularidades?, planos: [{ codigo, ausente, paginaInicial, paginaFinal }], resultado: 'admitida' \| 'nao_admitida', motivacao? }` | `admissibilidade` |
 
 - Textos do 28.1 (10 requisitos), 28.2 a 28.5 ficam em `matriz_2026.json` (`admissibilidade`).
 - Página de corte de cada PA = página inicial + limite do PA (Anexo III, 7.1) − 1; a tela alerta quando excede.
@@ -312,7 +316,7 @@ O componente `FormularioApi` (`src/components/ui`) valida com o mesmo esquema da
 
 | Endpoint | Método | Corpo (JSON) | Permissão |
 |---|---|---|---|
-| `/api/desempate` | `PUT` | `{ chamamentoId, loteCodigo, ordem: [propostaId, ...], justificativa }` | `desempate` |
+| `/api/desempate` | `PUT` | `{ chamamentoId, sessaoId, loteCodigo, ordem: [propostaId, ...], justificativa }` | `desempate` |
 | `/api/reabrir` | `POST` | `{ chamamentoId, propostaId, motivo }` | `reabrir` |
 | `/api/diligencias` | `POST` criar; `PATCH` com `acao` | `{ chamamentoId, propostaId, objeto, prazo }`; `{ ..., id, acao: 'responder', resposta }` ou `{ ..., id, acao: 'encerrar', conclusao }` | `diligencias` |
 

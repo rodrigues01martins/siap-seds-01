@@ -53,8 +53,12 @@ function semIndefinidos(dados: Record<string, unknown> = {}): Record<string, unk
 export async function gravar(
   autor: Autor,
   preparar: (transacao: Transaction) => Operacao[] | Promise<Operacao[]>,
-  /** Só a reabertura (RF-18) escreve em proposta homologada; ela mesma confere a regra. */
-  opcoes: { permitirPropostaHomologada?: boolean } = {},
+  opcoes: {
+    /** Só a reabertura (RF-18) escreve em proposta homologada; ela mesma confere a regra. */
+    permitirPropostaHomologada?: boolean
+    /** Sessão da Comissão em que a gravação acontece: vai para cada registro de auditoria (base do reset). */
+    sessaoId?: string
+  } = {},
 ): Promise<void> {
   const { db } = obterAdmin()
   await db.runTransaction(async (transacao) => {
@@ -101,6 +105,7 @@ export async function gravar(
         uid: autor.uid,
         email: autor.email,
         perfil: autor.perfil,
+        ...(opcoes.sessaoId ? { sessaoId: opcoes.sessaoId } : {}),
         dataHora: agora,
       })
     })
