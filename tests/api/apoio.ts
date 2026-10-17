@@ -26,6 +26,8 @@ export interface RegistroAuditoria {
   subcolecoes?: Record<string, unknown>
   /** Sessão da Comissão em que a gravação foi feita (admissibilidade, D1, D2, desempate). */
   sessaoId?: string
+  /** Só no reset: a sessão cujos registros foram revertidos. */
+  resetDaSessao?: string
   /** 'admin' ou 'usuario' (quem gravou). */
   perfil: string
   dataHora: Timestamp
@@ -43,7 +45,7 @@ export const ACESSO_TESTE: Record<PerfilTeste, { admin: boolean; permissoes: str
   admin: { admin: true, permissoes: [], comissao: null },
   presidente: {
     admin: false,
-    permissoes: ['consultar', ...AVALIACAO, 'sessaoAbrirEncerrar', 'sessaoConduzir', 'homologar', 'reabrir', 'desempate'],
+    permissoes: ['consultar', ...AVALIACAO, 'sessaoAbrirEncerrar', 'sessaoConduzir', 'homologar', 'reabrir', 'desempate', 'resetarSessao'],
     comissao: 'presidente',
   },
   relator: { admin: false, permissoes: ['consultar', ...AVALIACAO, 'sessaoConduzir'], comissao: 'relator' },
