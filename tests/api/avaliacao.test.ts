@@ -37,21 +37,13 @@ const registro = (dados: Record<string, unknown> = {}) => ({
   ...dados,
 })
 
-let relator: Usuario
 let presidente: Usuario
-let membro: Usuario
 let admin: Usuario
-let controle: Usuario
+let antigo: Usuario
 
 beforeAll(async () => {
   await limparAuth()
-  ;[relator, presidente, membro, admin, controle] = await Promise.all([
-    criarUsuario('relator'),
-    criarUsuario('presidente'),
-    criarUsuario('membro'),
-    criarUsuario('admin'),
-    criarUsuario('controle'),
-  ])
+  ;[presidente, admin, antigo] = await Promise.all([criarUsuario('presidente'), criarUsuario('admin'), criarUsuario('antigo')])
 })
 
 beforeEach(async () => {
@@ -60,16 +52,16 @@ beforeEach(async () => {
 })
 
 describe('/api/avaliacao — acesso', () => {
-  it('405, 401 e 403 (controle, só consulta, não registra nível)', async () => {
-    const r405 = await chamar(rota, 'GET', undefined, relator.token)
+  it('405, 401 e 403 (cadastro antigo, sem perfil)', async () => {
+    const r405 = await chamar(rota, 'GET', undefined, presidente.token)
     expect(r405.status).toBe(405)
     expect(r405.headers.get('Allow')).toBe('PUT')
     expect((await chamar(rota, 'PUT', registro(), null)).status).toBe(401)
-    expect((await chamar(rota, 'PUT', registro(), controle.token)).status).toBe(403)
+    expect((await chamar(rota, 'PUT', registro(), antigo.token)).status).toBe(403)
   })
 
-  it.each(['presidente', 'relator', 'membro', 'admin'] as const)('%s registra nível', async (perfil) => {
-    const usuario = { presidente, relator, membro, admin }[perfil]
+  it.each(['presidente', 'admin'] as const)('%s registra nível', async (perfil) => {
+    const usuario = { presidente, admin }[perfil]
     expect((await chamar(rota, 'PUT', registro(), usuario.token)).status).toBe(200)
   })
 })
@@ -82,32 +74,32 @@ describe('/api/avaliacao — validação (400)', () => {
     ['justificativa curta', { justificativa: 'curta' }, 'justificativa', 'A justificativa deve ter ao menos 20 caracteres.'],
     ['voto divergente com unanimidade', { votoDivergente: 'Membro X votou 2.' }, 'votoDivergente', 'Voto divergente só se aplica a decisão por maioria.'],
   ])('%s', async (_caso, ajuste, campo, mensagem) => {
-    const r = await chamar(rota, 'PUT', registro(ajuste), relator.token)
+    const r = await chamar(rota, 'PUT', registro(ajuste), presidente.token)
     expect(r).toMatchObject({ status: 400, corpo: { campos: { [campo]: mensagem } } })
     expect(await totalAuditoria()).toBe(0)
   })
 
   it('decisão fora de unanimidade|maioria e nível não inteiro → 400', async () => {
-    const r = await chamar(rota, 'PUT', registro({ decisao: 'consenso', nivel: 2.5 }), relator.token)
+    const r = await chamar(rota, 'PUT', registro({ decisao: 'consenso', nivel: 2.5 }), presidente.token)
     expect(r.status).toBe(400)
     expect(Object.keys(r.corpo?.campos ?? {}).sort()).toEqual(['decisao', 'nivel'])
   })
 
   it('mínimo da justificativa vem do chamamento (configurável)', async () => {
     await semearProposta({ justificativaMinima: 80 })
-    const r = await chamar(rota, 'PUT', registro(), relator.token)
+    const r = await chamar(rota, 'PUT', registro(), presidente.token)
     expect(r).toMatchObject({ status: 400, corpo: { campos: { justificativa: 'A justificativa deve ter ao menos 80 caracteres.' } } })
   })
 
   it('proposta inexistente → 404', async () => {
-    const r = await chamar(rota, 'PUT', registro({ propostaId: 'nao-existe' }), relator.token)
+    const r = await chamar(rota, 'PUT', registro({ propostaId: 'nao-existe' }), presidente.token)
     expect(r).toMatchObject({ status: 404, corpo: { erro: 'Proposta não encontrada.' } })
   })
 })
 
 describe('/api/avaliacao — gravação, auditoria e recálculo (C4)', () => {
   it('registra o nível e audita com antes = null', async () => {
-    const r = await chamar(rota, 'PUT', registro({ decisao: 'maioria', votoDivergente: 'Membro X: nível 2.' }), relator.token)
+    const r = await chamar(rota, 'PUT', registro({ decisao: 'maioria', votoDivergente: 'Membro X: nível 2.' }), presidente.token)
     expect(r.status).toBe(200)
     expect(await ler(`${CAMINHO_PROPOSTA}/avaliacoes/3.1`)).toMatchObject({
       nivel: 3,
@@ -117,18 +109,18 @@ describe('/api/avaliacao — gravação, auditoria e recálculo (C4)', () => {
       sessaoId: SESSAO,
     })
     const [registroAuditoria] = await auditoriaDe(`${CAMINHO_PROPOSTA}/avaliacoes/3.1`)
-    expect(registroAuditoria).toMatchObject({ acao: 'criar', antes: null, depois: { nivel: 3 }, uid: relator.uid, perfil: 'usuario' })
+    expect(registroAuditoria).toMatchObject({ acao: 'criar', antes: null, depois: { nivel: 3 }, uid: presidente.uid, perfil: 'presidente' })
   })
 
   it('registrar de novo o mesmo subcritério → editar, com antes e depois', async () => {
-    await chamar(rota, 'PUT', registro(), relator.token)
+    await chamar(rota, 'PUT', registro(), presidente.token)
     await chamar(rota, 'PUT', registro({ nivel: 1 }), presidente.token)
     const registros = await auditoriaDe(`${CAMINHO_PROPOSTA}/avaliacoes/3.1`)
-    expect(registros[1]).toMatchObject({ acao: 'editar', antes: { nivel: 3 }, depois: { nivel: 1 }, perfil: 'usuario' })
+    expect(registros[1]).toMatchObject({ acao: 'editar', antes: { nivel: 3 }, depois: { nivel: 1 }, perfil: 'presidente' })
   })
 
   it('recalcula totais da proposta na mesma gravação (avaliação incompleta → pendente)', async () => {
-    const r = await chamar(rota, 'PUT', registro(), relator.token)
+    const r = await chamar(rota, 'PUT', registro(), presidente.token)
     expect(r.corpo?.totais).toMatchObject({ d1: 3, d2: 0, nf: 3, status: 'pendente', completa: false })
     const proposta = await ler(CAMINHO_PROPOSTA)
     expect(proposta?.totais).toMatchObject({ d1: 3, status: 'pendente' })
@@ -139,7 +131,7 @@ describe('/api/avaliacao — gravação, auditoria e recálculo (C4)', () => {
     const niveis = Object.fromEntries(CODIGOS.map((c, i) => [c, i % 5]))
     const { ['6.4']: ultimo, ...demais } = niveis
     await semearNiveis(demais)
-    await chamar(rota, 'PUT', registro({ codigo: '6.4', nivel: ultimo, paginas: [] }), relator.token)
+    await chamar(rota, 'PUT', registro({ codigo: '6.4', nivel: ultimo, paginas: [] }), presidente.token)
 
     const d1 = calcularD1(niveis)
     const d2 = calcularD2({ experiencias: [], dataLimite: DATA_LIMITE })
@@ -165,7 +157,7 @@ describe('/api/avaliacao — gravação, auditoria e recálculo (C4)', () => {
   it('completa e com nível 0 em 1.1 → desclassificada', async () => {
     const { ['1.1']: _, ...demais } = Object.fromEntries(CODIGOS.map((c) => [c, 4]))
     await semearNiveis(demais)
-    const r = await chamar(rota, 'PUT', registro({ codigo: '1.1', nivel: 0, paginas: [] }), relator.token)
+    const r = await chamar(rota, 'PUT', registro({ codigo: '1.1', nivel: 0, paginas: [] }), presidente.token)
     expect(r.corpo?.totais).toMatchObject({ status: 'desclassificada', completa: true, d1: 108 })
   })
 })
@@ -174,7 +166,7 @@ describe('/api/avaliacao — exige sessão aberta (Etapa 4a)', () => {
   const mensagem = 'Avaliação só pode ser registrada em sessão aberta da Comissão.'
 
   it('sessão inexistente → 409, sem gravar nem auditar', async () => {
-    const r = await chamar(rota, 'PUT', registro({ sessaoId: 'nao-existe' }), relator.token)
+    const r = await chamar(rota, 'PUT', registro({ sessaoId: 'nao-existe' }), presidente.token)
     expect(r).toMatchObject({ status: 409, corpo: { erro: mensagem } })
     expect(await ler(`${CAMINHO_PROPOSTA}/avaliacoes/3.1`)).toBeUndefined()
     expect(await totalAuditoria()).toBe(0)
@@ -182,7 +174,7 @@ describe('/api/avaliacao — exige sessão aberta (Etapa 4a)', () => {
 
   it('sessão encerrada → 409', async () => {
     await semearProposta({ sessao: 'encerrada' })
-    const r = await chamar(rota, 'PUT', registro(), relator.token)
+    const r = await chamar(rota, 'PUT', registro(), presidente.token)
     expect(r).toMatchObject({ status: 409, corpo: { erro: mensagem } })
     expect(await totalAuditoria()).toBe(0)
   })
@@ -190,20 +182,20 @@ describe('/api/avaliacao — exige sessão aberta (Etapa 4a)', () => {
 
 describe('/api/avaliacao — foco da sessão (Etapa 4b)', () => {
   it('ao salvar, o subcritério vira o foco da sessão, na mesma gravação e auditado', async () => {
-    const r = await chamar(rota, 'PUT', registro({ codigo: '2.1' }), membro.token)
+    const r = await chamar(rota, 'PUT', registro({ codigo: '2.1' }), admin.token)
     expect(r.status).toBe(200)
     const caminhoSessao = `chamamentos/${CH}/sessoes/${SESSAO}`
     expect((await ler(caminhoSessao))?.foco).toEqual({ tipo: 'subcriterio', propostaId: PROP, subcriterio: '2.1' })
     expect((await auditoriaDe(caminhoSessao)).at(-1)).toMatchObject({
       acao: 'editar',
       depois: { foco: { tipo: 'subcriterio', propostaId: PROP, subcriterio: '2.1' } },
-      uid: membro.uid,
+      uid: admin.uid,
     })
   })
 
   it('proposta fora da pauta da sessão → 409, sem gravar', async () => {
-    await semearSessao(SESSAO, { pauta: ['outra-proposta'] })
-    const r = await chamar(rota, 'PUT', registro(), relator.token)
+    await semearSessao(SESSAO, { lotes: ['L2'] })
+    const r = await chamar(rota, 'PUT', registro(), presidente.token)
     expect(r).toMatchObject({ status: 409, corpo: { erro: 'Proposta fora da pauta da sessão.' } })
     expect(await totalAuditoria()).toBe(0)
   })
@@ -212,7 +204,7 @@ describe('/api/avaliacao — foco da sessão (Etapa 4b)', () => {
 describe('/api/avaliacao — proposta homologada', () => {
   it('→ 409, sem gravar nem auditar', async () => {
     await semearProposta({ bloqueada: true })
-    const r = await chamar(rota, 'PUT', registro(), relator.token)
+    const r = await chamar(rota, 'PUT', registro(), presidente.token)
     expect(r).toMatchObject({ status: 409, corpo: { erro: 'Proposta homologada: alteração não permitida.' } })
     expect(await ler(`${CAMINHO_PROPOSTA}/avaliacoes/3.1`)).toBeUndefined()
     expect(await totalAuditoria()).toBe(0)

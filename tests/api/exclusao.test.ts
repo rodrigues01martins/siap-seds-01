@@ -27,13 +27,12 @@ const EM_EXCLUSAO = 'Registro em exclusão: alteração não permitida.'
 const INCOMPLETA = 'A exclusão foi registrada, mas não terminou. Repita a operação para concluir.'
 
 let admin: Usuario
-let cadastrador: Usuario
+let presidente: Usuario
+let antigo: Usuario
 
 beforeAll(async () => {
   await limparAuth()
-  admin = await criarUsuario('admin')
-  // Tem as três permissões de Cadastros, mas não é administrador: excluir é só do admin.
-  cadastrador = await criarUsuario('controle', { permissoes: ['consultar', 'chamamentos', 'oscs', 'propostas'] })
+  ;[admin, presidente, antigo] = await Promise.all([criarUsuario('admin'), criarUsuario('presidente'), criarUsuario('antigo')])
 })
 
 /** Chamamento com lotes, OSC e uma proposta com subcoleções (inclusive aninhada). */
@@ -88,12 +87,12 @@ describe('exclusão — acesso e validação', () => {
     ['proposta', rotaPropostas, { chamamentoId: CH, propostaId: P }],
     ['OSC', rotaOscs, { cnpj: CNPJ }],
     ['chamamento', rotaChamamentos, { id: CH }],
-  ] as const)('%s: 401 sem login, 403 para quem não é admin (mesmo com a permissão de cadastro)', async (_c, rota, ids) => {
+  ] as const)('%s: 401 sem login, 403 para cadastro antigo (sem perfil novo)', async (_c, rota, ids) => {
     await semear()
     expect((await chamar(rota, 'DELETE', { ...ids, justificativa: JUSTIFICATIVA }, null)).status).toBe(401)
-    expect((await chamar(rota, 'DELETE', { ...ids, justificativa: JUSTIFICATIVA }, cadastrador.token)).status).toBe(403)
+    expect((await chamar(rota, 'DELETE', { ...ids, justificativa: JUSTIFICATIVA }, antigo.token)).status).toBe(403)
     expect((await consultar(rota, { ...ids, simular: 'true' }, null)).status).toBe(401)
-    expect((await consultar(rota, { ...ids, simular: 'true' }, cadastrador.token)).status).toBe(403)
+    expect((await consultar(rota, { ...ids, simular: 'true' }, antigo.token)).status).toBe(403)
     expect(await totalAuditoria()).toBe(0)
   })
 
@@ -237,6 +236,13 @@ describe('exclusão de OSC', () => {
     expect((previa.corpo?.bloqueios as { itens: string[] }[])[0]!.itens).toHaveLength(2)
     expect(await ler(`oscs/${CNPJ}`)).not.toHaveProperty('status')
     expect(await totalAuditoria()).toBe(0)
+  })
+
+  it('o presidente também exclui (admin e presidente fazem tudo)', async () => {
+    await semear({ proposta: false })
+    const r = await chamar(rotaOscs, 'DELETE', { cnpj: CNPJ, justificativa: JUSTIFICATIVA }, presidente.token)
+    expect(r.status).toBe(200)
+    expect((await auditoriaDe(`oscs/${CNPJ}`))[0]).toMatchObject({ acao: 'excluir', uid: presidente.uid, perfil: 'presidente' })
   })
 
   it('sem propostas → apaga e audita', async () => {

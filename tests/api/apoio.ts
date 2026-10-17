@@ -28,29 +28,21 @@ export interface RegistroAuditoria {
   sessaoId?: string
   /** Só no reset: a sessão cujos registros foram revertidos. */
   resetDaSessao?: string
-  /** 'admin' ou 'usuario' (quem gravou). */
+  /** Perfil de quem gravou: 'admin' ou 'presidente'. */
   perfil: string
   dataHora: Timestamp
 }
 
 /**
- * Cenários de teste com os nomes dos antigos perfis, traduzidos para o acesso atual (usuarios/{uid}:
- * admin, permissoes e papel na Comissão). Mantém legíveis os testes de cada rota.
+ * Perfis de teste: os dois perfis do app (admin e presidente) e um cadastro do modelo anterior (relator,
+ * membro ou controle: permissões por área e papel na Comissão, sem perfil), que não tem mais acesso.
  */
-export type PerfilTeste = 'admin' | 'presidente' | 'relator' | 'membro' | 'controle'
+export type PerfilTeste = 'admin' | 'presidente' | 'antigo'
 
-const AVALIACAO = ['admissibilidade', 'nivelD1', 'experienciasD2', 'diligencias']
-
-export const ACESSO_TESTE: Record<PerfilTeste, { admin: boolean; permissoes: string[]; comissao: string | null }> = {
-  admin: { admin: true, permissoes: [], comissao: null },
-  presidente: {
-    admin: false,
-    permissoes: ['consultar', ...AVALIACAO, 'sessaoAbrirEncerrar', 'sessaoConduzir', 'homologar', 'reabrir', 'desempate', 'resetarSessao'],
-    comissao: 'presidente',
-  },
-  relator: { admin: false, permissoes: ['consultar', ...AVALIACAO, 'sessaoConduzir'], comissao: 'relator' },
-  membro: { admin: false, permissoes: ['consultar', 'nivelD1'], comissao: 'membro' },
-  controle: { admin: false, permissoes: ['consultar'], comissao: null },
+export const ACESSO_TESTE: Record<PerfilTeste, Record<string, unknown>> = {
+  admin: { perfil: 'admin' },
+  presidente: { perfil: 'presidente' },
+  antigo: { admin: false, permissoes: ['consultar', 'nivelD1'], comissao: 'relator' },
 }
 
 /** Cadastros (usuarios/{uid}) dos usuários de teste: limparFirestore os regrava. */
@@ -165,6 +157,12 @@ export const PROP = 'p1'
 export const CAMINHO_PROPOSTA = `chamamentos/${CH}/propostas/${PROP}`
 /** Sessão da Comissão semeada aberta por semearProposta (a avaliação exige sessão aberta). */
 export const SESSAO = 'sessao-1'
+/** Presentes da sessão: só nomes e papéis (sem login), com exatamente um presidente. */
+export const PRESENTES = [
+  { nome: 'Ana Presidente', papel: 'presidente' },
+  { nome: 'Bruno Membro', papel: 'membro' },
+  { nome: 'Carla Membro', papel: 'membro' },
+]
 
 /** Chamamento (com data limite), OSC, proposta e sessão aberta prontos para avaliação. */
 export async function semearProposta(
@@ -189,7 +187,7 @@ export async function semearProposta(
 export async function semearSessao(id: string, dados: Record<string, unknown> = {}): Promise<void> {
   await obterAdmin()
     .db.doc(`chamamentos/${CH}/sessoes/${id}`)
-    .set({ data: '2026-11-10', pauta: [PROP], status: 'aberta', presentes: [], declaracoes: [], foco: null, ...dados })
+    .set({ data: '2026-11-10', lotes: ['L1'], status: 'aberta', presentes: PRESENTES, foco: null, ...dados })
 }
 
 /** Regrava o cadastro (usuarios/{uid}) do usuário com o cenário `perfil`. */

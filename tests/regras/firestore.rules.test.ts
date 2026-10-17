@@ -1,6 +1,7 @@
 // Testes das regras do Firestore no emulador (npm run test:regras).
 // Matriz de acesso: cada caminho × cada ator, para leitura e escrita. O acesso vem de usuarios/{uid}
-// (admin, permissoes, ativo), gravado só pela /api.
+// (perfil admin ou presidente, ativo), gravado só pela /api. Cadastro do modelo anterior (relator, membro,
+// controle: permissões e papel, sem perfil) não lê nada; administrador antigo (admin: true) continua.
 
 import { readFileSync } from 'node:fs'
 import {
@@ -16,19 +17,22 @@ let ambiente: RulesTestEnvironment
 
 /** Cadastro de cada ator em usuarios/{uid}; 'anonimo' não tem login e 'sem-cadastro' não tem documento. */
 const CADASTROS = {
-  admin: { email: 'admin@go.gov.br', admin: true, ativo: true, permissoes: [] },
-  consulta: { email: 'consulta@go.gov.br', admin: false, ativo: true, permissoes: ['consultar'] },
-  avaliador: { email: 'avaliador@go.gov.br', admin: false, ativo: true, permissoes: ['nivelD1'] },
-  'sem-permissao': { email: 'sem-permissao@go.gov.br', admin: false, ativo: true, permissoes: [] },
-  desativado: { email: 'desativado@go.gov.br', admin: false, ativo: false, permissoes: ['consultar'] },
-  'admin-desativado': { email: 'ex-admin@go.gov.br', admin: true, ativo: false, permissoes: [] },
+  admin: { email: 'admin@go.gov.br', perfil: 'admin', ativo: true },
+  presidente: { email: 'presidente@go.gov.br', perfil: 'presidente', ativo: true },
+  'admin-antigo': { email: 'admin-antigo@go.gov.br', admin: true, ativo: true, permissoes: [] },
+  antigo: { email: 'relator@go.gov.br', admin: false, ativo: true, permissoes: ['consultar', 'nivelD1'], comissao: 'relator' },
+  'perfil-invalido': { email: 'membro@go.gov.br', perfil: 'membro', ativo: true },
+  // Perfil novo vale mais que o campo antigo: presidente com admin: true esquecido não é administrador.
+  'presidente-ex-admin': { email: 'ex@go.gov.br', perfil: 'presidente', admin: true, ativo: true },
+  desativado: { email: 'desativado@go.gov.br', perfil: 'presidente', ativo: false },
+  'admin-desativado': { email: 'ex-admin@go.gov.br', perfil: 'admin', ativo: false },
 } as const
 
 type Ator = keyof typeof CADASTROS | 'anonimo' | 'sem-cadastro'
 const ATORES: Ator[] = ['anonimo', 'sem-cadastro', ...(Object.keys(CADASTROS) as (keyof typeof CADASTROS)[])]
 const LOGADOS = ATORES.filter((a) => a !== 'anonimo')
-/** Quem lê os dados do app: ativo e administrador ou com ao menos uma permissão. */
-const LEITORES: Ator[] = ['admin', 'consulta', 'avaliador']
+/** Quem lê os dados do app: conta ativa com perfil admin ou presidente (ou administrador antigo). */
+const LEITORES: Ator[] = ['admin', 'presidente', 'admin-antigo', 'presidente-ex-admin']
 
 const uidDe = (ator: Ator) => `uid-${ator}`
 
@@ -74,10 +78,11 @@ const LEITURA: Record<string, Ator[]> = {
   'chamamentos/ch1/propostas/p1/avaliacoes/a1': LEITORES,
   'chamamentos/ch1/sessoes/s1': LEITORES,
   'oscs/osc1': LEITORES,
-  'auditoria/ev1': ['admin'],
-  // O próprio cadastro (o app lê para saber o acesso) e os leitores (listam a Comissão na sessão).
+  // Admin e presidente fazem tudo no sistema, inclusive ver o histórico.
+  'auditoria/ev1': LEITORES,
+  // O próprio cadastro (o app lê para saber o acesso) e os leitores.
   'usuarios/uid-admin': LEITORES,
-  'usuarios/uid-sem-permissao': ['sem-permissao', ...LEITORES],
+  'usuarios/uid-antigo': ['antigo', ...LEITORES],
   'usuarios/uid-desativado': ['desativado', ...LEITORES],
   'usuarios/uid-sem-cadastro': ['sem-cadastro', ...LEITORES],
   'colecao-nao-prevista/x': [],
@@ -104,16 +109,16 @@ describe('leitura de coleção (list)', () => {
     await assertFails(getDocs(collection(bancoDe(ator), 'usuarios')))
   })
 
-  it('só o administrador ativo lista a auditoria', async () => {
-    await assertSucceeds(getDocs(collection(bancoDe('admin'), 'auditoria')))
-    for (const ator of ['consulta', 'avaliador', 'admin-desativado'] as const) {
+  it('admin e presidente ativos listam a auditoria; cadastro antigo e desativado, não', async () => {
+    for (const ator of ['admin', 'presidente'] as const) await assertSucceeds(getDocs(collection(bancoDe(ator), 'auditoria')))
+    for (const ator of ['antigo', 'perfil-invalido', 'admin-desativado'] as const) {
       await assertFails(getDocs(collection(bancoDe(ator), 'auditoria')))
     }
   })
 })
 
 describe('escrita bloqueada para TODOS os clientes (toda escrita passa pela /api)', () => {
-  const caminhos = [...DOCUMENTOS, 'usuarios/uid-admin', 'usuarios/uid-consulta']
+  const caminhos = [...DOCUMENTOS, 'usuarios/uid-admin', 'usuarios/uid-presidente']
   const casos = caminhos.flatMap((caminho) => ATORES.map((ator) => ({ caminho, ator })))
 
   it.each(casos)('$ator não cria/atualiza/apaga $caminho', async ({ caminho, ator }) => {
@@ -124,7 +129,8 @@ describe('escrita bloqueada para TODOS os clientes (toda escrita passa pela /api
   })
 
   it('ninguém cria ou altera o próprio cadastro (ex.: para virar administrador)', async () => {
-    await assertFails(setDoc(doc(bancoDe('sem-cadastro'), 'usuarios/uid-sem-cadastro'), { admin: true }))
-    await assertFails(updateDoc(doc(bancoDe('consulta'), 'usuarios/uid-consulta'), { admin: true }))
+    await assertFails(setDoc(doc(bancoDe('sem-cadastro'), 'usuarios/uid-sem-cadastro'), { perfil: 'admin' }))
+    await assertFails(updateDoc(doc(bancoDe('presidente'), 'usuarios/uid-presidente'), { perfil: 'admin' }))
+    await assertFails(updateDoc(doc(bancoDe('antigo'), 'usuarios/uid-antigo'), { perfil: 'presidente' }))
   })
 })

@@ -18,7 +18,6 @@ import {
   ler,
   limparAuth,
   limparFirestore,
-  registrarUsuario,
   semCarimbos,
   totalAuditoria,
   type Usuario,
@@ -29,23 +28,11 @@ const DATA_LIMITE = '2026-10-31'
 
 let admin: Usuario
 let presidente: Usuario
-let relator: Usuario
-let membro: Usuario
 
 beforeAll(async () => {
   await limparAuth()
   await limparFirestore()
-  ;[admin, presidente, relator, membro] = await Promise.all([
-    criarUsuario('admin'),
-    criarUsuario('presidente'),
-    criarUsuario('relator'),
-    criarUsuario('membro'),
-  ])
-  await Promise.all([
-    registrarUsuario(presidente, 'presidente'),
-    registrarUsuario(relator, 'relator'),
-    registrarUsuario(membro, 'membro'),
-  ])
+  ;[admin, presidente] = await Promise.all([criarUsuario('admin'), criarUsuario('presidente')])
 })
 
 /** Chama a rota e exige o status esperado, mostrando o corpo se falhar. */
@@ -94,15 +81,18 @@ describe('fluxo completo: cadastro → sessão → D2 → D1 → homologação',
       {
         chamamentoId: ch,
         data: '2026-11-10',
-        pauta: [p],
-        presentes: [presidente.uid, relator.uid, membro.uid],
-        declaracoes: [presidente, relator, membro].map((u) => ({ uid: u.uid, semImpedimento: true })),
+        lotes: ['L1'],
+        presentes: [
+          { nome: 'Ana Presidente', papel: 'presidente' },
+          { nome: 'Bruno Membro', papel: 'membro' },
+          { nome: 'Carla Membro', papel: 'membro' },
+        ],
       },
       presidente,
       201,
     )
 
-    // 3. Experiências da D2 (relator)
+    // 3. Experiências da D2 (presidente)
     const atestado = { tipo: 'Atestado de capacidade técnica', numeroSEI: '1001', comprovaExecucaoSatisfatoria: true, aceito: true }
     const internacao = await exigir<{ id: string }>(
       experiencia,
@@ -124,7 +114,7 @@ describe('fluxo completo: cadastro → sessão → D2 → D1 → homologação',
         valorAnualCentavos: 1_200_000_000,
         documentos: [atestado],
       },
-      relator,
+      presidente,
       201,
     )
     const esporte = await exigir<{ id: string }>(
@@ -141,13 +131,13 @@ describe('fluxo completo: cadastro → sessão → D2 → D1 → homologação',
         fim: '2021-12-31',
         documentos: [atestado],
       },
-      relator,
+      presidente,
       201,
     )
 
-    // 4. Os 28 subcritérios da D1, cada um pela /api (membro, relator e presidente)
+    // 4. Os 28 subcritérios da D1, cada um pela /api (presidente e administrador)
     const niveis = Object.fromEntries(CODIGOS.map((c, i) => [c, i % 3 === 0 ? 4 : 3]))
-    const avaliadores = [membro, relator, presidente]
+    const avaliadores = [presidente, admin]
     for (const [i, codigo] of CODIGOS.entries()) {
       await exigir(
         avaliacao,
@@ -161,7 +151,7 @@ describe('fluxo completo: cadastro → sessão → D2 → D1 → homologação',
           decisao: 'unanimidade',
           sessaoId: s,
         },
-        avaliadores[i % 3]!,
+        avaliadores[i % 2]!,
       )
     }
 
@@ -191,7 +181,7 @@ describe('fluxo completo: cadastro → sessão → D2 → D1 → homologação',
       avaliacao,
       'PUT',
       { ...alvo, codigo: '1.1', nivel: 0, justificativa: 'Tentativa após homologação.', paginas: [], decisao: 'unanimidade', sessaoId: s },
-      relator.token,
+      presidente.token,
     )
     expect(depois.status).toBe(409)
 

@@ -4,11 +4,11 @@ import * as rota from '../../api/desempate'
 import { CH, SESSAO, auditoriaDe, chamar, criarUsuario, ler, limparAuth, limparFirestore, semearProposta, semearPropostaComTotais, totalAuditoria, type Usuario } from './apoio'
 
 let presidente: Usuario
-let relator: Usuario
+let antigo: Usuario
 
 beforeAll(async () => {
   await limparAuth()
-  ;[presidente, relator] = await Promise.all([criarUsuario('presidente'), criarUsuario('relator')])
+  ;[presidente, antigo] = await Promise.all([criarUsuario('presidente'), criarUsuario('antigo')])
 })
 
 beforeEach(async () => {
@@ -30,12 +30,12 @@ const corpo = (dados: Record<string, unknown> = {}) => ({
 })
 
 describe('/api/desempate — acesso e validação', () => {
-  it('405 com Allow PUT, 401, 403 (relator)', async () => {
+  it('405 com Allow PUT, 401, 403 (cadastro antigo)', async () => {
     const r = await chamar(rota, 'GET', undefined, presidente.token)
     expect(r.status).toBe(405)
     expect(r.headers.get('Allow')).toBe('PUT')
     expect((await chamar(rota, 'PUT', corpo(), null)).status).toBe(401)
-    expect((await chamar(rota, 'PUT', corpo(), relator.token)).status).toBe(403)
+    expect((await chamar(rota, 'PUT', corpo(), antigo.token)).status).toBe(403)
   })
 
   it.each([
@@ -87,7 +87,7 @@ describe('/api/desempate — gravação e auditoria', () => {
       decididoPor: { uid: presidente.uid, email: presidente.email },
     })
     expect(doc?.decididoEm).toBeInstanceOf(Timestamp)
-    expect((await auditoriaDe(caminho))[0]).toMatchObject({ acao: 'criar', uid: presidente.uid, perfil: 'usuario' })
+    expect((await auditoriaDe(caminho))[0]).toMatchObject({ acao: 'criar', uid: presidente.uid, perfil: 'presidente' })
 
     const r2 = await chamar(rota, 'PUT', corpo({ ordem: ['b', 'c'] }), presidente.token)
     expect(r2.corpo?.id).toBe(r.corpo?.id)

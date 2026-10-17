@@ -24,11 +24,11 @@ const CODIGOS = MATRIZ_2026.dimensao1.planos.flatMap((p) => p.subcriterios.map((
 const ALVO = { chamamentoId: CH, propostaId: PROP }
 
 let presidente: Usuario
-let relator: Usuario
+let antigo: Usuario
 
 beforeAll(async () => {
   await limparAuth()
-  ;[presidente, relator] = await Promise.all([criarUsuario('presidente'), criarUsuario('relator')])
+  ;[presidente, antigo] = await Promise.all([criarUsuario('presidente'), criarUsuario('antigo')])
 })
 
 beforeEach(async () => {
@@ -44,16 +44,16 @@ async function completarAvaliacao(): Promise<void> {
     avaliacao,
     'PUT',
     { ...ALVO, codigo: '6.4', nivel: 3, justificativa: 'Avaliação concluída pela Comissão.', paginas: [], decisao: 'unanimidade', sessaoId: SESSAO },
-    relator.token,
+    presidente.token,
   )
   expect(r.corpo?.totais).toMatchObject({ status: 'apta', completa: true })
 }
 
 describe('/api/homologar — acesso e validação', () => {
-  it('405, 401 e 403 (relator não homologa)', async () => {
+  it('405, 401 e 403 (cadastro antigo não homologa)', async () => {
     expect((await chamar(rota, 'GET', undefined, presidente.token)).status).toBe(405)
     expect((await chamar(rota, 'POST', ALVO, null)).status).toBe(401)
-    expect((await chamar(rota, 'POST', ALVO, relator.token)).status).toBe(403)
+    expect((await chamar(rota, 'POST', ALVO, antigo.token)).status).toBe(403)
   })
 
   it('corpo inválido → 400; proposta inexistente → 404', async () => {
@@ -65,7 +65,7 @@ describe('/api/homologar — acesso e validação', () => {
     const mensagem = 'Proposta com avaliação pendente: conclua os 28 subcritérios antes de homologar.'
     expect(await chamar(rota, 'POST', ALVO, presidente.token)).toMatchObject({ status: 409, corpo: { erro: mensagem } })
     await semearNiveis({ '1.1': 3 })
-    await chamar(avaliacao, 'PUT', { ...ALVO, codigo: '1.2', nivel: 3, justificativa: 'Justificativa suficiente para o teste.', paginas: [], decisao: 'unanimidade', sessaoId: SESSAO }, relator.token)
+    await chamar(avaliacao, 'PUT', { ...ALVO, codigo: '1.2', nivel: 3, justificativa: 'Justificativa suficiente para o teste.', paginas: [], decisao: 'unanimidade', sessaoId: SESSAO }, presidente.token)
     expect((await chamar(rota, 'POST', ALVO, presidente.token)).status).toBe(409)
   })
 })
@@ -86,7 +86,7 @@ describe('/api/homologar — homologação', () => {
       antes: { bloqueada: false },
       depois: { bloqueada: true, homologadaPor: { uid: presidente.uid } },
       uid: presidente.uid,
-      perfil: 'usuario',
+      perfil: 'presidente',
     })
   })
 
@@ -94,10 +94,10 @@ describe('/api/homologar — homologação', () => {
     await completarAvaliacao()
     await chamar(rota, 'POST', ALVO, presidente.token)
 
-    const nivel = await chamar(avaliacao, 'PUT', { ...ALVO, codigo: '1.1', nivel: 1, justificativa: 'Tentativa após homologação.', paginas: [], decisao: 'unanimidade', sessaoId: SESSAO }, relator.token)
+    const nivel = await chamar(avaliacao, 'PUT', { ...ALVO, codigo: '1.1', nivel: 1, justificativa: 'Tentativa após homologação.', paginas: [], decisao: 'unanimidade', sessaoId: SESSAO }, presidente.token)
     expect(nivel).toMatchObject({ status: 409, corpo: { erro: 'Proposta homologada: alteração não permitida.' } })
 
-    const exp = await chamar(experiencia, 'POST', { ...ALVO, sessaoId: SESSAO, descricao: 'Nova experiência', categorias: ['C'], modalidade: 'outra', mrosc: false, inicio: '2020-01-01', fim: null }, relator.token)
+    const exp = await chamar(experiencia, 'POST', { ...ALVO, sessaoId: SESSAO, descricao: 'Nova experiência', categorias: ['C'], modalidade: 'outra', mrosc: false, inicio: '2020-01-01', fim: null }, presidente.token)
     expect(exp.status).toBe(409)
 
     expect((await chamar(rota, 'POST', ALVO, presidente.token)).status).toBe(409)
@@ -106,7 +106,7 @@ describe('/api/homologar — homologação', () => {
   it('inapta e desclassificada também podem ser homologadas (só pendente não)', async () => {
     const { ['6.4']: _, ...demais } = Object.fromEntries(CODIGOS.map((c) => [c, 1]))
     await semearNiveis(demais)
-    await chamar(avaliacao, 'PUT', { ...ALVO, codigo: '6.4', nivel: 1, justificativa: 'Avaliação concluída pela Comissão.', paginas: [], decisao: 'unanimidade', sessaoId: SESSAO }, relator.token)
+    await chamar(avaliacao, 'PUT', { ...ALVO, codigo: '6.4', nivel: 1, justificativa: 'Avaliação concluída pela Comissão.', paginas: [], decisao: 'unanimidade', sessaoId: SESSAO }, presidente.token)
     expect(((await ler(CAMINHO_PROPOSTA))?.totais as { status: string }).status).toBe('inapta')
     expect((await chamar(rota, 'POST', ALVO, presidente.token)).status).toBe(200)
   })

@@ -15,12 +15,12 @@ const VALIDO = {
 }
 
 let admin: Usuario
-let relator: Usuario
+let antigo: Usuario
 
 beforeAll(async () => {
   await limparAuth()
   admin = await criarUsuario('admin')
-  relator = await criarUsuario('relator')
+  antigo = await criarUsuario('antigo')
 })
 beforeEach(limparFirestore)
 
@@ -36,8 +36,8 @@ describe('/api/chamamentos — acesso', () => {
     expect((await chamar(rota, 'POST', VALIDO, null)).status).toBe(401)
   })
 
-  it('perfil sem permissão (relator) → 403', async () => {
-    expect((await chamar(rota, 'POST', VALIDO, relator.token)).status).toBe(403)
+  it('cadastro antigo, sem perfil novo → 403', async () => {
+    expect((await chamar(rota, 'POST', VALIDO, antigo.token)).status).toBe(403)
   })
 })
 

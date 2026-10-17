@@ -18,12 +18,12 @@ const banco = vi.hoisted(() => ({ db: null as unknown }))
 vi.mock('../../src/lib/firebase', () => ({ obterDb: () => banco.db, obterAuth: () => ({}) }))
 
 let ambiente: RulesTestEnvironment
-let relator: Usuario
+let presidente: Usuario
 
 beforeAll(async () => {
   await limparAuth()
   await limparFirestore()
-  relator = await criarUsuario('relator')
+  presidente = await criarUsuario('presidente')
   ambiente = await initializeTestEnvironment({
     projectId: process.env.GCLOUD_PROJECT ?? 'demo-siap-seds',
     firestore: { rules: readFileSync('firestore.rules', 'utf8') },
@@ -69,7 +69,7 @@ describe('projeção em tempo real (emuladores)', () => {
         decisao: 'unanimidade',
         sessaoId: SESSAO,
       },
-      relator.token,
+      presidente.token,
     )
     expect(r.status).toBe(200)
 

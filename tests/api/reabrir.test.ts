@@ -5,11 +5,11 @@ import * as rota from '../../api/reabrir'
 import { CAMINHO_PROPOSTA, CH, PROP, SESSAO, auditoriaDe, chamar, criarUsuario, ler, limparAuth, limparFirestore, semearProposta, totalAuditoria, type Usuario } from './apoio'
 
 let presidente: Usuario
-let relator: Usuario
+let antigo: Usuario
 
 beforeAll(async () => {
   await limparAuth()
-  ;[presidente, relator] = await Promise.all([criarUsuario('presidente'), criarUsuario('relator')])
+  ;[presidente, antigo] = await Promise.all([criarUsuario('presidente'), criarUsuario('antigo')])
 })
 
 beforeEach(async () => {
@@ -21,12 +21,12 @@ const MOTIVO = 'Erro material no registro do subcritério 3.1 identificado após
 const corpo = (dados: Record<string, unknown> = {}) => ({ chamamentoId: CH, propostaId: PROP, motivo: MOTIVO, ...dados })
 
 describe('/api/reabrir — acesso e validação', () => {
-  it('405 com Allow POST, 401, 403 (relator)', async () => {
+  it('405 com Allow POST, 401, 403 (cadastro antigo)', async () => {
     const r = await chamar(rota, 'GET', undefined, presidente.token)
     expect(r.status).toBe(405)
     expect(r.headers.get('Allow')).toBe('POST')
     expect((await chamar(rota, 'POST', corpo(), null)).status).toBe(401)
-    expect((await chamar(rota, 'POST', corpo(), relator.token)).status).toBe(403)
+    expect((await chamar(rota, 'POST', corpo(), antigo.token)).status).toBe(403)
   })
 
   it('motivo obrigatório → 400', async () => {
@@ -60,14 +60,14 @@ describe('/api/reabrir — reabertura (RF-18)', () => {
       acao: 'editar',
       antes: { bloqueada: true },
       depois: { bloqueada: false, motivoReabertura: MOTIVO },
-      perfil: 'usuario',
+      perfil: 'presidente',
     })
 
     const nivel = await chamar(
       avaliacao,
       'PUT',
       { chamamentoId: CH, propostaId: PROP, codigo: '3.1', nivel: 3, justificativa: 'Correção após a reabertura.', paginas: [], decisao: 'unanimidade', sessaoId: SESSAO },
-      relator.token,
+      presidente.token,
     )
     expect(nivel.status).toBe(200)
   })

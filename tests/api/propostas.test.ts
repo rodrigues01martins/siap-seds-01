@@ -14,12 +14,12 @@ const VALIDA = {
 }
 
 let admin: Usuario
-let membro: Usuario
+let antigo: Usuario
 
 beforeAll(async () => {
   await limparAuth()
   admin = await criarUsuario('admin')
-  membro = await criarUsuario('membro')
+  antigo = await criarUsuario('antigo')
 })
 
 beforeEach(async () => {
@@ -41,7 +41,7 @@ describe('/api/propostas — acesso', () => {
     expect(r.status).toBe(405)
     expect(r.headers.get('Allow')).toBe('GET, POST, PATCH, DELETE')
     expect((await chamar(rota, 'POST', VALIDA, null)).status).toBe(401)
-    expect((await chamar(rota, 'POST', VALIDA, membro.token)).status).toBe(403)
+    expect((await chamar(rota, 'POST', VALIDA, antigo.token)).status).toBe(403)
   })
 })
 

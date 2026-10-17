@@ -5,11 +5,11 @@ import { lerAcesso, podeFazer, type Acesso, type Exigencia } from '../../src/dom
 import { obterAdmin } from './admin.js'
 import { ErroApi, MENSAGENS } from './erros.js'
 
-/** Quem grava (vai para o histórico): perfil = 'admin' ou 'usuario'. */
+/** Quem grava (vai para o histórico): perfil = 'admin' ou 'presidente'. */
 export interface Assinatura {
   uid: string
   email: string | null
-  perfil: 'admin' | 'usuario'
+  perfil: 'admin' | 'presidente'
 }
 
 export interface Autor extends Assinatura {
@@ -41,8 +41,8 @@ export async function identificar(
  * Lê "Authorization: Bearer <ID token>". Sem token ou token inválido/revogado → 401;
  * sem cadastro, conta desativada ou sem a permissão exigida → 403. Administrador passa em tudo.
  */
-export async function autenticar(requisicao: Request, exigencia: Exigencia): Promise<Autor> {
+export async function autenticar(requisicao: Request, exigencia: Exigencia = 'consultar'): Promise<Autor> {
   const { uid, email, acesso } = await identificar(requisicao)
   if (!acesso || !podeFazer(acesso, exigencia)) throw new ErroApi(403, MENSAGENS.semPermissao)
-  return { uid, email, perfil: acesso.admin ? 'admin' : 'usuario', acesso }
+  return { uid, email, perfil: acesso.admin ? 'admin' : 'presidente', acesso }
 }

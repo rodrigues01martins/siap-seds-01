@@ -15,6 +15,7 @@ import { MATRIZ_2026 } from '../../src/domain/matriz'
 import {
   CAMINHO_PROPOSTA,
   CH,
+  PRESENTES,
   PROP,
   SESSAO,
   auditoriaDe,
@@ -37,29 +38,18 @@ const CAMINHO_SESSAO = `chamamentos/${CH}/sessoes/${SESSAO}`
 const CODIGOS = MATRIZ_2026.dimensao1.planos.flatMap((p) => p.subcriterios.map((s) => s.codigo))
 
 let presidente: Usuario
-let relator: Usuario
-let membro: Usuario
 let admin: Usuario
-let semPapel: Usuario
+let antigo: Usuario
 
 beforeAll(async () => {
   await limparAuth()
-  ;[presidente, relator, membro, admin, semPapel] = await Promise.all([
-    criarUsuario('presidente'),
-    criarUsuario('relator'),
-    criarUsuario('membro'),
-    criarUsuario('admin'),
-    // Tem a permissão, mas não é o presidente da Comissão: não reseta.
-    criarUsuario('relator', { permissoes: ['consultar', 'resetarSessao'] }),
-  ])
+  ;[presidente, admin, antigo] = await Promise.all([criarUsuario('presidente'), criarUsuario('admin'), criarUsuario('antigo')])
 })
 
 beforeEach(async () => {
   await limparFirestore()
   await semearProposta()
   await semearSessao(SESSAO, {
-    presentes: [{ uid: 'u-presidente', email: 'p@go.gov.br', perfil: 'presidente' }],
-    declaracoes: [{ uid: 'u-presidente', semImpedimento: true }],
     foco: { tipo: 'resumo', propostaId: PROP },
   })
 })
@@ -73,7 +63,7 @@ async function nivel(codigo: string, valor: number, sessaoId = SESSAO) {
     avaliacao,
     'PUT',
     { chamamentoId: CH, propostaId: PROP, sessaoId, codigo, nivel: valor, justificativa: `Fundamentação da Comissão para ${codigo}.`, paginas: [1], decisao: 'unanimidade' },
-    relator.token,
+    presidente.token,
   )
   expect(r.status).toBe(200)
 }
@@ -94,23 +84,22 @@ async function novaExperiencia(sessaoId = SESSAO): Promise<string> {
       vagas: 90,
       documentos: [{ tipo: 'Atestado', numeroSEI: '1', comprovaExecucaoSatisfatoria: true, aceito: true }],
     },
-    relator.token,
+    presidente.token,
   )
   expect(r.status).toBe(201)
   return r.corpo?.id as string
 }
 
-const assinatura = () => ({ uid: presidente.uid, email: presidente.email, perfil: 'usuario' as const })
+const assinatura = () => ({ uid: presidente.uid, email: presidente.email, perfil: 'presidente' as const })
 
 describe('reset da sessão — acesso e validação', () => {
-  it('401 sem login; 403 para relator, membro, admin sem papel de presidente e quem tem a permissão sem ser presidente', async () => {
+  it('401 sem login; 403 para cadastro antigo (sem perfil novo); o administrador também vê a prévia', async () => {
     await nivel('1.1', 3)
     const antes = await totalAuditoria()
     expect((await resetar({}, null as unknown as string)).status).toBe(401)
-    for (const u of [relator, membro, admin, semPapel]) {
-      expect((await resetar({}, u.token)).status).toBe(403)
-      expect((await previa(u.token)).status).toBe(403)
-    }
+    expect((await resetar({}, antigo.token)).status).toBe(403)
+    expect((await previa(antigo.token)).status).toBe(403)
+    expect((await previa(admin.token)).status).toBe(200)
     expect((await previa(null as unknown as string)).status).toBe(401)
     expect(await totalAuditoria()).toBe(antes)
     expect(await ler(`${CAMINHO_PROPOSTA}/avaliacoes/1.1`)).toBeDefined()
@@ -170,7 +159,7 @@ describe('reset da sessão — reversões', () => {
       admissibilidade,
       'PUT',
       { chamamentoId: CH, propostaId: PROP, sessaoId: SESSAO, requisitos, irregularidadesFormais: [], planos, resultado: 'admitida' },
-      relator.token,
+      presidente.token,
     )
     expect(adm.status).toBe(200)
 
@@ -201,14 +190,14 @@ describe('reset da sessão — reversões', () => {
 
     const de11 = (await auditoriaDe(`${CAMINHO_PROPOSTA}/avaliacoes/1.1`)).filter((r) => r.acao === ('resetar_sessao' as string))
     expect(de11).toHaveLength(1)
-    expect(de11[0]).toMatchObject({ antes: { nivel: 4 }, depois: { nivel: 2 }, resetDaSessao: SESSAO, justificativa: MOTIVO, uid: presidente.uid, perfil: 'usuario' })
+    expect(de11[0]).toMatchObject({ antes: { nivel: 4 }, depois: { nivel: 2 }, resetDaSessao: SESSAO, justificativa: MOTIVO, uid: presidente.uid, perfil: 'presidente' })
     const de12 = (await auditoriaDe(`${CAMINHO_PROPOSTA}/avaliacoes/1.2`)).filter((r) => r.acao === ('resetar_sessao' as string))
     expect(de12).toEqual([expect.objectContaining({ antes: expect.objectContaining({ nivel: 3 }), depois: null })])
     // O reset não é gravação "da sessão": nada dele leva o sessaoId.
     expect(de12[0]).not.toHaveProperty('sessaoId')
   })
 
-  it('a sessão não é apagada: "reiniciada", com autoria, data, motivo e contador; presentes e declarações preservados; foco limpo', async () => {
+  it('a sessão não é apagada: "reiniciada", com autoria, data, motivo e contador; presentes preservados; foco limpo', async () => {
     await nivel('1.1', 3)
     expect((await resetar({ justificativa: `  ${MOTIVO}  ` })).status).toBe(200)
     const sessao = await ler(CAMINHO_SESSAO)
@@ -218,8 +207,7 @@ describe('reset da sessão — reversões', () => {
       motivo: MOTIVO,
       resets: 1,
       foco: null,
-      presentes: [{ uid: 'u-presidente', perfil: 'presidente' }],
-      declaracoes: [{ uid: 'u-presidente', semImpedimento: true }],
+      presentes: PRESENTES,
     })
     expect(sessao?.reiniciadaEm).toBeInstanceOf(Timestamp)
     expect(sessao?.historicoResets).toEqual([expect.objectContaining({ motivo: MOTIVO, por: { uid: presidente.uid, email: presidente.email } })])
@@ -228,7 +216,7 @@ describe('reset da sessão — reversões', () => {
       avaliacao,
       'PUT',
       { chamamentoId: CH, propostaId: PROP, sessaoId: SESSAO, codigo: '1.2', nivel: 3, justificativa: 'Tentativa depois do reset.', paginas: [1], decisao: 'unanimidade' },
-      relator.token,
+      presidente.token,
     )
     expect(r.status).toBe(409)
   })
@@ -307,7 +295,7 @@ describe('reset da sessão — interrupção e repetição (idempotente)', () =>
       avaliacao,
       'PUT',
       { chamamentoId: CH, propostaId: PROP, sessaoId: SESSAO, codigo: '1.4', nivel: 3, justificativa: 'Tentativa durante o reset.', paginas: [1], decisao: 'unanimidade' },
-      relator.token,
+      presidente.token,
     )
     expect(novo.status).toBe(409)
 

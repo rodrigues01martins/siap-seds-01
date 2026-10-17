@@ -44,11 +44,10 @@ const NIVEL = { chamamentoId: CH, propostaId: PROP, codigo: '1.1', nivel: 3, jus
 const DESEMPATE = { chamamentoId: CH, loteCodigo: 'L1', ordem: ['c', 'b'], justificativa: 'Critério aplicado pela Comissão em sessão: maior pontuação no PA1.' }
 
 let presidente: Usuario
-let relator: Usuario
 
 beforeAll(async () => {
   await limparAuth()
-  ;[presidente, relator] = await Promise.all([criarUsuario('presidente'), criarUsuario('relator')])
+  presidente = await criarUsuario('presidente')
 })
 
 beforeEach(async () => {
@@ -80,14 +79,14 @@ describe('sessaoId obrigatório e de sessão aberta', () => {
     ['admissibilidade', admissibilidade, 'PUT', ADMISSIBILIDADE],
     ['experiência (criar)', experiencia, 'POST', EXPERIENCIA],
   ] as const)('%s: proposta fora da pauta da sessão → 409', async (_caso, rota, metodo, corpo) => {
-    await semearSessao(SESSAO, { pauta: ['outra-proposta'] })
-    expect(await chamar(rota, metodo, { ...corpo, sessaoId: SESSAO }, relator.token)).toMatchObject({ status: 409, corpo: { erro: FORA_DA_PAUTA } })
+    await semearSessao(SESSAO, { lotes: ['L2'] })
+    expect(await chamar(rota, metodo, { ...corpo, sessaoId: SESSAO }, presidente.token)).toMatchObject({ status: 409, corpo: { erro: FORA_DA_PAUTA } })
   })
 })
 
 describe('sessaoId gravado no documento e em cada registro de auditoria', () => {
   it('admissibilidade', async () => {
-    expect((await chamar(admissibilidade, 'PUT', { ...ADMISSIBILIDADE, sessaoId: SESSAO }, relator.token)).status).toBe(200)
+    expect((await chamar(admissibilidade, 'PUT', { ...ADMISSIBILIDADE, sessaoId: SESSAO }, presidente.token)).status).toBe(200)
     expect(await ler(CAMINHO_PROPOSTA)).toMatchObject({ admissibilidade: { situacao: 'admitida', sessaoId: SESSAO } })
     const registros = await auditoriaDaOperacao()
     expect(registros.length).toBeGreaterThan(0)
@@ -95,7 +94,7 @@ describe('sessaoId gravado no documento e em cada registro de auditoria', () => 
   })
 
   it('nível da D1 (avaliação, totais, resultado da D2 e foco da sessão)', async () => {
-    expect((await chamar(avaliacao, 'PUT', { ...NIVEL, sessaoId: SESSAO }, relator.token)).status).toBe(200)
+    expect((await chamar(avaliacao, 'PUT', { ...NIVEL, sessaoId: SESSAO }, presidente.token)).status).toBe(200)
     expect(await ler(`${CAMINHO_PROPOSTA}/avaliacoes/1.1`)).toMatchObject({ sessaoId: SESSAO })
     const registros = await auditoriaDaOperacao()
     expect(registros.map((r) => r.caminho).sort()).toEqual(
@@ -105,7 +104,7 @@ describe('sessaoId gravado no documento e em cada registro de auditoria', () => 
   })
 
   it('experiência: criar, editar e excluir', async () => {
-    const criada = await chamar(experiencia, 'POST', { ...EXPERIENCIA, sessaoId: SESSAO }, relator.token)
+    const criada = await chamar(experiencia, 'POST', { ...EXPERIENCIA, sessaoId: SESSAO }, presidente.token)
     expect(criada.status).toBe(201)
     const id = criada.corpo?.id as string
     const caminho = `${CAMINHO_PROPOSTA}/experiencias/${id}`
@@ -113,11 +112,11 @@ describe('sessaoId gravado no documento e em cada registro de auditoria', () => 
 
     await semearSessao('sessao-2', { status: 'aberta' })
     await obterAdmin().db.doc(`chamamentos/${CH}/sessoes/${SESSAO}`).update({ status: 'encerrada' })
-    const editada = await chamar(experiencia, 'PATCH', { chamamentoId: CH, propostaId: PROP, id, sessaoId: 'sessao-2', vagas: 10 }, relator.token)
+    const editada = await chamar(experiencia, 'PATCH', { chamamentoId: CH, propostaId: PROP, id, sessaoId: 'sessao-2', vagas: 10 }, presidente.token)
     expect(editada.status).toBe(200)
     expect(await ler(caminho)).toMatchObject({ vagas: 10, sessaoId: 'sessao-2' })
 
-    expect((await chamar(experiencia, 'DELETE', { chamamentoId: CH, propostaId: PROP, id, sessaoId: 'sessao-2' }, relator.token)).status).toBe(200)
+    expect((await chamar(experiencia, 'DELETE', { chamamentoId: CH, propostaId: PROP, id, sessaoId: 'sessao-2' }, presidente.token)).status).toBe(200)
     const registros = (await auditoriaDaOperacao()) as (RegistroAuditoria & { sessaoId?: string })[]
     const daExperiencia = registros.filter((r) => r.caminho === caminho).sort((a, b) => a.dataHora.toMillis() - b.dataHora.toMillis())
     expect(daExperiencia.map((r) => [r.acao, r.sessaoId])).toEqual([
