@@ -5,9 +5,9 @@ import { describe, expect, it, vi } from 'vitest'
 import type { Acesso } from '../../domain/permissoes'
 import { AcessoNaoAutorizado } from './AcessoNaoAutorizado'
 
-const simulado = vi.hoisted(() => ({ acesso: null as Acesso | null }))
+const simulado = vi.hoisted(() => ({ acesso: null as Acesso | null, erro: undefined as string | undefined }))
 vi.mock('./useUsuario', () => ({
-  useUsuario: () => ({ carregando: false, usuario: { uid: 'u1', email: 'relator@goias.gov.br', nome: 'Rel', acesso: simulado.acesso }, sair: vi.fn() }),
+  useUsuario: () => ({ carregando: false, usuario: { uid: 'u1', email: 'relator@goias.gov.br', nome: 'Rel', acesso: simulado.acesso, erro: simulado.erro }, sair: vi.fn() }),
 }))
 
 const montar = () =>
@@ -23,6 +23,14 @@ describe('tela de acesso não autorizado (após o login)', () => {
     montar()
     expect(screen.getByText(/Seu acesso precisa ser atualizado pelo administrador\./)).toBeInTheDocument()
     expect(screen.getByText(/relator@goias\.gov\.br/)).toBeInTheDocument()
+  })
+
+  it('o 403 da /api com o mesmo aviso não aparece de novo como "Detalhe"', () => {
+    simulado.acesso = { perfil: null, ativo: true }
+    simulado.erro = 'Seu acesso precisa ser atualizado pelo administrador.'
+    montar()
+    expect(screen.getAllByText(/Seu acesso precisa ser atualizado pelo administrador\./)).toHaveLength(1)
+    simulado.erro = undefined
   })
 
   it('sem cadastro: conta ainda sem acesso; desativada: avisa', () => {

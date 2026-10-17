@@ -41,7 +41,7 @@ export function AcessoNaoAutorizado() {
       <p className="text-body-md text-text-primary">
         Conta <strong>{usuario?.email}</strong>. {mensagem}
       </p>
-      {usuario?.erro && (
+      {usuario?.erro && usuario.erro !== ACESSO_DESATUALIZADO && (
         <div className="mt-4">
           <Alert tom="warning" titulo="Detalhe">
             {usuario.erro}
