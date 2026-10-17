@@ -1,15 +1,18 @@
-// Porteiro: valida o ID token do Firebase (login) e confere o acesso no cadastro usuarios/{uid}
-// (admin, permissoes, ativo). Lido a cada chamada: liberar ou retirar uma permissão vale na hora.
+// Porteiro: valida o ID token do Firebase (login) e confere o perfil no cadastro usuarios/{uid}
+// (perfil admin ou presidente, ativo). Lido a cada chamada: mudar o perfil vale na hora.
+// Admin e presidente fazem tudo; só o admin gerencia usuários (exigência 'admin').
 
-import { lerAcesso, podeFazer, type Acesso, type Exigencia } from '../../src/domain/permissoes.js'
+import { ACESSO_DESATUALIZADO, lerAcesso, podeFazer, precisaAtualizarAcesso, type Acesso, type Exigencia, type Perfil } from '../../src/domain/permissoes.js'
 import { obterAdmin } from './admin.js'
 import { ErroApi, MENSAGENS } from './erros.js'
 
-/** Quem grava (vai para o histórico): perfil = 'admin' ou 'usuario'. */
+/** Quem grava: uid, e-mail, perfil e nome (nome e e-mail vão para atualizadoPor de cada documento gravado). */
 export interface Assinatura {
   uid: string
   email: string | null
-  perfil: 'admin' | 'usuario'
+  perfil: Perfil
+  /** Nome no cadastro usuarios/{uid} (vai para atualizadoPor); null se não houver. */
+  nome?: string | null
 }
 
 export interface Autor extends Assinatura {
@@ -19,7 +22,7 @@ export interface Autor extends Assinatura {
 /** Quem está chamando: ID token válido (401 se ausente, inválido ou revogado) e o cadastro, se houver. */
 export async function identificar(
   requisicao: Request,
-): Promise<{ uid: string; email: string | null; acesso: Acesso | null }> {
+): Promise<{ uid: string; email: string | null; nome: string | null; acesso: Acesso | null }> {
   const cabecalho = requisicao.headers.get('Authorization') ?? ''
   const token = /^Bearer\s+(\S+)$/i.exec(cabecalho)?.[1]
   if (!token) throw new ErroApi(401, MENSAGENS.semLogin)
@@ -34,15 +37,23 @@ export async function identificar(
     throw new ErroApi(401, MENSAGENS.sessaoInvalida)
   }
   const cadastro = await db.doc(`usuarios/${decodificado.uid}`).get()
-  return { uid: decodificado.uid, email: decodificado.email ?? null, acesso: lerAcesso(cadastro.data()) }
+  const nome = cadastro.get('nome') as unknown
+  return {
+    uid: decodificado.uid,
+    email: decodificado.email ?? null,
+    nome: typeof nome === 'string' && nome.trim() ? nome.trim() : null,
+    acesso: lerAcesso(cadastro.data()),
+  }
 }
 
 /**
- * Lê "Authorization: Bearer <ID token>". Sem token ou token inválido/revogado → 401;
- * sem cadastro, conta desativada ou sem a permissão exigida → 403. Administrador passa em tudo.
+ * Lê "Authorization: Bearer <ID token>". Sem token ou token inválido/revogado → 401; cadastro do modelo
+ * anterior (sem perfil) → 403 pedindo a atualização; sem cadastro, desativado ou presidente na gestão de
+ * usuários → 403.
  */
-export async function autenticar(requisicao: Request, exigencia: Exigencia): Promise<Autor> {
-  const { uid, email, acesso } = await identificar(requisicao)
-  if (!acesso || !podeFazer(acesso, exigencia)) throw new ErroApi(403, MENSAGENS.semPermissao)
-  return { uid, email, perfil: acesso.admin ? 'admin' : 'usuario', acesso }
+export async function autenticar(requisicao: Request, exigencia: Exigencia = 'usuario'): Promise<Autor> {
+  const { uid, email, nome, acesso } = await identificar(requisicao)
+  if (precisaAtualizarAcesso(acesso)) throw new ErroApi(403, ACESSO_DESATUALIZADO)
+  if (!podeFazer(acesso, exigencia)) throw new ErroApi(403, MENSAGENS.semPermissao)
+  return { uid, email, nome, perfil: acesso!.perfil!, acesso: acesso! }
 }

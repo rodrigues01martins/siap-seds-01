@@ -15,13 +15,12 @@ import { admissibilidadeExemplo, resultadoD2Exemplo, totaisExemplo } from '../..
 const subcriterio = (codigo: string) => MATRIZ_2026.dimensao1.planos.flatMap((p) => p.subcriterios).find((s) => s.codigo === codigo)!
 
 describe('Projeção — admissibilidade', () => {
-  it('checklist 28.1 com atendido/não atendido e tabela de páginas com excesso destacado', () => {
+  it('admitida (sim/não) com o motivo e tabela de páginas com excesso destacado; sem checklist 28.1', () => {
     render(<ProjecaoAdmissibilidade admissibilidade={admissibilidadeExemplo()} />)
     for (const r of MATRIZ_2026.admissibilidade.requisitosEssenciais) {
-      expect(screen.getByText(r.descricao)).toBeInTheDocument()
+      expect(screen.queryByText(r.descricao)).not.toBeInTheDocument()
     }
-    expect(screen.getByRole('listitem', { name: '28.1.IV: não atendido' })).toBeInTheDocument()
-    expect(screen.getByRole('listitem', { name: '28.1.I: atendido' })).toBeInTheDocument()
+    expect(screen.getByText('Motivo: Arquivo não abre integralmente.')).toBeInTheDocument()
     const pa3 = screen.getByRole('row', { name: /^PA3\b/ })
     expect(pa3).toHaveAttribute('data-excede', 'true')
     expect(pa3).toHaveTextContent('Excede em 2')
@@ -40,11 +39,9 @@ describe('Projeção — subcritério', () => {
     nivel: 2,
     justificativa: 'Lacunas relevantes nos fluxos de atendimento.',
     paginas: [2, 5],
-    decisao: 'maioria' as const,
-    votoDivergente: 'Membro X: nível 3.',
   }
 
-  it('código, título, elementos, escala com o nível registrado destacado, decisão, justificativa e páginas', () => {
+  it('código, título, elementos, escala com o nível registrado destacado, justificativa e páginas (sem decisão)', () => {
     render(<ProjecaoSubcriterio codigo="3.1" registro={registro} />)
     const s = subcriterio('3.1')
     expect(screen.getByRole('heading', { name: `${s.codigo} — ${s.titulo}` })).toBeInTheDocument()
@@ -57,8 +54,7 @@ describe('Projeção — subcritério', () => {
     expect(registrado.className).toContain('bg-projecao-destaque-bg') // action.primary, além do texto
     expect(screen.getByRole('listitem', { name: 'Nível 3' })).not.toHaveAttribute('aria-current')
     for (const { descritor } of MATRIZ_2026.dimensao1.escala) expect(screen.getByText(descritor)).toBeInTheDocument()
-    expect(screen.getByText('Maioria')).toBeInTheDocument()
-    expect(screen.getByText('Membro X: nível 3.')).toBeInTheDocument()
+    expect(screen.queryByText(/Decisão|Maioria|Unanimidade|Voto divergente/)).not.toBeInTheDocument()
     expect(screen.getByText('Lacunas relevantes nos fluxos de atendimento.')).toBeInTheDocument()
     expect(screen.getByText('Páginas citadas: 2, 5')).toBeInTheDocument()
   })

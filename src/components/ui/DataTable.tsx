@@ -158,7 +158,7 @@ export function DataTable<T>({
         </div>
       )}
 
-      <div className="overflow-x-auto">
+      <div className="relative overflow-x-auto">
         <table className="w-full border-collapse text-left text-body-sm">
           <caption className="sr-only">{rotulo}</caption>
           <thead className="bg-table-header-bg text-table-header-fg">

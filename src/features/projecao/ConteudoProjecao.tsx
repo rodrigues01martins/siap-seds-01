@@ -1,13 +1,14 @@
 // Conteúdo do telão por tipo de foco — só leitura, tema de projeção (fundo neutral.0, texto neutral.950,
 // nível registrado em action.primary) e tipografia display-lg/display-md para leitura a 6 m.
-// Nada aqui grava ou oferece controle de escrita (nem checkbox: o checklist vira ✓/✗ com texto).
+// Nada aqui grava ou oferece controle de escrita. Admissibilidade simplificada (admitida, motivo e páginas por
+// PA) e subcritério sem decisão nem voto divergente (Simplificação 2/4).
 
-import type { Admissibilidade } from '../../domain/admissibilidade'
 import type { ResultadoCriterio, ResultadoD2 } from '../../domain/d2'
 import { formatarNumero } from '../../domain/formatacao'
 import { MATRIZ_2026 } from '../../domain/matriz'
 import type { TotaisProposta } from '../../domain/proposta'
 import { ROTULO_STATUS, type StatusPainel } from '../../domain/statusProposta'
+import type { AdmissibilidadeGravada } from '../../lib/tipos'
 
 const ROTULO_SITUACAO = { admitida: 'Admitida', nao_admitida: 'Não admitida', desclassificada: 'Desclassificada (28.2)' }
 
@@ -21,8 +22,7 @@ function Aviso({ children }: { children: React.ReactNode }) {
 
 // ---------- Admissibilidade ----------
 
-export function ProjecaoAdmissibilidade({ admissibilidade }: { admissibilidade: Admissibilidade | null }) {
-  const regras = MATRIZ_2026.admissibilidade
+export function ProjecaoAdmissibilidade({ admissibilidade }: { admissibilidade: AdmissibilidadeGravada | null }) {
   if (!admissibilidade) {
     return (
       <section>
@@ -37,26 +37,11 @@ export function ProjecaoAdmissibilidade({ admissibilidade }: { admissibilidade: 
       <p className="text-display-md">
         Situação:{' '}
         <strong className={admissibilidade.situacao === 'admitida' ? 'text-projecao-positivo' : 'text-projecao-negativo'}>
-          {ROTULO_SITUACAO[admissibilidade.situacao]}
+          {ROTULO_SITUACAO[admissibilidade.situacao ?? 'admitida']}
         </strong>
       </p>
-      <div className="grid gap-8 xl:grid-cols-2">
-        <ul className="space-y-2 text-heading-2 font-normal">
-          {regras.requisitosEssenciais.map((r) => {
-            const ok = admissibilidade.requisitos[r.codigo] !== false
-            return (
-              <li key={r.codigo} aria-label={`${r.codigo}: ${ok ? 'atendido' : 'não atendido'}`} className="flex gap-3">
-                <span aria-hidden className={`font-bold ${ok ? 'text-projecao-positivo' : 'text-projecao-negativo'}`}>
-                  {ok ? '✓' : '✗'}
-                </span>
-                <span>
-                  <strong className="mr-2">{r.codigo}</strong>
-                  <span>{r.descricao}</span>
-                </span>
-              </li>
-            )
-          })}
-        </ul>
+      {admissibilidade.motivo && <p className="text-heading-1 font-normal">Motivo: {admissibilidade.motivo}</p>}
+      <div>
         <table aria-label="Páginas por Plano de Ação" className="w-full text-heading-2 font-normal">
           <thead className="text-left text-projecao-fg-secundario">
             <tr>
@@ -69,7 +54,7 @@ export function ProjecaoAdmissibilidade({ admissibilidade }: { admissibilidade: 
             </tr>
           </thead>
           <tbody>
-            {admissibilidade.planos.map((p) => {
+            {(admissibilidade.planos ?? []).map((p: NonNullable<AdmissibilidadeGravada['planos']>[number] & { ausente?: boolean }) => {
               const excede = p.excede > 0
               return (
                 <tr
@@ -99,11 +84,10 @@ export function ProjecaoAdmissibilidade({ admissibilidade }: { admissibilidade: 
 // ---------- Subcritério da D1 ----------
 
 export interface RegistroProjetado {
-  nivel: number
+  /** null: rascunho do salvamento automático, sem nível ainda. */
+  nivel: number | null
   justificativa: string
   paginas: number[]
-  decisao: 'unanimidade' | 'maioria'
-  votoDivergente?: string
 }
 
 export function ProjecaoSubcriterio({ codigo, registro }: { codigo: string; registro: RegistroProjetado | null }) {
@@ -150,14 +134,6 @@ export function ProjecaoSubcriterio({ codigo, registro }: { codigo: string; regi
       </div>
       {registro ? (
         <div className="space-y-3 text-heading-1 font-normal">
-          <p>
-            Decisão: <strong>{registro.decisao === 'maioria' ? 'Maioria' : 'Unanimidade'}</strong>
-          </p>
-          {registro.votoDivergente && (
-            <p>
-              Voto divergente: <span>{registro.votoDivergente}</span>
-            </p>
-          )}
           <p className="text-projecao-fg-secundario">Justificativa:</p>
           <p className="text-display-md font-normal">{registro.justificativa}</p>
           <p>Páginas citadas: {registro.paginas.length > 0 ? registro.paginas.join(', ') : '—'}</p>

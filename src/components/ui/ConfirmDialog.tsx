@@ -1,6 +1,6 @@
 // Confirmação de ação: alertdialog, foco inicial em "Cancelar" (o caminho seguro), botão com o verbo da
 // ação (ex.: "Desativar"), carregando enquanto confirma. Destrutiva por padrão; variante "primary" para
-// atos importantes que não destroem (ex.: homologar). Conteúdo extra (ex.: justificativa) em children.
+// atos importantes que não destroem (ex.: concluir a proposta). Conteúdo extra (ex.: justificativa) em children.
 
 import type { ReactNode } from 'react'
 import { Button } from './Button'

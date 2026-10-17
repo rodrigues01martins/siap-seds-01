@@ -1,9 +1,9 @@
 # Roteiro do dia da sessão da Comissão de Seleção
 
 Passo a passo para a sessão de avaliação no SIAP (produção). Imprima ou deixe aberto em outra aba.
-Quem faz cada passo está entre colchetes: **[presidente]**, **[relator]**, **[admin]**, **[telão]**.
-Cada um precisa da permissão correspondente na tela **Usuários** (ex.: presidente com "Abrir e encerrar
-sessão", "Homologar" e "Registrar desempate"; relator com "Conduzir sessão" e as de Avaliação).
+Quem faz cada passo está entre colchetes: **[presidente]**, **[relator]**, **[admin]**, **[telão]** (papéis da
+reunião). No app há só dois perfis com login, **admin** e **presidente**, e os dois fazem tudo (só o admin
+gerencia usuários): quem conduz e quem registra entram com uma conta de perfil admin ou presidente.
 
 ---
 
@@ -12,8 +12,9 @@ sessão", "Homologar" e "Registrar desempate"; relator com "Conduzir sessão" e 
 1. **[admin]** Rode o **backup antes da sessão** pelo terminal (`npm run backup -- --projeto prod --confirmar`,
    com `BACKUP_SENHA` definida). Confira a contagem e o SHA-256 na saída e guarde o arquivo na rede da SEDS
    (seção 7 do [checklist](CHECKLIST-PRODUCAO.md)).
-2. **[admin]** Confira os usuários: em **Usuários** (`/usuarios`), cada membro com o **papel na Comissão**
-   (presidente, relator, membro) e as permissões certas, e o usuário do telão só com **Consulta** (ver passo 4).
+2. **[admin]** Confira os usuários em **Usuários** (`/usuarios`): quem vai operar o app com perfil **admin** ou
+   **presidente** e conta ativa; cadastro antigo aparece como "Precisa de perfil". Os demais membros não precisam
+   de login: entram na sessão só pelo nome.
 3. **[admin]** Confira no painel do chamamento que todas as propostas da pauta existem, com **nº SEI** e
    **protocolo** corretos (o Caderno é consultado no SEI pelo nº; o app não guarda o PDF).
 4. **[telão]** Teste o computador da sala: projetor, navegador atualizado (Chrome ou Edge), login do
@@ -25,35 +26,40 @@ sessão", "Homologar" e "Registrar desempate"; relator com "Conduzir sessão" e 
 
 ### 1. Logins (antes de abrir)
 - Cada membro entra em **https://<endereço de produção>** com o próprio e-mail. Ninguém usa o login de outro:
-  toda gravação fica na auditoria com o e-mail de quem gravou.
-- Se aparecer **"Acesso não autorizado"**, o admin libera o acesso em **Usuários**: a tela da pessoa
-  atualiza sozinha, sem sair e entrar.
+  cada documento gravado guarda quem gravou por último (atualizadoPor: nome e e-mail) e quando.
+- Se aparecer **"Acesso não autorizado"** ou "Seu acesso precisa ser atualizado pelo administrador", o admin dá
+  o perfil em **Usuários**: a tela da pessoa atualiza sozinha, sem sair e entrar.
 
 ### 2. Abrir a sessão — [presidente]
-1. Painel do chamamento → **Abrir sessão** → data e **pauta** (propostas que serão analisadas hoje).
-2. Na tela da sessão → **Presentes e declarações de impedimento**: marque quem está presente e registre
-   a declaração de cada um (sem impedimento ou impedido, com o motivo). O relator também pode fazer isso.
-3. Membro **impedido** em uma proposta não participa da deliberação dela; registre o motivo.
+1. **Início** → **Abrir sessão** (ou painel do chamamento → **Abrir sessão**): numa página só, a **data**, o(s) **lote(s) em pauta** (as propostas
+   desses lotes são as analisadas hoje) e os **presentes**: nome e papel (presidente ou membro) de cada pessoa,
+   com **Adicionar pessoa** e **Remover**. Exatamente um presidente e sem nomes repetidos.
+2. Chegou ou saiu alguém: tela da sessão → **Alterar presentes**. Voltou ao app depois? O **Início** mostra a
+   sessão aberta em destaque: **Continuar**.
+3. Impedimento de membro não é registrado no app: se houver, conste no texto da ata (passo 6).
 
 ### 3. Ligar o telão — [telão]
-1. No computador do projetor, entre com o **usuário do telão** (só com a permissão **Consulta**: só lê).
+1. No computador do projetor, entre com o **usuário do telão** (perfil presidente; a projeção não tem nenhum
+   controle de escrita).
 2. Na tela da sessão, clique em **Abrir projeção (telão)** e depois em **Tela cheia** (F11 também serve).
-3. O telão mostra o que o presidente ou o relator projetam. Sem foco, mostra a tela de espera.
+3. O telão mostra o que o relator projeta: na tela de avaliação, ligue o interruptor **Projetar** (cabeçalho) e o
+   telão acompanha a aba e o subcritério em que a Comissão está. Sem foco, mostra a tela de espera.
 4. **Nunca** use o computador do telão para registrar avaliações.
 
-### 4. Ordem das telas para cada proposta — [relator] registra, [presidente] conduz
-Siga as abas da proposta (cabeçalho com OSC, lote e **nº SEI com botão Copiar** para abrir o Caderno no SEI):
+### 4. Cada proposta numa tela só — [relator] registra, [presidente] conduz
+Na tela da sessão, a **pauta** mostra cada proposta com o progresso ("D1 18/28 · D2 ok") e o status: clique em
+**Avaliar**. A proposta inteira fica numa tela, com um cabeçalho fixo (OSC, lote, **nº SEI com botão Copiar** para
+abrir o Caderno no SEI, "x de 28", D1 e NF parciais, status e o alerta de eliminatória) e **Proposta anterior /
+próxima** para seguir a pauta. **Não há botão Salvar:** tudo grava sozinho; confira o indicador no cabeçalho
+("Salvando…" → **"Tudo salvo"**).
 
-| # | Tela | O que fazer | Projetar no telão (botões e atalhos na tela da D1) |
+| # | Aba | O que fazer | Telão (com **Projetar** ligado) |
 |---|---|---|---|
-| 1 | **Admissibilidade** | Requisitos 28.1, páginas inicial e final de cada PA, irregularidades formais, resultado. Não admitida ou desclassificada para aqui. | **Projetar admissibilidade** |
-| 2 | **Dimensão 1** | Para cada subcritério: nível 0–4, decisão (unanimidade ou maioria; se maioria, o voto divergente), justificativa e páginas citadas (numeração interna do PA). Salvar leva ao próximo pendente. | Cada subcritério; **Alt+→ / Alt+←** navega, **Alt+R** mostra o resumo |
-| 3 | **Dimensão 2** | Experiências da OSC: categorias, modalidade, período, porte, documentos (aceitos e se comprovam execução satisfatória), desconsiderações por critério com justificativa. | **Projetar D2** |
-| 4 | **Memória da D2** | Conferir o cálculo passo a passo com a Comissão. | (já projetada no passo 3) |
-| 5 | **Resumo** | PA1…PA6, D1, D2, NF e status. Conferir antes de passar para a próxima proposta. | **Alt+R** |
-| 6 | **Diligências** (se preciso) | Objeto e prazo. Não admite conteúdo técnico novo (Anexo III, 29.3). Proposta com diligência aberta **não é homologada**. | — |
+| 1 | **Admissão** | Admitida (sim/não), motivo se não, e páginas inicial e final de cada PA, uma linha por PA (a tela mostra a página de corte). Não admitida para aqui. | admissibilidade |
+| 2 | **D1** | Uma página, com os PAs em seções. Em cada linha: nível 0–4 (clique ou tecla 0–4), justificativa e páginas citadas (numeração interna do PA). A linha diz o que falta; **Ir para o próximo pendente** leva ao seguinte. Registrou errado? A lixeira do nível apaga o registro. | o subcritério em que a Comissão está |
+| 3 | **D2** | Experiências direto na tabela (**Adicionar experiência**): categorias, modalidade, MROSC, período, vagas; em **Documentos**, os demais campos e os documentos (aceitos e se comprovam execução satisfatória); **Desconsiderar** por critério com justificativa. | D2 |
+| 4 | **Resultado** | PA1…PA6, D1, critérios da D2 com a memória, NF, status e eliminatórias. **Concluir** (mostra o que falta) e **Gerar espelho**. | resumo |
 
-Rodapé da tela da D1: **D1 parcial**, quantos subcritérios **faltam** e os status prévio e oficial.
 O status oficial é o calculado pelo servidor.
 
 ### 5. Fechar o lote — [presidente]
@@ -62,14 +68,15 @@ O status oficial é o calculado pelo servidor.
 3. **Empate de NF**: o sistema aplica os critérios do Edital (I D1, II PA1, III PA2, IV PA5, V C2.1, VI C2.3)
    e mostra o selo **"Desempate pelo Edital (critério N)"**. Só se o empate persistir em todos eles a Comissão
    decide e o presidente registra a ordem e a **justificativa** em **Registrar desempate** (RF-27).
-4. **Homologar** cada proposta (confirmação dupla: conferir NF e status). Homologada fica **somente leitura**.
-   Erro material depois da homologação: **Reabrir** com o motivo (RF-18), corrigir e homologar de novo.
+4. **Concluir** cada proposta (confirmação mostrando NF e status). Só conclui com a admissibilidade e, se admitida,
+   os 28 níveis e justificativas. A conclusão pode ser desfeita (**Desfazer conclusão**, sem motivo), e qualquer
+   alteração na avaliação também a desfaz: depois de corrigir, conclua de novo.
 5. **Quadro-resumo (PDF/XLSX)** do lote e **Espelho (PDF)** de cada proposta (botão no cabeçalho da proposta).
-   Documento com proposta não homologada sai com a marca **MINUTA**.
+   Documento com proposta não concluída sai com a marca **MINUTA**.
 
 ### 6. Ata e encerramento — [relator] e [presidente]
-1. **[relator]** Tela da sessão → **Minuta de ata**: o texto vem dos registros (presentes, impedimentos,
-   propostas, decisões por maioria, desempates e diligências). Ajuste o texto e **Exportar PDF**.
+1. **[relator]** Tela da sessão → **Minuta de ata**: o texto vem dos registros (lotes, presentes com os papéis,
+   propostas com a situação e a conclusão, desempates). Ajuste o texto e **Exportar PDF**.
    A edição não fica gravada no sistema: exporte antes de sair da página.
 2. **[presidente]** **Encerrar sessão** (depois disso não se registram avaliações nela).
 3. **[admin]** Rode o **backup depois da sessão** (o mesmo comando) e guarde o arquivo na rede da SEDS.
@@ -80,12 +87,12 @@ O status oficial é o calculado pelo servidor.
 ## Se algo der errado
 
 ### Caiu a internet
-- **O que acontece:** as telas continuam mostrando os últimos dados carregados, mas **nada é gravado**.
-  Ao salvar, aparece **"Sem conexão com o servidor"**. O texto digitado continua no formulário.
+- **O que acontece:** a tela continua mostrando o que foi digitado, mas **nada é gravado**. O app tenta de novo
+  sozinho; se não conseguir, o indicador do cabeçalho mostra **"Erro ao salvar: Sem conexão com o servidor"**.
 - **O que fazer:**
-  1. Não feche a aba nem recarregue a página (você perderia o que digitou).
-  2. Anote em papel o subcritério, o nível, a decisão e a justificativa combinados.
-  3. Quando a conexão voltar, clique em **Salvar** de novo e confira que o item ficou **preenchido** (●).
+  1. Não feche a aba nem recarregue a página (o navegador avisa: há gravação pendente).
+  2. Anote em papel o subcritério, o nível e a justificativa combinados.
+  3. Quando a conexão voltar, clique em **Tentar de novo** no cabeçalho e espere **"Tudo salvo"**.
   4. Recarregue a página (F5) para ter certeza de que a tela mostra o que está gravado no servidor.
 - **Plano B:** roteador do celular (hotspot) no computador do relator. O telão pode ficar parado:
   o que vale é o registro do relator.
@@ -96,22 +103,23 @@ O status oficial é o calculado pelo servidor.
 - O login dura até a pessoa sair, mas pode cair (senha alterada, conta desativada, navegador limpo).
 - Clique em **Entrar novamente**, faça login e volte à tela. Antes, copie o texto da justificativa
   (Ctrl+A, Ctrl+C no campo) para não perdê-lo.
-- **"Acesso não autorizado"** depois de entrar: o admin confere a pessoa em **Usuários** (permissões e conta
+- **"Acesso não autorizado"** depois de entrar: o admin confere a pessoa em **Usuários** (perfil e conta
   ativa). A mudança vale na hora.
 
 ### A gravação foi recusada (mensagem vermelha)
-- **"Operação não permitida"** (409) explica o motivo: nenhuma sessão aberta, proposta fora da pauta,
-  proposta homologada, diligência em aberto, proposta não admitida. Corrija a causa e repita.
+- **"Operação não permitida"** (409) explica o motivo: nenhuma sessão aberta, proposta de lote fora da pauta,
+  proposta não admitida, falta algo para concluir (admissibilidade, níveis ou justificativas). Corrija a causa e repita.
 - **"Dados inválidos"** (400): o campo com problema fica destacado (justificativa curta, página acima do
-  limite do PA, voto divergente sem maioria…).
+  limite do PA, motivo da não admissão em branco…).
 
 ### O telão parou de atualizar
 - Recarregue a página do telão (F5) e volte para tela cheia. O registro não é afetado.
 
 ### Erro de registro já gravado
-- Antes da homologação: corrija na própria tela (o novo registro substitui o anterior e a auditoria
-  guarda os dois).
-- Depois da homologação: **Reabrir** (permissão "Reabrir", com motivo), corrigir, homologar de novo.
+- Corrija na própria tela: o novo registro substitui o anterior (o app guarda só quem alterou por último e
+  quando). Se a proposta estava concluída, a alteração desfaz a conclusão: conclua de novo.
+- Registro que não deveria existir: use a **lixeira** (nível, experiência, documento, proposta). Para descartar
+  tudo o que foi feito numa sessão, exclua a sessão no painel do chamamento (a prévia mostra o que será apagado).
 
 ### Algo grave (dados apagados ou corrompidos)
 - Pare a sessão e chame o admin. Os backups ficam na rede da SEDS (arquivos `.json.cifrado`).

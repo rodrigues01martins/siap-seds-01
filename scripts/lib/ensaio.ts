@@ -3,16 +3,15 @@
 // Os documentos têm o formato que a /api grava; totais e memória da D2 vêm de src/domain, como em
 // api/_lib/recalcular.ts. Tudo é marcado como ENSAIO (ids, nomes e o campo ensaio: true).
 
-import { calcularAdmissibilidade, type EntradaAdmissibilidade } from '../../src/domain/admissibilidade'
 import { MATRIZ_2026 } from '../../src/domain/matriz'
 import { consolidarProposta } from '../../src/domain/proposta'
+import { apurarPlanos } from '../../src/esquemas/admissibilidade'
 import { paraExperiencia } from '../../src/esquemas/experiencia'
 import type { DadosDocumento } from './backup'
 
 export const CHAMAMENTO_ENSAIO = 'ensaio-2026'
 const SESSAO = 'ensaio-sessao-1'
 const DATA_LIMITE = '2026-10-31'
-const AUTOR = { uid: 'script-ensaio', email: null }
 
 type Esperado = 'apta' | 'inapta' | 'desclassificada' | 'nao_admitida' | 'pendente'
 
@@ -116,31 +115,24 @@ const ROTEIRO: Roteiro[] = [
   { id: 'ensaio-l2-gama', lote: 'L2', osc: 2, esperado: 'nao_admitida', niveis: {}, experiencias: [], admissao: 'nao_admitida' },
 ]
 
+/** Admissibilidade como a /api grava: admitida (sim/não), motivo, páginas por PA com página de corte. */
 function admissibilidade(admissao: Roteiro['admissao']) {
-  const regras = MATRIZ_2026.admissibilidade
-  const naoAdmitida = admissao === 'nao_admitida'
-  const entrada: EntradaAdmissibilidade = {
-    requisitos: Object.fromEntries(
-      regras.requisitosEssenciais
-        .filter((r) => r.codigo !== regras.requisitoPlanos)
-        .map((r, i) => [r.codigo, !(naoAdmitida && i === 3)]),
-    ),
-    irregularidadesFormais: [],
-    planos: PLANOS.map((p, i) => ({ codigo: p.codigo, ausente: false, paginaInicial: i * 15 + 3, paginaFinal: i * 15 + 3 + Math.min(p.limitePaginas, 10) - 1 })),
-    resultado: admissao,
-    ...(naoAdmitida ? { motivacao: 'Arquivo do Caderno não abre integralmente no SEI (ENSAIO).' } : {}),
+  const admitida = admissao === 'admitida'
+  const planos = PLANOS.map((p, i) => ({ codigo: p.codigo, paginaInicial: i * 15 + 3, paginaFinal: i * 15 + 3 + Math.min(p.limitePaginas, 10) - 1 }))
+  return {
+    admitida,
+    ...(admitida ? {} : { motivo: 'Arquivo do Caderno não abre integralmente no SEI (ENSAIO).' }),
+    planos: apurarPlanos(planos),
+    situacao: admissao as 'admitida' | 'nao_admitida',
+    sessaoId: SESSAO,
   }
-  return { ...calcularAdmissibilidade(entrada), registradaPor: AUTOR }
 }
 
 function avaliacao(codigo: string, nivel: number): DadosDocumento {
-  const maioria = codigo === '2.1'
   return {
     nivel,
     justificativa: `Registro fictício do ENSAIO para o subcritério ${codigo}: nível ${nivel} conforme debate da Comissão.`,
     paginas: [1, Math.min(2, limiteDe(codigo))],
-    decisao: maioria ? 'maioria' : 'unanimidade',
-    ...(maioria ? { votoDivergente: 'Um membro votou um nível abaixo (ENSAIO).' } : {}),
     sessaoId: SESSAO,
   }
 }
@@ -177,7 +169,7 @@ export function montarEnsaio(dataSessao: string): {
       protocolo: `ENSAIO-PROT-${String(n + 1).padStart(3, '0')}`,
       numeroSEI: `0000000${n + 1}`,
       observacao: 'Proposta fictícia do ENSAIO.',
-      bloqueada: false,
+      concluida: false,
       ensaio: true,
       admissibilidade: admissibilidade(r.admissao),
     }
@@ -195,14 +187,18 @@ export function montarEnsaio(dataSessao: string): {
     documentos[caminho] = proposta
   }
 
+  // Sessão do ensaio: lote(s) das propostas avaliadas e presentes só por nome (exatamente um presidente).
+  const lotesAvaliados = [...new Set(ROTEIRO.filter((r) => avaliadas.includes(r.id)).map((r) => r.lote))].sort()
   documentos[`${base}/sessoes/${SESSAO}`] = {
     data: dataSessao,
     status: 'encerrada',
-    pauta: avaliadas,
-    presentes: [],
-    declaracoes: [],
+    lotes: lotesAvaliados,
+    presentes: [
+      { nome: 'Presidente do ensaio', papel: 'presidente' },
+      { nome: 'Membro do ensaio A', papel: 'membro' },
+      { nome: 'Membro do ensaio B', papel: 'membro' },
+    ],
     foco: null,
-    abertaPor: AUTOR,
   }
 
   return {

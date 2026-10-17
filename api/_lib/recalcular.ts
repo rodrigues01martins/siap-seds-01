@@ -1,7 +1,10 @@
 // C4: recálculo dos totais da proposta dentro da MESMA transação da alteração,
 // usando apenas src/domain (consolidarProposta = calcularD1 + calcularD2).
+// Toda alteração na avaliação (nível, experiência, documento) desfaz a conclusão da proposta (concluida = false):
+// o documento final só sai de proposta concluída com os dados que estão gravados.
 
 import type { Transaction } from 'firebase-admin/firestore'
+import type { NiveisD1 } from '../../src/domain/d1.js'
 import { consolidarProposta, type TotaisProposta } from '../../src/domain/proposta.js'
 import { paraExperiencia } from '../../src/esquemas/experiencia.js'
 import { obterAdmin } from './admin.js'
@@ -39,13 +42,14 @@ export async function recalcular(
     throw new ErroApi(409, 'Chamamento sem data limite das propostas: cadastre-a antes de avaliar.')
   }
 
-  const niveis: Record<string, number> = Object.fromEntries(avaliacoes.docs.map((d) => [d.id, d.get('nivel') as number]))
+  // Nível null (rascunho do salvamento automático, só com justificativa) = subcritério ainda pendente.
+  const niveis: NiveisD1 = Object.fromEntries(avaliacoes.docs.map((d) => [d.id, d.get('nivel') as number | null]))
   const porId = new Map(experiencias.docs.map((d) => [d.id, paraExperiencia(d.id, d.data())]))
 
   if (!mudanca) {
-    // Só recalcula com o que está gravado (ex.: depois do reset da sessão).
+    // Só recalcula com o que está gravado (ex.: depois da exclusão de uma sessão).
   } else if (mudanca.colecao === 'avaliacoes') {
-    if (mudanca.dados) niveis[mudanca.id] = mudanca.dados.nivel as number
+    if (mudanca.dados) niveis[mudanca.id] = mudanca.dados.nivel as number | null
     else delete niveis[mudanca.id]
   } else if (mudanca.dados) {
     porId.set(mudanca.id, paraExperiencia(mudanca.id, mudanca.dados))
@@ -60,7 +64,7 @@ export async function recalcular(
   return {
     totais,
     operacoes: [
-      { caminho, acao: 'editar', dados: { totais } },
+      { caminho, acao: 'editar', dados: { totais, concluida: false } },
       {
         caminho: `${caminho}/resultadoD2/atual`,
         acao: resultado.exists ? 'editar' : 'criar',
@@ -71,8 +75,8 @@ export async function recalcular(
 }
 
 /**
- * Lê a proposta (404 se não existe) e recusa, antes de qualquer validação, se homologada ou se a
- * admissibilidade a deixou fora da avaliação (não admitida ou desclassificada) — 409.
+ * Lê a proposta (404 se não existe) e recusa, antes de qualquer validação, se a admissibilidade a deixou
+ * fora da avaliação (não admitida ou desclassificada) — 409.
  */
 export async function exigirPropostaEditavel(
   transacao: Transaction,
@@ -81,7 +85,6 @@ export async function exigirPropostaEditavel(
 ): Promise<void> {
   const proposta = await transacao.get(obterAdmin().db.doc(`chamamentos/${chamamentoId}/propostas/${propostaId}`))
   if (!proposta.exists) throw new ErroApi(404, MENSAGENS.propostaNaoEncontrada)
-  if (proposta.get('bloqueada') === true) throw new ErroApi(409, MENSAGENS.homologada)
   const admissao = proposta.get('admissibilidade.situacao') as string | undefined
   if (admissao === 'nao_admitida' || admissao === 'desclassificada') throw new ErroApi(409, MENSAGENS.naoAdmitida)
 }

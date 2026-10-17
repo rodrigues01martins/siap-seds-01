@@ -59,6 +59,28 @@ export function useConsulta<T = DocumentData>(
   return estado
 }
 
+/**
+ * Várias consultas em tempo real, uma por chave (ex.: as sessões abertas de cada chamamento), num só hook:
+ * devolve os documentos por chave (chave sem resposta ainda = ausente).
+ */
+export function useConsultas<T = DocumentData>(chaves: string[], montar: (db: Firestore, chave: string) => Query): Record<string, ComId<T>[]> {
+  const [porChave, setPorChave] = useState<Record<string, ComId<T>[]>>({})
+  const juntas = chaves.join('|')
+  useEffect(() => {
+    const lista = juntas ? juntas.split('|') : []
+    const parar = lista.map((chave) =>
+      onSnapshot(
+        montar(obterDb(), chave),
+        (instantaneo) => setPorChave((atual) => ({ ...atual, [chave]: instantaneo.docs.map((d) => ({ ...(d.data() as T), id: d.id })) })),
+        () => setPorChave((atual) => ({ ...atual, [chave]: [] })),
+      ),
+    )
+    return () => parar.forEach((p) => p())
+    // `montar` depende só das chaves (convenção destes hooks).
+  }, [juntas])
+  return porChave
+}
+
 /** Atalho: coleção inteira pelo caminho. */
 export function useColecao<T = DocumentData>(caminho: string | null): Leitura<ComId<T>[]> {
   return useConsulta<T>(caminho, (db) => query(collection(db, caminho!)))

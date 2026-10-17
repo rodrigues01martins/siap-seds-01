@@ -13,7 +13,7 @@ describe('StatusBadge: ponto + texto, nunca só cor', () => {
   it('mapeamento de cor documentado de cada status da proposta', () => {
     expect(MAPA_STATUS).toEqual({
       apta: { tom: 'success', rotulo: 'Apta' },
-      homologada: { tom: 'info', rotulo: 'Homologada' },
+      concluida: { tom: 'info', rotulo: 'Concluída' },
       inapta: { tom: 'warning', rotulo: 'Inapta' },
       empatada: { tom: 'warning', rotulo: 'Empatada' },
       desclassificada: { tom: 'error', rotulo: 'Desclassificada' },

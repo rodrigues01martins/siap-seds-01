@@ -15,13 +15,9 @@ a não ser que a pessoa esteja travada há mais de 2 minutos (aí conta como "pe
    presidente, relator(a) e membros da Comissão. Ninguém da equipe que construiu o sistema.
 2. **Ambiente:** projeto **dev**, com os dados fictícios do ensaio, recriados antes de cada participante:
    `npm run ensaio -- --projeto dev --recriar`. Não use produção.
-3. **Contas:** um usuário por papel, criado na tela **Usuários**, com as permissões do papel:
-
-   | Papel | Permissões |
-   |---|---|
-   | Presidente | Consulta; Sessão (abrir/encerrar, conduzir); Homologar; Reabrir; Desempate |
-   | Relator(a) | Consulta; Admissibilidade; Níveis da D1; Experiências da D2; Diligências; Conduzir sessão |
-   | Telão | só Consulta (computador ligado ao projetor) |
+3. **Contas:** criadas na tela **Usuários** com o perfil **presidente** (o app tem só dois perfis, admin e
+   presidente, e os dois fazem tudo; só o admin gerencia usuários). Uma conta para quem conduz, outra para quem
+   registra e outra para o telão (computador ligado ao projetor). Na sessão, os presentes são só nomes.
 
 4. **Material:** este roteiro impresso, a planilha aberta, um cronômetro e o telão (ou uma segunda janela).
 5. **Consentimento:** explique o objetivo, que **o sistema está sendo testado, não a pessoa**, que ela pode parar
@@ -53,50 +49,48 @@ a não ser que a pessoa esteja travada há mais de 2 minutos (aí conta como "pe
 ### T1 — Abrir a sessão da Comissão (presidente; tempo-alvo: 3 min)
 
 - **Instrução ao participante:** "Hoje é a sessão de avaliação. Abra a sessão do chamamento de ensaio com a data de
-  hoje. Todos estão presentes, mas um dos membros declarou impedimento por parentesco com dirigente de uma OSC.
-  Deixe na pauta só as propostas do Lote L1."
-- **Critério de sucesso:** sessão aberta com a data certa; todos presentes; o membro impedido com o motivo
-  registrado; pauta só com as propostas do Lote L1.
-- **Observe:** se a pessoa entende as 3 etapas do assistente, se encontra onde declarar o impedimento e se confere
-  o resumo antes de abrir.
+  hoje e só o Lote L1 em pauta. Estão presentes: Ana Lima (presidente), Bruno Reis e Carla Dias (membros)."
+- **Critério de sucesso:** sessão aberta com a data certa; só o Lote L1 em pauta; os três presentes com os papéis
+  certos (exatamente um presidente).
+- **Observe:** se a pessoa encontra "Adicionar pessoa", se escolhe o papel sem ajuda e se entende as mensagens
+  de presidente único e de nome repetido.
 
 ### T2 — Registrar a admissibilidade de uma proposta (relator; tempo-alvo: 4 min)
 
-- **Instrução:** "Registre a admissibilidade da proposta do Instituto Alfa. Todos os requisitos foram atendidos. Os
-  Planos de Ação começam na página 3 e vêm um depois do outro; o PA3 tem 2 páginas a mais do que o limite."
-- **Critério de sucesso:** proposta registrada como **admitida**; o excesso do PA3 notado pela pessoa (ela comenta
-  ou aponta o alerta de atenção).
-- **Observe:** se o alerta de páginas acima do limite é percebido e entendido ("página de corte"), e se a pessoa
-  sabe que o 28.1.VII é marcado sozinho pela tabela.
+- **Instrução:** "Registre a admissibilidade da proposta do Instituto Alfa: ela foi admitida. Os Planos de Ação
+  começam na página 3 e vêm um depois do outro; o PA3 tem 2 páginas a mais do que o limite."
+- **Critério de sucesso:** proposta registrada como **admitida** (sim); o excesso do PA3 notado pela pessoa (ela
+  comenta ou aponta o alerta de atenção).
+- **Observe:** se o alerta de páginas acima do limite é percebido e entendido ("página de corte") e se a pessoa
+  confia no salvamento automático (indicador "Tudo salvo" no cabeçalho, sem botão Salvar).
 
 ### T3 — Avaliar um subcritério da D1 e projetá-lo no telão (relator e presidente; tempo-alvo: 3 min)
 
-- **Instrução:** "Na Dimensão 1 da mesma proposta, registre o subcritério 1.1 com nível 3, decidido por maioria,
-  com o voto divergente de um membro que daria nível 2. Cite as páginas 2 e 5. Depois, mostre esse subcritério no
-  telão."
-- **Critério de sucesso:** registro salvo (nível 3, maioria, voto divergente, justificativa com o mínimo de
-  caracteres e páginas 2 e 5) e o telão mostrando o 1.1 com o nível registrado destacado.
-- **Observe:** se o descritor dos níveis é lido, se o botão **Salvar** do rodapé é encontrado, se a pessoa percebe
-  que o sistema avançou para o próximo subcritério e se usa **Projetar** ou os atalhos.
+- **Instrução:** "Na Dimensão 1 da mesma proposta, registre o subcritério 1.1 com nível 3 e uma justificativa.
+  Cite as páginas 2 e 5. Depois, mostre esse subcritério no telão."
+- **Critério de sucesso:** registro salvo (nível 3, justificativa com o mínimo de caracteres e páginas 2 e 5) e o
+  telão mostrando o 1.1 com o nível registrado destacado.
+- **Observe:** se o descritor do nível escolhido é lido, se a pessoa percebe que não há botão Salvar (grava
+  sozinho), se usa as teclas 0–4, "Ir para o próximo pendente" e o interruptor **Projetar**.
 
 ### T4 — Cadastrar uma experiência da D2 e conferir a memória de cálculo (relator; tempo-alvo: 5 min)
 
 - **Instrução:** "A OSC comprovou uma experiência de internação socioeducativa (categoria A), em parceria pelo
   MROSC, desde janeiro de 2019, com 60 vagas e um atestado de capacidade técnica aceito pela Comissão. Cadastre a
   experiência e diga quantos pontos ela rendeu no critério C2.1."
-- **Critério de sucesso:** experiência cadastrada com o documento aceito, e a pessoa encontra na **Memória da D2**
-  os pontos do C2.1.
-- **Observe:** se o painel lateral é entendido, se "comprova execução satisfatória" e "aceito" ficam claros e se a
-  linha do tempo e a memória são encontradas.
+- **Critério de sucesso:** experiência cadastrada na tabela com o documento aceito, e a pessoa encontra na aba
+  **Resultado** os pontos do C2.1.
+- **Observe:** se a edição direta na linha é entendida (e a linha expansível dos documentos), se "comprova execução
+  satisfatória" e "aceito" ficam claros e se a linha do tempo e a memória são encontradas.
 
-### T5 — Homologar a proposta e gerar a minuta da ata (presidente; tempo-alvo: 3 min)
+### T5 — Concluir a proposta e gerar a minuta da ata (presidente; tempo-alvo: 3 min)
 
-- **Instrução:** "A Comissão concluiu a avaliação da Associação Beta. Homologue a proposta e gere a minuta da ata
+- **Instrução:** "A Comissão terminou a avaliação da Associação Beta. Conclua a proposta e gere a minuta da ata
   da sessão em PDF."
-- **Critério de sucesso:** proposta **homologada** (selo "Homologada" na classificação) depois de conferir NF e
-  status na confirmação, e o PDF da ata baixado.
-- **Observe:** se a pessoa lê a NF e o status antes de confirmar, se entende que a homologação deixa tudo somente
-  leitura e se encontra a ata a partir da sessão.
+- **Critério de sucesso:** proposta **concluída** (selo "Concluída" no cabeçalho da avaliação ou na classificação)
+  depois de conferir NF e status, e o PDF da ata baixado.
+- **Observe:** se a pessoa lê a NF e o status antes de confirmar, se entende que a conclusão pode ser desfeita (e
+  que alterar a avaliação a desfaz) e se encontra a ata a partir da sessão.
 
 ## 4. Questionário SUS (System Usability Scale)
 

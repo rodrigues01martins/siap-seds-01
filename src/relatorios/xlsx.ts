@@ -1,11 +1,10 @@
-// Planilhas XLSX (exceljs), geradas no navegador: quadro-resumo do lote e trilha de auditoria.
+// Planilha XLSX (exceljs), gerada no navegador: quadro-resumo do lote.
 // Carregado sob demanda (import dinâmico) para não pesar no carregamento inicial do app.
 // Cada planilha termina com o rodapé dos documentos e o repete no rodapé de impressão.
 
 import ExcelJS from 'exceljs'
-import { descreverCaminho, diferencas, jsonIndentado, type RegistroAuditoria } from './auditoria.js'
 import { CONTEXTO, GOVERNO, SECRETARIA, SIGLA, SISTEMA } from '../lib/marca.js'
-import { CORES_DOCUMENTO, MARCA_MINUTA, formatarDataHora, linhasRodape, type Rodape } from './documento.js'
+import { CORES_DOCUMENTO, MARCA_MINUTA, linhasRodape, type Rodape } from './documento.js'
 import { COLUNAS_QUADRO, subtituloQuadro, textoEmpate, tituloQuadro, type CabecalhoQuadro, type Quadro } from './quadroResumo.js'
 
 function novoLivro(): ExcelJS.Workbook {
@@ -62,7 +61,7 @@ export async function quadroXlsx(cabecalho: CabecalhoQuadro, quadro: Quadro, rod
   })
   escreverMarca(planilha, true)
   if (minuta) {
-    const marca = planilha.addRow([`${MARCA_MINUTA} — há proposta não homologada neste lote`])
+    const marca = planilha.addRow([`${MARCA_MINUTA} — há proposta não concluída neste lote`])
     marca.font = { bold: true, size: 14, color: { argb: argb(CORES_DOCUMENTO.erro) } }
   }
   planilha.addRow([tituloQuadro(cabecalho)]).font = { bold: true, size: 13, color: { argb: argb(CORES_DOCUMENTO.azulInstitucional) } }
@@ -81,39 +80,6 @@ export async function quadroXlsx(cabecalho: CabecalhoQuadro, quadro: Quadro, rod
     planilha.addRow(['Empates não resolvidos pelos critérios do Edital (RF-27)']).font = { bold: true }
     for (const e of quadro.empates) planilha.addRow([textoEmpate(e)])
   }
-  escreverRodape(planilha, rodape)
-  return paraBytes(livro)
-}
-
-export const COLUNAS_AUDITORIA = ['Data/hora', 'Usuário', 'Perfil', 'Ação', 'Objeto', 'Caminho', 'Campos alterados', 'Antes', 'Depois']
-
-export async function auditoriaXlsx(registros: RegistroAuditoria[], rodape: Rodape): Promise<ArrayBuffer> {
-  const livro = novoLivro()
-  const planilha = livro.addWorksheet('Auditoria', { views: [{ state: 'frozen', ySplit: 1 }] })
-  escreverMarca(planilha, false) // a 1ª linha é o cabeçalho congelado da tabela: marca só na impressão
-  cabecalhoEmNegrito(planilha.addRow(COLUNAS_AUDITORIA))
-  const linhas: ExcelJS.Row[] = []
-  for (const r of registros) {
-    linhas.push(planilha.addRow([
-      r.dataHora ? formatarDataHora(r.dataHora) : '—',
-      r.email ?? r.uid,
-      r.perfil,
-      r.acao,
-      descreverCaminho(r.caminho),
-      r.caminho,
-      diferencas(r.antes, r.depois)
-        .map((d) => d.campo)
-        .join(', '),
-      jsonIndentado(r.antes),
-      jsonIndentado(r.depois),
-    ]))
-  }
-  zebrar(linhas)
-  const larguras = [19, 30, 11, 8, 40, 50, 30, 60, 60]
-  planilha.columns.forEach((coluna, i) => {
-    coluna.width = larguras[i]
-    coluna.alignment = { vertical: 'top', wrapText: i >= 6 }
-  })
   escreverRodape(planilha, rodape)
   return paraBytes(livro)
 }

@@ -1,7 +1,7 @@
-// Emergência: torna administrador (ou reativa) uma conta pelo e-mail, direto no projeto, sem o app.
+// Emergência: dá o perfil admin (ou reativa) a uma conta pelo e-mail, direto no projeto, sem o app.
 // Uso normal não precisa: o primeiro administrador entra sozinho (api/_lib/adminsIniciais.ts) e os demais
 // são definidos na tela Usuários. Serve se todos os administradores perderem o acesso.
-// A conta precisa existir no Firebase Authentication. Grava usuarios/{uid} e registra em auditoria.
+// A conta precisa existir no Firebase Authentication. Grava usuarios/{uid} (com atualizadoPor e atualizadoEm).
 //
 // Uso: FIREBASE_SERVICE_ACCOUNT='{...}' npm run tornar-admin -- --projeto dev --email pessoa@goias.gov.br
 
@@ -9,7 +9,7 @@ import { parseArgs } from 'node:util'
 import { getAuth } from 'firebase-admin/auth'
 import { FieldValue, getFirestore } from 'firebase-admin/firestore'
 import { executar, iniciarAdmin } from './lib/admin'
-import { registroDeScript } from './lib/auditoria'
+import { autoriaDeScript } from './lib/autoria'
 
 executar(async () => {
   const { values } = parseArgs({
@@ -35,31 +35,19 @@ executar(async () => {
   const db = getFirestore(app)
   const caminho = `usuarios/${usuario.uid}`
   const anterior = (await db.doc(caminho).get()).data() ?? null
-  const lote = db.batch()
-  lote.set(
-    db.doc(caminho),
+  await db.doc(caminho).set(
     {
       email,
       nome: (anterior?.nome as string | undefined) ?? usuario.displayName ?? email,
-      admin: true,
+      perfil: 'admin',
       ativo: true,
-      permissoes: (anterior?.permissoes as string[] | undefined) ?? [],
-      comissao: (anterior?.comissao as string | null | undefined) ?? null,
-      atualizadoEm: FieldValue.serverTimestamp(),
-      ...(anterior ? {} : { criadoEm: FieldValue.serverTimestamp() }),
+      // Campos do modelo anterior (permissões por área e papel na Comissão) saem do cadastro.
+      admin: FieldValue.delete(),
+      permissoes: FieldValue.delete(),
+      comissao: FieldValue.delete(),
+      ...autoriaDeScript('scripts/tornar-admin.ts', executor),
     },
     { merge: true },
   )
-  lote.create(
-    db.collection('auditoria').doc(),
-    registroDeScript({
-      acao: 'usuario.admin',
-      caminho,
-      detalhes: { email, antes: anterior ? { admin: anterior.admin ?? false, ativo: anterior.ativo ?? true } : null },
-      origem: 'scripts/tornar-admin.ts',
-      executor,
-    }),
-  )
-  await lote.commit()
   console.log(`${email} agora é administrador (conta ativa). Basta recarregar o app.`)
 })

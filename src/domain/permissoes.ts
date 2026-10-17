@@ -1,80 +1,56 @@
-// Acesso ao app (espelha a seção "Acesso" do CLAUDE.md): um único perfil, o Administrador, que faz a gestão
-// de usuários; os demais recebem permissões por área. Fica em usuarios/{uid} (admin, permissoes, ativo),
+// Acesso ao app (espelha a seção "Acesso" do CLAUDE.md): dois perfis com login, admin e presidente. Os dois
+// fazem tudo no sistema; só o admin gerencia usuários e perfis. Fica em usuarios/{uid} (perfil, ativo),
 // gravado só pela /api (tela Usuários) e lido pelas firestore.rules, pela /api e pelo app.
+// Cadastro do modelo anterior (relator, membro, controle: permissões por área e papel, sem perfil) fica sem
+// acesso até o admin dar um perfil novo; o administrador antigo (admin: true, sem perfil) continua admin.
 
-export const AREAS = [
-  {
-    id: 'consulta',
-    rotulo: 'Consulta',
-    permissoes: [{ id: 'consultar', rotulo: 'Ver chamamentos, avaliações e relatórios (somente leitura)' }],
-  },
-  {
-    id: 'cadastros',
-    rotulo: 'Cadastros',
-    permissoes: [
-      { id: 'chamamentos', rotulo: 'Chamamentos e lotes' },
-      { id: 'oscs', rotulo: 'OSCs' },
-      { id: 'propostas', rotulo: 'Propostas' },
-    ],
-  },
-  {
-    id: 'avaliacao',
-    rotulo: 'Avaliação',
-    permissoes: [
-      { id: 'admissibilidade', rotulo: 'Admissibilidade (Anexo III, item 28)' },
-      { id: 'nivelD1', rotulo: 'Níveis da D1 (subcritérios)' },
-      { id: 'experienciasD2', rotulo: 'Experiências da D2' },
-      { id: 'diligencias', rotulo: 'Diligências (RF-28)' },
-    ],
-  },
-  {
-    id: 'sessao',
-    rotulo: 'Sessão e resultado',
-    permissoes: [
-      { id: 'sessaoAbrirEncerrar', rotulo: 'Abrir e encerrar sessão' },
-      { id: 'sessaoConduzir', rotulo: 'Conduzir sessão (presentes, impedimentos e telão)' },
-      { id: 'homologar', rotulo: 'Homologar proposta' },
-      { id: 'reabrir', rotulo: 'Reabrir proposta homologada (RF-18)' },
-      { id: 'desempate', rotulo: 'Registrar desempate da Comissão (RF-27)' },
-      { id: 'resetarSessao', rotulo: 'Resetar sessão (exige também o papel de presidente da Comissão)' },
-    ],
-  },
-] as const
+export const PERFIS = ['admin', 'presidente'] as const
 
-export type Permissao = (typeof AREAS)[number]['permissoes'][number]['id']
+export type Perfil = (typeof PERFIS)[number]
 
-export const PERMISSOES: readonly Permissao[] = AREAS.flatMap((a) => a.permissoes.map((p) => p.id))
+export const ROTULO_PERFIL: Record<Perfil, string> = {
+  admin: 'Administrador',
+  presidente: 'Presidente',
+}
 
-/** O que a operação exige: uma permissão ou ser administrador (gestão de usuários, histórico e exclusão de cadastros). */
-export type Exigencia = Permissao | 'admin'
+export const DESCRICAO_PERFIL: Record<Perfil, string> = {
+  admin: 'Faz tudo no sistema e gerencia usuários e perfis.',
+  presidente: 'Faz tudo no sistema, menos gerenciar usuários e perfis.',
+}
+
+/** O que a operação exige: qualquer perfil ('usuario') ou ser administrador (gestão de usuários). */
+export type Exigencia = 'usuario' | 'admin'
 
 export interface Acesso {
-  admin: boolean
+  /** null = cadastro sem perfil válido (modelo anterior): sem acesso até o admin atualizar. */
+  perfil: Perfil | null
   ativo: boolean
-  permissoes: readonly Permissao[]
 }
 
-export function ehPermissao(valor: unknown): valor is Permissao {
-  return typeof valor === 'string' && (PERMISSOES as readonly string[]).includes(valor)
+export const ACESSO_DESATUALIZADO = 'Seu acesso precisa ser atualizado pelo administrador.'
+
+export function ehPerfil(valor: unknown): valor is Perfil {
+  return typeof valor === 'string' && (PERFIS as readonly string[]).includes(valor)
 }
 
-/** Lê o documento usuarios/{uid}; ausente = null (sem cadastro). Valores inválidos viram o padrão seguro. */
+/** Lê o documento usuarios/{uid}; ausente = null (sem cadastro). O campo perfil, se existe, vale mais que o antigo admin. */
 export function lerAcesso(dados: Record<string, unknown> | null | undefined): Acesso | null {
   if (!dados) return null
-  return {
-    admin: dados.admin === true,
-    ativo: dados.ativo !== false,
-    permissoes: Array.isArray(dados.permissoes) ? dados.permissoes.filter(ehPermissao) : [],
-  }
+  const perfil = 'perfil' in dados ? (ehPerfil(dados.perfil) ? dados.perfil : null) : dados.admin === true ? 'admin' : null
+  return { perfil, ativo: dados.ativo !== false }
 }
 
-/** Entra no app e lê os dados: conta ativa, administradora ou com ao menos uma permissão. */
+/** Entra no app e lê os dados: conta ativa com perfil. */
 export function podeLer(acesso: Acesso | null): boolean {
-  return acesso !== null && acesso.ativo && (acesso.admin || acesso.permissoes.length > 0)
+  return acesso !== null && acesso.ativo && acesso.perfil !== null
 }
 
-export function podeFazer(acesso: Acesso | null, exigencia: Exigencia): boolean {
-  if (!acesso?.ativo) return false
-  if (acesso.admin) return true
-  return exigencia !== 'admin' && acesso.permissoes.includes(exigencia)
+export function podeFazer(acesso: Acesso | null, exigencia: Exigencia = 'usuario'): boolean {
+  if (!podeLer(acesso)) return false
+  return exigencia === 'usuario' || acesso!.perfil === 'admin'
+}
+
+/** Cadastro ativo do modelo anterior, sem perfil novo: a tela e a /api pedem a atualização pelo admin. */
+export function precisaAtualizarAcesso(acesso: Acesso | null): boolean {
+  return acesso !== null && acesso.ativo && acesso.perfil === null
 }

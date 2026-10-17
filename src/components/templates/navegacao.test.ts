@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import type { Acesso } from '../../domain/permissoes'
 import { gruposDeNavegacao, type ContextoNavegacao } from './navegacao'
 
-const ADMIN: Acesso = { admin: true, ativo: true, permissoes: [] }
-const comum = (permissoes: Acesso['permissoes']): Acesso => ({ admin: false, ativo: true, permissoes })
+const ADMIN: Acesso = { perfil: 'admin', ativo: true }
+const PRESIDENTE: Acesso = { perfil: 'presidente', ativo: true }
 const CONTEXTO: ContextoNavegacao = {
   chamamento: { id: 'ch1', numero: '001/2026', lotes: ['L1', 'L2'] },
   sessaoAberta: 's9',
@@ -17,13 +17,13 @@ describe('navegação por domínio (§12: agrupar por domínio; itens conforme o
     expect(mapa(ADMIN)).toEqual([
       ['Início', ['Chamamentos → /']],
       ['Cadastros', ['Novo chamamento → /chamamentos/novo', 'OSCs → /oscs']],
-      ['Administração', ['Usuários → /usuarios', 'Histórico de alterações → /auditoria']],
+      ['Administração', ['Usuários → /usuarios', 'Limpar base → /admin/limpar-base']],
     ])
   })
 
   it('dentro de um chamamento: Sessão, Avaliação e Resultado aparecem, na ordem do domínio', () => {
     expect(mapa(ADMIN, CONTEXTO).map(([g]) => g)).toEqual(['Início', 'Sessão', 'Avaliação', 'Resultado', 'Cadastros', 'Administração'])
-    expect(mapa(ADMIN, CONTEXTO)).toContainEqual(['Sessão', ['Sessão em andamento → /chamamentos/ch1/sessoes/s9']])
+    expect(mapa(ADMIN, CONTEXTO)).toContainEqual(['Sessão', ['Sessão em andamento → /sessao/s9?ch=ch1']])
     expect(mapa(ADMIN, CONTEXTO)).toContainEqual(['Avaliação', ['Propostas do chamamento → /chamamentos/ch1']])
     expect(mapa(ADMIN, CONTEXTO)).toContainEqual([
       'Resultado',
@@ -35,26 +35,24 @@ describe('navegação por domínio (§12: agrupar por domínio; itens conforme o
     ])
   })
 
-  it('sem sessão aberta: "Abrir sessão" só para quem tem a permissão', () => {
+  it('sem sessão aberta: "Abrir sessão" (admin e presidente)', () => {
     const contexto = { ...CONTEXTO, sessaoAberta: null }
     expect(mapa(ADMIN, contexto)).toContainEqual(['Sessão', ['Abrir sessão → /chamamentos/ch1/sessoes/nova']])
-    expect(mapa(comum(['consultar']), contexto).map(([g]) => g)).not.toContain('Sessão')
+    expect(mapa(PRESIDENTE, contexto)).toContainEqual(['Sessão', ['Abrir sessão → /chamamentos/ch1/sessoes/nova']])
   })
 
-  it('só consulta: lê tudo, sem cadastros nem administração', () => {
-    expect(mapa(comum(['consultar']), CONTEXTO).map(([g]) => g)).toEqual(['Início', 'Sessão', 'Avaliação', 'Resultado'])
+  it('presidente: tudo, menos Usuários (só o admin gerencia usuários e perfis); sem o grupo Administração', () => {
+    expect(mapa(PRESIDENTE, CONTEXTO)).toEqual(mapa(ADMIN, CONTEXTO).filter(([g]) => g !== 'Administração'))
   })
 
-  it('permissão OSCs: só OSCs em Cadastros', () => {
-    expect(mapa(comum(['oscs']))).toEqual([
-      ['Início', ['Chamamentos → /']],
-      ['Cadastros', ['OSCs → /oscs']],
-    ])
+  it('sem histórico de alterações (a auditoria detalhada saiu)', () => {
+    expect(mapa(ADMIN, CONTEXTO).flatMap(([, itens]) => itens as string[]).some((i) => i.includes('/auditoria'))).toBe(false)
   })
 
-  it('sem acesso: nenhum item', () => {
+  it('sem acesso (sem cadastro, cadastro antigo sem perfil ou desativado): nenhum item', () => {
     expect(gruposDeNavegacao(null, CONTEXTO)).toEqual([])
-    expect(gruposDeNavegacao(comum([]), CONTEXTO)).toEqual([])
+    expect(gruposDeNavegacao({ perfil: null, ativo: true }, CONTEXTO)).toEqual([])
+    expect(gruposDeNavegacao({ perfil: 'admin', ativo: false }, CONTEXTO)).toEqual([])
   })
 
   it('cada item tem ícone e lote com caractere especial é codificado na rota', () => {

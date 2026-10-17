@@ -1,16 +1,15 @@
-// Papel de cada pessoa na Comissão de Seleção (usuarios/{uid}.comissao). Só identifica quem pode constar
-// como presente na sessão e como assina a ata; o que cada um pode fazer vem das permissões (permissoes.ts).
+// Papel de quem está presente na sessão da Comissão de Seleção: só o nome e o papel (sem login). Cada sessão
+// tem exatamente um presidente; os demais são membros. Aparece na sessão e na ata (assinaturas).
 
-export const PAPEIS_COMISSAO = ['presidente', 'relator', 'membro'] as const
+export const PAPEIS_SESSAO = ['presidente', 'membro'] as const
 
-export type PapelComissao = (typeof PAPEIS_COMISSAO)[number]
+export type PapelSessao = (typeof PAPEIS_SESSAO)[number]
 
-export const ROTULO_PAPEL: Record<PapelComissao, string> = {
+export const ROTULO_PAPEL: Record<PapelSessao, string> = {
   presidente: 'Presidente',
-  relator: 'Relator',
   membro: 'Membro',
 }
 
-export function ehPapelComissao(valor: unknown): valor is PapelComissao {
-  return typeof valor === 'string' && (PAPEIS_COMISSAO as readonly string[]).includes(valor)
+export function ehPapelSessao(valor: unknown): valor is PapelSessao {
+  return typeof valor === 'string' && (PAPEIS_SESSAO as readonly string[]).includes(valor)
 }

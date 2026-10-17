@@ -3,30 +3,27 @@ import { BrowserRouter, Route, Routes } from 'react-router'
 import { AppShell } from './components/templates/AppShell'
 import { ToastProvider } from './components/ui/Toast'
 import type { Exigencia } from './domain/permissoes'
-import { TelaAdmissibilidade } from './features/admissibilidade/TelaAdmissibilidade'
-import { TelaAuditoria } from './features/auditoria/TelaAuditoria'
 import { Login } from './features/auth/Login'
-import { TelaD1 } from './features/avaliacao/TelaD1'
+import { RedirecionarAvaliacao, RedirecionarSessao } from './features/avaliar/Redirecionar'
+import { TelaAvaliar } from './features/avaliar/TelaAvaliar'
 import { RotaProtegida } from './features/auth/RotaProtegida'
 import { UsuarioProvider } from './features/auth/useUsuario'
 import { FormChamamento } from './features/chamamentos/FormChamamento'
 import { FormProposta } from './features/chamamentos/FormProposta'
 import { Inicio } from './features/chamamentos/ListaChamamentos'
 import { PainelChamamento } from './features/chamamentos/PainelChamamento'
-import { TelaD2 } from './features/experiencias/TelaD2'
-import { TelaMemoriaD2 } from './features/experiencias/TelaMemoriaD2'
 import { TelaOscs } from './features/oscs/TelaOscs'
 import { NaoEncontrado } from './features/erros/NaoEncontrado'
-import { TelaDiligencia, TelaDiligencias, TelaNovaDiligencia } from './features/diligencias/TelaDiligencias'
 import { TelaProjecao } from './features/projecao/TelaProjecao'
 import { TelaAta } from './features/relatorios/TelaAta'
 import { TelaClassificacao } from './features/resultado/TelaClassificacao'
 import { ConduzirSessao } from './features/sessoes/ConduzirSessao'
 import { NovaSessao } from './features/sessoes/NovaSessao'
 import { TelaUsuarios } from './features/usuarios/TelaUsuarios'
+import { TelaLimparBase } from './features/admin/TelaLimparBase'
 
 
-/** Tela que exige uma permissão (ou o administrador); sem `exige`, basta ter acesso ao app. */
+/** Tela que exige o perfil admin (gestão de usuários); sem `exige`, basta ter perfil (admin ou presidente). */
 const so = (exige: Exigencia | null, tela: ReactNode) => <RotaProtegida exige={exige ?? undefined}>{tela}</RotaProtegida>
 
 export default function App() {
@@ -46,25 +43,26 @@ export default function App() {
             }
           >
             <Route index element={<Inicio />} />
-            <Route path="chamamentos/novo" element={so('chamamentos', <FormChamamento />)} />
+            <Route path="chamamentos/novo" element={so(null, <FormChamamento />)} />
             <Route path="chamamentos/:ch" element={so(null, <PainelChamamento />)} />
-            <Route path="chamamentos/:ch/editar" element={so('chamamentos', <FormChamamento />)} />
-            <Route path="chamamentos/:ch/propostas/nova" element={so('propostas', <FormProposta />)} />
-            <Route path="chamamentos/:ch/propostas/:p/editar" element={so('propostas', <FormProposta />)} />
-            <Route path="chamamentos/:ch/sessoes/nova" element={so('sessaoAbrirEncerrar', <NovaSessao />)} />
-            <Route path="chamamentos/:ch/sessoes/:s" element={so(null, <ConduzirSessao />)} />
+            <Route path="chamamentos/:ch/editar" element={so(null, <FormChamamento />)} />
+            <Route path="chamamentos/:ch/propostas/nova" element={so(null, <FormProposta />)} />
+            <Route path="chamamentos/:ch/propostas/:p/editar" element={so(null, <FormProposta />)} />
+            <Route path="chamamentos/:ch/sessoes/nova" element={so(null, <NovaSessao />)} />
             <Route path="chamamentos/:ch/sessoes/:s/ata" element={so(null, <TelaAta />)} />
-            <Route path="chamamentos/:ch/propostas/:p/admissibilidade" element={so(null, <TelaAdmissibilidade />)} />
-            <Route path="chamamentos/:ch/propostas/:p/d1" element={so(null, <TelaD1 />)} />
-            <Route path="chamamentos/:ch/propostas/:p/d2" element={so(null, <TelaD2 />)} />
-            <Route path="chamamentos/:ch/propostas/:p/d2/memoria" element={so(null, <TelaMemoriaD2 />)} />
-            <Route path="chamamentos/:ch/propostas/:p/diligencias" element={so(null, <TelaDiligencias />)} />
-            <Route path="chamamentos/:ch/propostas/:p/diligencias/nova" element={so('diligencias', <TelaNovaDiligencia />)} />
-            <Route path="chamamentos/:ch/propostas/:p/diligencias/:d" element={so(null, <TelaDiligencia />)} />
+            {/* Jornada de avaliação (Simplificação 3/4): a sessão e a proposta inteira numa tela só. */}
+            <Route path="sessao/:id" element={so(null, <ConduzirSessao />)} />
+            <Route path="avaliar/:propostaId" element={so(null, <TelaAvaliar />)} />
+            {/* Endereços antigos levam às telas novas. */}
+            <Route path="chamamentos/:ch/sessoes/:s" element={<RedirecionarSessao />} />
+            <Route path="chamamentos/:ch/propostas/:p/admissibilidade" element={<RedirecionarAvaliacao aba="admissao" />} />
+            <Route path="chamamentos/:ch/propostas/:p/d1" element={<RedirecionarAvaliacao aba="d1" />} />
+            <Route path="chamamentos/:ch/propostas/:p/d2" element={<RedirecionarAvaliacao aba="d2" />} />
+            <Route path="chamamentos/:ch/propostas/:p/d2/memoria" element={<RedirecionarAvaliacao aba="resultado" />} />
             <Route path="chamamentos/:ch/lotes/:lote/classificacao" element={so(null, <TelaClassificacao />)} />
-            <Route path="oscs" element={so('oscs', <TelaOscs />)} />
+            <Route path="oscs" element={so(null, <TelaOscs />)} />
             <Route path="usuarios" element={so('admin', <TelaUsuarios />)} />
-            <Route path="auditoria" element={so('admin', <TelaAuditoria />)} />
+            <Route path="admin/limpar-base" element={so('admin', <TelaLimparBase />)} />
             {/* Qualquer outro endereço (ex.: o antigo /ui): página "não encontrado", dentro do app. */}
             <Route path="*" element={<NaoEncontrado />} />
           </Route>

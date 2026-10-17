@@ -34,10 +34,11 @@ describe('rodapé comum dos documentos', () => {
 })
 
 describe('marca d’água "MINUTA"', () => {
-  it('vale quando alguma proposta do documento não está homologada', () => {
-    expect(precisaMinuta([{ bloqueada: true }, { bloqueada: false }])).toBe(true)
+  it('vale quando alguma proposta do documento não está concluída (o campo antigo bloqueada não conta)', () => {
+    expect(precisaMinuta([{ concluida: true }, { concluida: false }])).toBe(true)
     expect(precisaMinuta([{}])).toBe(true)
-    expect(precisaMinuta([{ bloqueada: true }, { bloqueada: true }])).toBe(false)
+    expect(precisaMinuta([{ bloqueada: true } as { concluida?: boolean }])).toBe(true)
+    expect(precisaMinuta([{ concluida: true }, { concluida: true }])).toBe(false)
     expect(precisaMinuta([])).toBe(false)
   })
 

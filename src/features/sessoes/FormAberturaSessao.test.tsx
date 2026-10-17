@@ -3,142 +3,93 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { ErroApi } from '../../lib/api'
-import { FormAberturaSessao, type MembroComissao, type PropostaPauta } from './FormAberturaSessao'
+import { FormAberturaSessao } from './FormAberturaSessao'
 
-const MEMBROS: MembroComissao[] = [
-  { uid: 'u1', email: 'presidente@seds.go.gov.br', perfil: 'presidente' },
-  { uid: 'u2', email: 'membro@seds.go.gov.br', perfil: 'membro' },
-]
-const PROPOSTAS: PropostaPauta[] = [
-  { id: 'p1', rotulo: 'Instituto Esperança — Lote L1' },
-  { id: 'p2', rotulo: 'Associação Futuro — Lote L1' },
+const LOTES = [
+  { codigo: 'L1', descricao: 'CASE Goiânia' },
+  { codigo: 'L2', descricao: 'CASE Anápolis' },
 ]
 
 function montar(onAbrir = vi.fn().mockResolvedValue(undefined)) {
-  render(<FormAberturaSessao membros={MEMBROS} propostas={PROPOSTAS} onAbrir={onAbrir} />)
+  render(<FormAberturaSessao lotes={LOTES} onAbrir={onAbrir} />)
   fireEvent.change(screen.getByLabelText(/^Data da sessão/), { target: { value: '2026-11-10' } })
   return onAbrir
 }
 
-const avancar = () => userEvent.click(screen.getByRole('button', { name: 'Avançar' }))
-/** Avança até a pauta (última etapa) e abre a sessão. */
-async function abrir() {
-  while (screen.queryByRole('button', { name: 'Avançar' })) await avancar()
-  await userEvent.click(screen.getByRole('button', { name: 'Abrir sessão' }))
-}
+const nome = (i: number) => screen.getByRole('textbox', { name: new RegExp(`^Nome da pessoa ${i}`) })
+const papel = (i: number) => screen.getByRole('combobox', { name: new RegExp(`^Papel da pessoa ${i}`) })
+const abrir = () => userEvent.click(screen.getByRole('button', { name: 'Abrir sessão' }))
 
-describe('Tela de abertura da sessão', () => {
-  it('assistente em 3 etapas: só a etapa atual aparece; Avançar valida a etapa; Voltar mantém os dados', async () => {
-    render(<FormAberturaSessao membros={MEMBROS} propostas={PROPOSTAS} onAbrir={vi.fn()} />)
-    expect(screen.getByRole('heading', { name: '1. Abertura' })).toBeVisible()
-    expect(screen.queryByRole('checkbox', { name: /^Presente/ })).not.toBeInTheDocument()
-    await avancar()
-    expect(await screen.findByLabelText(/^Data da sessão/)).toHaveAccessibleDescription(/Data inválida/)
-    expect(screen.getByRole('heading', { name: '1. Abertura' })).toBeVisible()
-    fireEvent.change(screen.getByLabelText(/^Data da sessão/), { target: { value: '2026-11-10' } })
-    await avancar()
-    const etapa2 = screen.getByRole('heading', { name: '2. Presentes e declarações' })
-    await waitFor(() => expect(etapa2).toHaveFocus())
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Presente: membro@seds.go.gov.br' }))
-    await avancar()
-    expect(screen.getByRole('group', { name: 'Pauta' })).toBeVisible()
-    expect(screen.getByText('1 de 2')).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Voltar' }))
-    expect(screen.getByRole('checkbox', { name: 'Presente: membro@seds.go.gov.br' })).not.toBeChecked()
+describe('Abertura da sessão (uma página: data, lote(s) e presentes)', () => {
+  it('sem etapas, sem usuários e sem declarações de impedimento', () => {
+    montar()
+    expect(screen.queryByRole('button', { name: 'Avançar' })).not.toBeInTheDocument()
+    expect(screen.queryByText(/impedimento/i)).not.toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Lote(s) em pauta' })).toBeInTheDocument()
+    // Começa com uma pessoa, já como presidente.
+    expect(nome(1)).toHaveValue('')
+    expect(papel(1)).toHaveValue('presidente')
   })
 
-
-  it('por padrão todos presentes, sem impedimento e com toda a pauta; envia no formato da /api', async () => {
+  it('"Adicionar pessoa" (nome + papel) e remoção com um clique; envia data, lotes e presentes', async () => {
     const onAbrir = montar()
+    await userEvent.click(screen.getByRole('checkbox', { name: /^Lote L1/ }))
+    await userEvent.type(nome(1), 'Ana Lima')
+    await userEvent.click(screen.getByRole('button', { name: 'Adicionar pessoa' }))
+    expect(papel(2)).toHaveValue('membro')
+    await userEvent.type(nome(2), 'Bruno Reis')
+    await userEvent.click(screen.getByRole('button', { name: 'Adicionar pessoa' }))
+    await userEvent.type(nome(3), 'Carla Dias')
+    await userEvent.click(screen.getByRole('button', { name: 'Remover pessoa 2 (Bruno Reis)' }))
+    expect(screen.getAllByRole('textbox', { name: /^Nome da pessoa/ })).toHaveLength(2)
+
     await abrir()
-    await waitFor(() => expect(onAbrir).toHaveBeenCalledTimes(1))
-    expect(onAbrir).toHaveBeenCalledWith({
-      data: '2026-11-10',
-      pauta: ['p1', 'p2'],
-      presentes: ['u1', 'u2'],
-      declaracoes: [
-        { uid: 'u1', semImpedimento: true },
-        { uid: 'u2', semImpedimento: true },
-      ],
-    })
+    await waitFor(() =>
+      expect(onAbrir).toHaveBeenCalledWith({
+        data: '2026-11-10',
+        lotes: ['L1'],
+        presentes: [
+          { nome: 'Ana Lima', papel: 'presidente' },
+          { nome: 'Carla Dias', papel: 'membro' },
+        ],
+      }),
+    )
   })
 
-  it('Avançar para a última etapa não envia o formulário (o botão de enviar é outro elemento)', async () => {
+  it.each([
+    ['dois presidentes', async () => {
+      await userEvent.click(screen.getByRole('button', { name: 'Adicionar pessoa' }))
+      await userEvent.type(nome(2), 'Bruno Reis')
+      await userEvent.selectOptions(papel(2), 'presidente')
+    }, 'Informe exatamente um presidente.'],
+    ['nomes repetidos', async () => {
+      await userEvent.click(screen.getByRole('button', { name: 'Adicionar pessoa' }))
+      await userEvent.type(nome(2), ' ana  lima ')
+    }, 'Há nomes repetidos.'],
+  ])('%s: mensagem anunciada e nada enviado', async (_caso, preparar, mensagem) => {
     const onAbrir = montar()
-    await avancar()
-    const avancarNaEtapa2 = screen.getByRole('button', { name: 'Avançar' })
-    await avancar()
-    expect(screen.getByRole('group', { name: 'Pauta' })).toBeVisible()
-    expect(avancarNaEtapa2).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Abrir sessão' })).toHaveAttribute('type', 'submit')
+    await userEvent.click(screen.getByRole('checkbox', { name: /^Lote L1/ }))
+    await userEvent.type(nome(1), 'Ana Lima')
+    await preparar()
+    await abrir()
+    expect(await screen.findByText(mensagem)).toBeInTheDocument()
     expect(onAbrir).not.toHaveBeenCalled()
   })
 
-  it('pauta escolhida pelos checkboxes', async () => {
+  it('sem lote e sem nome: erros nos campos', async () => {
     const onAbrir = montar()
-    await avancar()
-    await avancar()
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Associação Futuro — Lote L1' }))
     await abrir()
-    await waitFor(() => expect(onAbrir).toHaveBeenCalled())
-    expect(onAbrir.mock.calls[0]![0]).toMatchObject({ pauta: ['p1'] })
-  })
-
-  it('membro ausente: sai de presentes, não declara e o checkbox de declaração fica desabilitado', async () => {
-    const onAbrir = montar()
-    await avancar()
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Presente: membro@seds.go.gov.br' }))
-    expect(screen.getByRole('checkbox', { name: 'Sem impedimento: membro@seds.go.gov.br' })).toBeDisabled()
-    await abrir()
-    await waitFor(() => expect(onAbrir).toHaveBeenCalled())
-    expect(onAbrir.mock.calls[0]![0]).toMatchObject({
-      presentes: ['u1'],
-      declaracoes: [{ uid: 'u1', semImpedimento: true }],
-    })
-  })
-
-  it('impedimento exige motivo (mesma regra da /api), mostrado na linha do membro', async () => {
-    const onAbrir = montar()
-    await avancar()
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Sem impedimento: membro@seds.go.gov.br' }))
-    await avancar() // a etapa de presentes não avança sem o motivo
-    const motivo = screen.getByLabelText('Motivo do impedimento: membro@seds.go.gov.br')
-    await waitFor(() => expect(motivo).toHaveAccessibleDescription(/Informe o motivo do impedimento\./))
-    expect(screen.queryByRole('group', { name: 'Pauta' })).not.toBeInTheDocument()
-    expect(onAbrir).not.toHaveBeenCalled()
-
-    await userEvent.type(motivo, 'Parente de dirigente da OSC.')
-    await abrir()
-    await waitFor(() => expect(onAbrir).toHaveBeenCalled())
-    expect(onAbrir.mock.calls[0]![0]).toMatchObject({
-      declaracoes: [
-        { uid: 'u1', semImpedimento: true },
-        { uid: 'u2', semImpedimento: false, motivo: 'Parente de dirigente da OSC.' },
-      ],
-    })
-  })
-
-  it('pauta vazia → mensagem no grupo da pauta', async () => {
-    const onAbrir = montar()
-    await avancar()
-    await avancar()
-    for (const p of PROPOSTAS) await userEvent.click(screen.getByRole('checkbox', { name: p.rotulo }))
-    await abrir()
-    const pauta = screen.getByRole('group', { name: 'Pauta' })
-    expect(await within(pauta).findByText('Informe ao menos uma proposta na pauta.')).toBeInTheDocument()
+    expect(await screen.findByText('Informe ao menos um lote.')).toBeInTheDocument()
+    expect(screen.getByText('Informe o nome.')).toBeInTheDocument()
     expect(onAbrir).not.toHaveBeenCalled()
   })
 
-  it('409 da /api (sessão já aberta) aparece no alerta', async () => {
+  it('erro da /api (409: já há sessão aberta) aparece na tela', async () => {
     montar(vi.fn().mockRejectedValue(new ErroApi(409, 'Já existe sessão aberta neste chamamento: encerre-a antes de abrir outra.')))
+    await userEvent.click(screen.getByRole('checkbox', { name: /^Lote L2/ }))
+    await userEvent.type(nome(1), 'Ana Lima')
     await abrir()
-    expect(await screen.findByRole('alert')).toHaveTextContent('Já existe sessão aberta neste chamamento')
-  })
-
-  it('sem membros da Comissão cadastrados: aviso', async () => {
-    render(<FormAberturaSessao membros={[]} propostas={PROPOSTAS} onAbrir={vi.fn()} />)
-    fireEvent.change(screen.getByLabelText(/^Data da sessão/), { target: { value: '2026-11-10' } })
-    await avancar()
-    expect(screen.getByText(/Nenhum usuário com papel na Comissão/)).toBeInTheDocument()
+    const alerta = await screen.findByRole('alert')
+    expect(within(alerta.parentElement!).getByText(/Já existe sessão aberta/)).toBeInTheDocument()
   })
 })

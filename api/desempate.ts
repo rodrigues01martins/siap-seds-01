@@ -1,11 +1,10 @@
-// PUT /api/desempate — registra a decisão de desempate da Comissão (RF-27). Perfil: presidente.
+// PUT /api/desempate — registra a decisão de desempate da Comissão (RF-27). Perfis: admin e presidente.
 // Só para empates que os critérios do Edital (matriz: desempate) não resolveram: confere, com
 // src/domain/classificacao.ts, que as propostas informadas formam exatamente um desses grupos
 // empatados atuais do lote e grava a ordem decidida com a
-// justificativa em chamamentos/{ch}/desempates/{id}, auditado. Registrar de novo o mesmo grupo edita.
-// Só em sessão aberta do chamamento; o sessaoId vai para o documento e para a auditoria.
+// justificativa em chamamentos/{ch}/desempates/{id}. Registrar de novo o mesmo grupo edita.
+// Só em sessão aberta do chamamento; o sessaoId vai para o documento (excluir a sessão apaga a decisão).
 
-import { FieldValue } from 'firebase-admin/firestore'
 import { classificarLote, type PropostaDoLote } from '../src/domain/classificacao.js'
 import { esquemaDesempate } from '../src/esquemas/resultado.js'
 import { obterAdmin } from './_lib/admin.js'
@@ -16,14 +15,14 @@ import { autenticar } from './_lib/porteiro.js'
 import { exigirSessaoAberta } from './_lib/sessaoAberta.js'
 import { exigirSemProblemas, lerCorpo } from './_lib/validacao.js'
 
-/** Mesmo grupo → mesmo documento (a decisão pode ser refeita, com auditoria de antes/depois). */
+/** Mesmo grupo → mesmo documento (a decisão pode ser refeita). */
 function idDaDecisao(lote: string, propostas: string[]): string {
   return `${lote.replace(/[^A-Za-z0-9_-]/g, '_')}--${[...propostas].sort().join('-')}`
 }
 
 export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   PUT: async (requisicao) => {
-    const autor = await autenticar(requisicao, 'desempate')
+    const autor = await autenticar(requisicao)
     const { chamamentoId, sessaoId, loteCodigo, ordem, justificativa } = await lerCorpo(requisicao, esquemaDesempate)
     const { db } = obterAdmin()
     const id = idDaDecisao(loteCodigo, ordem)
@@ -60,13 +59,11 @@ export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
             propostas: [...ordem].sort(),
             ordem,
             justificativa,
-            decididoPor: { uid: autor.uid, email: autor.email },
-            decididoEm: FieldValue.serverTimestamp(),
             sessaoId,
           },
         },
       ]
-    }, { sessaoId })
+    })
     return json(200, { id, chamamentoId })
   },
 })

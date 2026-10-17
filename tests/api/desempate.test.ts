@@ -1,14 +1,15 @@
 import { Timestamp } from 'firebase-admin/firestore'
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import * as rota from '../../api/desempate'
-import { CH, SESSAO, auditoriaDe, chamar, criarUsuario, ler, limparAuth, limparFirestore, semearProposta, semearPropostaComTotais, totalAuditoria, type Usuario } from './apoio'
+import { obterAdmin } from '../../api/_lib/admin'
+import { CH, SESSAO, autoria, chamar, criarUsuario, ler, limparAuth, limparFirestore, semearProposta, semearPropostaComTotais, type Usuario } from './apoio'
 
 let presidente: Usuario
-let relator: Usuario
+let antigo: Usuario
 
 beforeAll(async () => {
   await limparAuth()
-  ;[presidente, relator] = await Promise.all([criarUsuario('presidente'), criarUsuario('relator')])
+  ;[presidente, antigo] = await Promise.all([criarUsuario('presidente'), criarUsuario('antigo')])
 })
 
 beforeEach(async () => {
@@ -18,6 +19,8 @@ beforeEach(async () => {
   await semearPropostaComTotais('b', 84)
   await semearPropostaComTotais('c', 84)
 })
+
+const semDecisoes = async () => (await obterAdmin().db.collection(`chamamentos/${CH}/desempates`).get()).empty
 
 const JUSTIFICATIVA = 'Critério do Edital aplicado pela Comissão em sessão de 10/11/2026: maior pontuação no PA1.'
 const corpo = (dados: Record<string, unknown> = {}) => ({
@@ -30,12 +33,12 @@ const corpo = (dados: Record<string, unknown> = {}) => ({
 })
 
 describe('/api/desempate — acesso e validação', () => {
-  it('405 com Allow PUT, 401, 403 (relator)', async () => {
+  it('405 com Allow PUT, 401, 403 (cadastro antigo)', async () => {
     const r = await chamar(rota, 'GET', undefined, presidente.token)
     expect(r.status).toBe(405)
     expect(r.headers.get('Allow')).toBe('PUT')
     expect((await chamar(rota, 'PUT', corpo(), null)).status).toBe(401)
-    expect((await chamar(rota, 'PUT', corpo(), relator.token)).status).toBe(403)
+    expect((await chamar(rota, 'PUT', corpo(), antigo.token)).status).toBe(403)
   })
 
   it.each([
@@ -46,7 +49,7 @@ describe('/api/desempate — acesso e validação', () => {
   ])('%s → 400', async (_caso, ajuste, campo, mensagem) => {
     const r = await chamar(rota, 'PUT', corpo(ajuste), presidente.token)
     expect(r).toMatchObject({ status: 400, corpo: { campos: { [campo]: mensagem } } })
-    expect(await totalAuditoria()).toBe(0)
+    expect(await semDecisoes()).toBe(true)
   })
 
   it('chamamento inexistente → 404', async () => {
@@ -58,7 +61,7 @@ describe('/api/desempate — acesso e validação', () => {
     await semearPropostaComTotais('c', 84, { d1: 79 })
     const r = await chamar(rota, 'PUT', corpo({ ordem: ['c', 'b'] }), presidente.token)
     expect(r).toMatchObject({ status: 409, corpo: { erro: 'As propostas informadas não formam um empate atual neste lote.' } })
-    expect(await totalAuditoria()).toBe(0)
+    expect(await semDecisoes()).toBe(true)
   })
 
   it('propostas que não formam um empate atual → 409', async () => {
@@ -72,8 +75,8 @@ describe('/api/desempate — acesso e validação', () => {
   })
 })
 
-describe('/api/desempate — gravação e auditoria', () => {
-  it('registra a decisão (ordem, NF, justificativa, autoria) e audita; registrar de novo edita', async () => {
+describe('/api/desempate — gravação', () => {
+  it('registra a decisão (ordem, NF, justificativa, atualizadoPor); registrar de novo edita', async () => {
     const r = await chamar(rota, 'PUT', corpo(), presidente.token)
     expect(r.status).toBe(200)
     const caminho = `chamamentos/${CH}/desempates/${r.corpo?.id as string}`
@@ -84,17 +87,13 @@ describe('/api/desempate — gravação e auditoria', () => {
       propostas: ['b', 'c'],
       ordem: ['c', 'b'],
       justificativa: JUSTIFICATIVA,
-      decididoPor: { uid: presidente.uid, email: presidente.email },
+      atualizadoPor: autoria(presidente),
     })
-    expect(doc?.decididoEm).toBeInstanceOf(Timestamp)
-    expect((await auditoriaDe(caminho))[0]).toMatchObject({ acao: 'criar', uid: presidente.uid, perfil: 'usuario' })
+    expect(doc?.atualizadoEm).toBeInstanceOf(Timestamp)
+    expect(doc).not.toHaveProperty('decididoPor')
 
     const r2 = await chamar(rota, 'PUT', corpo({ ordem: ['b', 'c'] }), presidente.token)
     expect(r2.corpo?.id).toBe(r.corpo?.id)
-    expect((await auditoriaDe(caminho)).at(-1)).toMatchObject({
-      acao: 'editar',
-      antes: { ordem: ['c', 'b'] },
-      depois: { ordem: ['b', 'c'] },
-    })
+    expect(await ler(caminho)).toMatchObject({ ordem: ['b', 'c'] })
   })
 })

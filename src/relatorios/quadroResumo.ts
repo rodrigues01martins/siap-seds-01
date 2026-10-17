@@ -7,7 +7,7 @@ import { classificarLote, type ClassificacaoLote, type DecisaoDesempate, type Si
 import { formatarNumero } from '../domain/formatacao.js'
 import { MATRIZ_2026 } from '../domain/matriz/index.js'
 import type { TotaisProposta } from '../domain/proposta.js'
-import { ROTULO_STATUS, statusDaProposta } from '../domain/statusProposta.js'
+import { ROTULO_SITUACAO, situacaoDaProposta } from '../domain/situacaoProposta.js'
 import { montarPdf, tabela, type Rodape } from './documento.js'
 
 /** Proposta do lote como a classificação a lê (totais e admissibilidade gravados pela /api). */
@@ -15,9 +15,12 @@ export interface PropostaQuadro {
   id: string
   nomeOsc: string
   totais?: TotaisProposta
-  bloqueada?: boolean
-  admissibilidade?: { situacao: SituacaoAdmissao; motivos: string[]; motivacao?: string }
+  concluida?: boolean
+  /** motivo: admissibilidade simplificada; motivos e motivacao: registros anteriores à Simplificação 2/4. */
+  admissibilidade?: { situacao: SituacaoAdmissao; motivo?: string; motivos?: string[]; motivacao?: string }
 }
+
+const comConclusao = (rotulo: string, p: PropostaQuadro) => `${rotulo}${p.concluida ? ' (concluída)' : ''}`
 
 export interface DecisaoComJustificativa extends DecisaoDesempate {
   justificativa: string
@@ -68,6 +71,7 @@ export function motivoFora(p: PropostaQuadro, situacao: SituacaoFora): string {
   if (situacao === 'nao_admitida' || (situacao === 'desclassificada' && p.admissibilidade?.situacao === 'desclassificada')) {
     const motivos = [...(p.admissibilidade?.motivos ?? [])]
     if (p.admissibilidade?.motivacao) motivos.push(p.admissibilidade.motivacao)
+    if (p.admissibilidade?.motivo) motivos.push(p.admissibilidade.motivo)
     return motivos.join('; ') || 'Admissibilidade (Anexo III, item 28)'
   }
   return (p.totais?.motivos ?? []).join('; ')
@@ -116,7 +120,7 @@ export function montarQuadro(propostas: PropostaQuadro[], decisoes: DecisaoComJu
       d1: pos.d1,
       d2: pos.d2,
       nf: pos.nf,
-      situacao: ROTULO_STATUS[statusDaProposta(p)],
+      situacao: comConclusao(ROTULO_SITUACAO[situacaoDaProposta(p)], p),
       observacao: pos.empatada
         ? 'Empatada'
         : pos.desempatadaPelaComissao
@@ -136,7 +140,7 @@ export function montarQuadro(propostas: PropostaQuadro[], decisoes: DecisaoComJu
       d1: p.totais?.d1 ?? null,
       d2: p.totais?.d2 ?? null,
       nf: p.totais?.nf ?? null,
-      situacao: `${ROTULO_FORA[situacao]}${p.bloqueada ? ' (homologada)' : ''}`,
+      situacao: comConclusao(ROTULO_FORA[situacao], p),
       observacao: motivoFora(p, situacao),
     }
   })

@@ -1,7 +1,7 @@
 // Classificação do lote: ranking por NF (src/domain/classificacao.ts, sem duplicar regra; motivos e aviso
 // vêm de src/relatorios/quadroResumo.ts, os mesmos do quadro-resumo) em DataTable com StatusBadge, propostas
-// fora da classificação com o motivo, aviso de não definitiva, desempate registrado pela Comissão (RF-27),
-// homologação com confirmação dupla mostrando NF e status (C5) e reabertura destrutiva com motivo (RF-18).
+// fora da classificação com o motivo, aviso de não definitiva, desempate registrado pela Comissão (RF-27) e
+// "Concluir" (ConfirmDialog com NF e status) / "Desfazer conclusão" (direto): ação reversível, sem justificativa.
 
 import { ArrowDown, ArrowUp, BadgeCheck, RotateCcw, Scale } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
@@ -9,7 +9,6 @@ import { Alert } from '../../components/ui/Alert'
 import { AlertaErroApi } from '../../components/ui/AlertaErroApi'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
-import { Checkbox } from '../../components/ui/Checkbox'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { DataTable } from '../../components/ui/DataTable'
 import { Dialog } from '../../components/ui/Dialog'
@@ -18,8 +17,8 @@ import { Badge, StatusBadge } from '../../components/ui/StatusBadge'
 import { TextArea } from '../../components/ui/TextArea'
 import { formatarNumero } from '../../domain/formatacao'
 import { MATRIZ_2026 } from '../../domain/matriz'
-import { statusDaProposta } from '../../domain/statusProposta'
-import { esquemaDesempate, esquemaReabrir } from '../../esquemas/resultado'
+import { situacaoDaProposta } from '../../domain/situacaoProposta'
+import { esquemaDesempate } from '../../esquemas/resultado'
 import {
   avisoNaoDefinitiva,
   classificarPropostas,
@@ -37,15 +36,14 @@ interface Props {
   lote: { codigo: string; descricao: string }
   propostas: LinhaClassificacao[]
   decisoes: DecisaoRegistrada[]
-  podeHomologar: boolean
+  podeConcluir: boolean
   podeDesempatar: boolean
-  podeReabrir: boolean
-  onHomologar: (id: string) => Promise<void>
+  onConcluir: (id: string) => Promise<void>
   onDesempatar: (ordem: string[], justificativa: string) => Promise<void>
-  onReabrir: (id: string, motivo: string) => Promise<void>
+  onDesfazer: (id: string) => Promise<void>
 }
 
-type Dialogo = { tipo: 'homologar' | 'reabrir'; id: string } | { tipo: 'desempate'; nf: number; ids: string[] } | null
+type Dialogo = { tipo: 'concluir'; id: string } | { tipo: 'desempate'; nf: number; ids: string[] } | null
 type Esquema = { safeParse: (v: unknown) => { success: boolean; error?: { issues: { message: string }[] } } }
 
 const PLANOS = MATRIZ_2026.dimensao1.planos
@@ -72,17 +70,15 @@ function useAcao() {
   return { executando, erro, executar }
 }
 
-function DialogoHomologar({ proposta, onConfirmar, onFechar }: { proposta: LinhaClassificacao; onConfirmar: () => Promise<void>; onFechar: () => void }) {
-  const [conferido, setConferido] = useState(false)
+function DialogoConcluir({ proposta, onConfirmar, onFechar }: { proposta: LinhaClassificacao; onConfirmar: () => Promise<void>; onFechar: () => void }) {
   const { executando, erro, executar } = useAcao()
   return (
     <ConfirmDialog
       aberto
       variante="primary"
-      titulo={`Homologar ${proposta.nomeOsc}?`}
-      mensagem="Depois de homologada, a proposta fica somente leitura em todas as telas (só a reabertura desfaz)."
-      rotuloConfirmar="Confirmar homologação"
-      confirmarDesabilitado={!conferido}
+      titulo={`Concluir ${proposta.nomeOsc}?`}
+      mensagem="Os relatórios desta proposta passam a sair como finais (sem MINUTA). A conclusão pode ser desfeita; alterar a avaliação também a desfaz."
+      rotuloConfirmar="Concluir"
       confirmando={executando}
       onCancelar={onFechar}
       onConfirmar={() => void executar(onConfirmar, onFechar)}
@@ -91,41 +87,10 @@ function DialogoHomologar({ proposta, onConfirmar, onFechar }: { proposta: Linha
         <ListaDescricao
           className="sm:grid-cols-2 xl:grid-cols-2"
           itens={[
-            { termo: 'Nota final (NF)', valor: <strong className="text-heading-3 tabular-nums">{`NF ${formatarNumero(proposta.totais?.nf ?? 0)}`}</strong> },
-            { termo: 'Status', valor: <StatusBadge status={statusDaProposta(proposta)} /> },
+            { termo: 'Nota final (NF)', valor: <strong className="text-heading-3 tabular-nums">{proposta.totais ? `NF ${formatarNumero(proposta.totais.nf)}` : 'NF —'}</strong> },
+            { termo: 'Status', valor: <StatusBadge status={situacaoDaProposta(proposta)} /> },
           ]}
         />
-        <Checkbox rotulo="Conferi a NF e o status desta proposta" checked={conferido} onChange={(e) => setConferido(e.target.checked)} />
-        <AlertaErroApi erro={erro} />
-      </div>
-    </ConfirmDialog>
-  )
-}
-
-function DialogoReabrir({ nome, onConfirmar, onFechar }: { nome: string; onConfirmar: (motivo: string) => Promise<void>; onFechar: () => void }) {
-  const [motivo, setMotivo] = useState('')
-  const [mensagem, setMensagem] = useState<string | undefined>()
-  const { executando, erro, executar } = useAcao()
-  return (
-    <ConfirmDialog
-      aberto
-      titulo={`Reabrir ${nome}?`}
-      mensagem="A proposta volta a aceitar avaliação (RF-18) e deixa de estar homologada. O motivo fica registrado e auditado."
-      rotuloConfirmar="Confirmar reabertura"
-      confirmando={executando}
-      onCancelar={onFechar}
-      onConfirmar={() => {
-        const r = (esquemaReabrir.shape.motivo as Esquema).safeParse(motivo)
-        if (!r.success) {
-          setMensagem(r.error?.issues[0]?.message ?? 'Valor inválido.')
-          return
-        }
-        setMensagem(undefined)
-        void executar(() => onConfirmar(motivo.trim()), onFechar)
-      }}
-    >
-      <div className="space-y-4">
-        <TextArea rotulo="Motivo" obrigatorio rows={3} value={motivo} onChange={(e) => setMotivo(e.target.value)} erro={mensagem} />
         <AlertaErroApi erro={erro} />
       </div>
     </ConfirmDialog>
@@ -207,35 +172,39 @@ function DialogoDesempate({
 
 const Selos = ({ children }: { children: ReactNode }) => <span className="flex flex-wrap items-center gap-1 py-2">{children}</span>
 
-export function TabelaClassificacao({ lote, propostas, decisoes, podeHomologar, podeDesempatar, podeReabrir, onHomologar, onDesempatar, onReabrir }: Props) {
+export function TabelaClassificacao({ lote, propostas, decisoes, podeConcluir, podeDesempatar, onConcluir, onDesempatar, onDesfazer }: Props) {
   const [dialogo, setDialogo] = useState<Dialogo>(null)
+  const desfazer = useAcao()
   const porId = new Map(propostas.map((p) => [p.id, p]))
   const nomes = new Map(propostas.map((p) => [p.id, p.nomeOsc]))
   const r = classificarPropostas(propostas, decisoes)
   const decisaoDo = (nf: number, ids: string[]) => decisoes.find((d) => d.nf === nf && mesmoConjunto(d.propostas, ids))
   const aviso = avisoNaoDefinitiva(r)
-  const comAcoes = podeHomologar || podeReabrir
+  const comAcoes = podeConcluir
 
   const acoes = (p: LinhaClassificacao) =>
-    p.bloqueada
-      ? podeReabrir && (
-          <Button variante="tertiary" tamanho="sm" icone={RotateCcw} onClick={() => setDialogo({ tipo: 'reabrir', id: p.id })}>
-            Reabrir
-          </Button>
-        )
-      : podeHomologar &&
-        p.totais &&
-        p.totais.status !== 'pendente' && (
-          <Button variante="secondary" tamanho="sm" icone={BadgeCheck} onClick={() => setDialogo({ tipo: 'homologar', id: p.id })}>
-            Homologar
-          </Button>
-        )
+    p.concluida ? (
+      <Button
+        variante="tertiary"
+        tamanho="sm"
+        icone={RotateCcw}
+        carregando={desfazer.executando}
+        onClick={() => void desfazer.executar(() => onDesfazer(p.id), () => undefined)}
+      >
+        Desfazer conclusão
+      </Button>
+    ) : (
+      <Button variante="secondary" tamanho="sm" icone={BadgeCheck} onClick={() => setDialogo({ tipo: 'concluir', id: p.id })}>
+        Concluir
+      </Button>
+    )
 
   const ranking = r.ranking.map((pos) => ({ pos, p: porId.get(pos.id)! }))
   const fora = propostasFora(r).map(({ id, situacao }) => ({ p: porId.get(id)!, situacao }))
 
   return (
     <div className="space-y-6">
+      <AlertaErroApi erro={desfazer.erro} />
       {aviso && (
         <Alert tom="warning" papel="status" titulo="Resultado provisório" rotulo="Classificação não definitiva">
           {aviso}
@@ -267,7 +236,8 @@ export function TabelaClassificacao({ lote, propostas, decisoes, podeHomologar, 
               titulo: 'Status',
               celula: ({ pos, p }) => (
                 <Selos>
-                  <StatusBadge status={statusDaProposta(p)} />
+                  <StatusBadge status={situacaoDaProposta(p)} />
+                  {p.concluida && <StatusBadge status="concluida" />}
                   {pos.empatada && <StatusBadge status="empatada" />}
                   {pos.desempatadaPelaComissao && <Badge tom="info">Desempate da Comissão</Badge>}
                   {pos.desempatadaPeloEdital && (
@@ -327,20 +297,19 @@ export function TabelaClassificacao({ lote, propostas, decisoes, podeHomologar, 
                 celula: ({ p, situacao }) => (
                   <Selos>
                     <StatusBadge status={situacao} />
-                    {p.bloqueada && <StatusBadge status="homologada" />}
+                    {p.concluida && <StatusBadge status="concluida" />}
                   </Selos>
                 ),
               },
               { id: 'motivo', titulo: 'Motivo', celula: ({ p, situacao }) => <span className="block min-w-64 py-2 text-text-secondary">{motivoFora(p, situacao)}</span> },
               { id: 'nf', titulo: 'NF', alinhar: 'direita', celula: ({ p }) => (p.totais ? formatarNumero(p.totais.nf) : '—') },
             ]}
-            acoes={comAcoes ? ({ p, situacao }) => situacao !== 'pendente' && acoes(p) : undefined}
+            acoes={comAcoes ? ({ p }) => acoes(p) : undefined}
           />
         </Card>
       )}
 
-      {dialogo?.tipo === 'homologar' && <DialogoHomologar proposta={porId.get(dialogo.id)!} onConfirmar={() => onHomologar(dialogo.id)} onFechar={() => setDialogo(null)} />}
-      {dialogo?.tipo === 'reabrir' && <DialogoReabrir nome={nomes.get(dialogo.id) ?? ''} onConfirmar={(motivo) => onReabrir(dialogo.id, motivo)} onFechar={() => setDialogo(null)} />}
+      {dialogo?.tipo === 'concluir' && <DialogoConcluir proposta={porId.get(dialogo.id)!} onConfirmar={() => onConcluir(dialogo.id)} onFechar={() => setDialogo(null)} />}
       {dialogo?.tipo === 'desempate' && <DialogoDesempate nf={dialogo.nf} ids={dialogo.ids} nomes={nomes} onConfirmar={onDesempatar} onFechar={() => setDialogo(null)} />}
     </div>
   )

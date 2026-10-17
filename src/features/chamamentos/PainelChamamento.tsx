@@ -1,13 +1,12 @@
-// /chamamentos/:ch (DetailPage): dados do chamamento, propostas por lote com status e sessões.
-// Admin: "Excluir" proposta no menu de ações da linha (DialogoExclusao; homologada fica bloqueada).
+// /chamamentos/:ch (DetailPage): dados do chamamento, propostas por lote com status (e "Concluída") e sessões.
+// Lixeira em cada item (lote, proposta, sessão): exclusão livre em cascata com a prévia (DialogoExclusao).
 
-import { FilePlus2, Presentation, SquarePen, Trophy } from 'lucide-react'
+import { ClipboardCheck, FilePlus2, Presentation, SquarePen, Trophy } from 'lucide-react'
 import { useParams } from 'react-router'
 import { DetailPage } from '../../components/templates/paginas'
 import { ButtonLink } from '../../components/ui/ButtonLink'
 import { Card } from '../../components/ui/Card'
 import { DataTable } from '../../components/ui/DataTable'
-import { MenuAcoes } from '../../components/ui/MenuAcoes'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { ErrorState } from '../../components/ui/ErrorState'
 import { StatusBadge } from '../../components/ui/StatusBadge'
@@ -15,11 +14,12 @@ import { Skeleton } from '../../components/ui/Skeleton'
 import { dataBr } from '../../lib/datas'
 import { formatarCnpj } from '../../domain/cnpj'
 import { podeFazer } from '../../domain/permissoes'
-import { statusDaProposta } from '../../domain/statusProposta'
+import { situacaoDaProposta } from '../../domain/situacaoProposta'
 import { useColecao, useDocumento, type ComId } from '../../lib/firestore'
+import { rotaAvaliar, rotaSessao } from '../../lib/rotas'
 import type { Chamamento, Osc, Proposta, Sessao } from '../../lib/tipos'
 import { useUsuario } from '../auth/useUsuario'
-import { emExclusao, SeloEmExclusao, useExclusao } from '../exclusao/useExclusao'
+import { useExclusao } from '../exclusao/useExclusao'
 import { SeloSessao } from '../sessoes/SeloSessao'
 
 const numero = (valor: number | undefined) => (valor === undefined ? '—' : valor.toLocaleString('pt-BR', { maximumFractionDigits: 2 }))
@@ -43,9 +43,8 @@ export function PainelChamamento() {
 
   const c = chamamento.dados
   const nomeOsc = new Map(oscs.dados.map((o) => [o.cnpj, o.razaoSocial]))
-  const podeEditar = podeFazer(acesso, 'chamamentos')
-  const podeProposta = podeFazer(acesso, 'propostas')
-  const admin = acesso?.admin === true
+  // Admin e presidente fazem tudo (a rota já exige um dos perfis).
+  const podeGravar = podeFazer(acesso)
   const sessaoAberta = sessoes.dados.find((s) => s.status === 'aberta')
   const caminho = `/chamamentos/${ch}`
 
@@ -55,12 +54,12 @@ export function PainelChamamento() {
         trilha: [...trilhaBase, { rotulo: `Chamamento ${c.numero}` }],
         titulo: `Chamamento ${c.numero}`,
         descricao: c.titulo,
-        acoesSecundarias: podeEditar ? (
+        acoesSecundarias: podeGravar ? (
           <ButtonLink para={`${caminho}/editar`} variante="secondary" icone={SquarePen}>
             Editar chamamento
           </ButtonLink>
         ) : undefined,
-        acaoPrimaria: podeProposta ? (
+        acaoPrimaria: podeGravar ? (
           <ButtonLink para={`${caminho}/propostas/nova`} icone={FilePlus2}>
             Nova proposta
           </ButtonLink>
@@ -77,9 +76,12 @@ export function PainelChamamento() {
           key={lote.codigo}
           titulo={`Lote ${lote.codigo} — ${lote.descricao}`}
           acoes={
-            <ButtonLink para={`${caminho}/lotes/${encodeURIComponent(lote.codigo)}/classificacao`} variante="secondary" tamanho="sm" icone={Trophy}>
-              Classificação do lote
-            </ButtonLink>
+            <span className="flex flex-wrap items-center gap-1">
+              <ButtonLink para={`${caminho}/lotes/${encodeURIComponent(lote.codigo)}/classificacao`} variante="secondary" tamanho="sm" icone={Trophy}>
+                Classificação do lote
+              </ButtonLink>
+              {podeGravar && exclusao.botao({ rota: '/api/chamamentos', ids: { id: ch ?? '', lote: lote.codigo }, nome: `lote ${lote.codigo} — ${lote.descricao}` })}
+            </span>
           }
         >
           <DataTable<ComId<Proposta>>
@@ -102,43 +104,32 @@ export function PainelChamamento() {
               { id: 'protocolo', titulo: 'Protocolo', celula: (p) => p.protocolo ?? '—' },
               { id: 'sei', titulo: 'Nº SEI', celula: (p) => p.numeroSEI ?? '—' },
               { id: 'nf', titulo: 'NF', celula: (p) => numero(p.totais?.nf), ordenar: (p) => p.totais?.nf ?? -1, alinhar: 'direita' },
-              { id: 'status', titulo: 'Status', celula: (p) => (emExclusao(p) ? <SeloEmExclusao /> : <StatusBadge status={statusDaProposta(p)} />) },
+              {
+                id: 'status',
+                titulo: 'Status',
+                celula: (p) => (
+                  <span className="flex flex-wrap gap-1">
+                    <StatusBadge status={situacaoDaProposta(p)} />
+                    {p.concluida && <StatusBadge status="concluida" />}
+                  </span>
+                ),
+              },
             ]}
             acoes={(p) => {
               const nome = nomeOsc.get(p.oscCnpj) ?? p.id
               const base = `${caminho}/propostas/${p.id}`
               return (
                 <span className="flex flex-wrap justify-end gap-1">
-                  {(
-                    [
-                      ['admissibilidade', 'Admissibilidade'],
-                      ['d1', 'D1'],
-                      ['d2', 'D2'],
-                      ['diligencias', 'Diligências'],
-                    ] as const
-                  ).map(([rota, rotulo]) => (
-                    <ButtonLink key={rota} para={`${base}/${rota}`} variante="tertiary" tamanho="sm" aria-label={`${rotulo} — ${nome}`}>
-                      {rotulo}
-                    </ButtonLink>
-                  ))}
-                  {podeProposta && !p.bloqueada && (
+                  <ButtonLink para={rotaAvaliar(ch ?? '', p.id)} variante="tertiary" tamanho="sm" icone={ClipboardCheck} aria-label={`Avaliar — ${nome}`}>
+                    Avaliar
+                  </ButtonLink>
+                  {podeGravar && (
                     <ButtonLink para={`${base}/editar`} variante="tertiary" tamanho="sm" aria-label={`Editar proposta — ${nome}`}>
                       Editar
                     </ButtonLink>
                   )}
-                  {admin && (
-                    <MenuAcoes
-                      rotulo={`Mais ações — proposta ${p.protocolo ?? p.id}`}
-                      itens={[
-                        exclusao.itemExcluir({
-                          tipo: 'proposta',
-                          ids: { chamamentoId: ch ?? '', propostaId: p.id },
-                          identificador: p.protocolo ?? p.id,
-                          nome: `proposta ${p.protocolo ?? p.id} — ${nome}`,
-                        }),
-                      ]}
-                    />
-                  )}
+                  {podeGravar &&
+                    exclusao.botao({ rota: '/api/propostas', ids: { chamamentoId: ch ?? '', propostaId: p.id }, nome: `proposta ${p.protocolo ?? p.id} — ${nome}` })}
                 </span>
               )
             }}
@@ -149,7 +140,7 @@ export function PainelChamamento() {
       <Card
         titulo="Sessões da Comissão"
         acoes={
-          podeFazer(acesso, 'sessaoAbrirEncerrar') && !sessaoAberta ? (
+          podeGravar && !sessaoAberta ? (
             <ButtonLink para={`${caminho}/sessoes/nova`} variante="secondary" tamanho="sm" icone={Presentation}>
               Abrir sessão
             </ButtonLink>
@@ -165,12 +156,15 @@ export function PainelChamamento() {
             { id: 'data', titulo: 'Data', celula: (s) => dataBr(s.data), ordenar: (s) => s.data },
             { id: 'situacao', titulo: 'Situação', celula: (s) => <SeloSessao status={s.status} /> },
             { id: 'presentes', titulo: 'Presentes', celula: (s) => String(s.presentes.length), alinhar: 'direita' },
-            { id: 'pauta', titulo: 'Propostas na pauta', celula: (s) => String(s.pauta.length), alinhar: 'direita' },
+            { id: 'lotes', titulo: 'Lotes em pauta', celula: (s) => (s.lotes ?? []).join(', ') || '—' },
           ]}
           acoes={(s) => (
-            <ButtonLink para={`${caminho}/sessoes/${s.id}`} variante="tertiary" tamanho="sm" aria-label={`Abrir sessão de ${dataBr(s.data)}`}>
-              Abrir
-            </ButtonLink>
+            <span className="flex justify-end gap-1">
+              <ButtonLink para={rotaSessao(ch ?? '', s.id)} variante="tertiary" tamanho="sm" aria-label={`Abrir sessão de ${dataBr(s.data)}`}>
+                Abrir
+              </ButtonLink>
+              {podeGravar && exclusao.botao({ rota: '/api/sessao', ids: { chamamentoId: ch ?? '', sessaoId: s.id }, nome: `sessão de ${dataBr(s.data)}` })}
+            </span>
           )}
         />
       </Card>

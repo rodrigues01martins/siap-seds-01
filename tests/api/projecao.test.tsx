@@ -10,6 +10,7 @@ import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import * as avaliacao from '../../api/avaliacao'
+import * as sessao from '../../api/sessao'
 import { TelaProjecao } from '../../src/features/projecao/TelaProjecao'
 import { CAMINHO_PROPOSTA, CH, PROP, SESSAO, chamar, criarUsuario, limparAuth, limparFirestore, semearProposta, type Usuario } from './apoio'
 import { obterAdmin } from '../../api/_lib/admin'
@@ -18,12 +19,12 @@ const banco = vi.hoisted(() => ({ db: null as unknown }))
 vi.mock('../../src/lib/firebase', () => ({ obterDb: () => banco.db, obterAuth: () => ({}) }))
 
 let ambiente: RulesTestEnvironment
-let relator: Usuario
+let presidente: Usuario
 
 beforeAll(async () => {
   await limparAuth()
   await limparFirestore()
-  relator = await criarUsuario('relator')
+  presidente = await criarUsuario('presidente')
   ambiente = await initializeTestEnvironment({
     projectId: process.env.GCLOUD_PROJECT ?? 'demo-siap-seds',
     firestore: { rules: readFileSync('firestore.rules', 'utf8') },
@@ -31,7 +32,7 @@ beforeAll(async () => {
   banco.db = ambiente.authenticatedContext('uid-telao').firestore()
   await obterAdmin()
     .db.doc('usuarios/uid-telao')
-    .set({ email: 'telao@teste.go.gov.br', admin: false, ativo: true, permissoes: ['consultar'] })
+    .set({ email: 'telao@teste.go.gov.br', perfil: 'presidente', ativo: true })
   await semearProposta()
   await obterAdmin().db.doc(CAMINHO_PROPOSTA).update({ numeroSEI: '95570001' })
   await obterAdmin()
@@ -55,7 +56,7 @@ describe('projeção em tempo real (emuladores)', () => {
     expect(await screen.findByRole('heading', { name: /^3\.1 — / }, { timeout: 15_000 })).toBeInTheDocument()
     expect(await screen.findByText('Aguardando registro da Comissão')).toBeInTheDocument()
 
-    // A Comissão registra o 2.1 pela /api: a avaliação é gravada e o foco muda na mesma transação.
+    // A Comissão registra o 2.1 pela /api e a tela (interruptor "Projetar" ligado) move o foco do telão.
     const r = await chamar(
       avaliacao,
       'PUT',
@@ -66,12 +67,13 @@ describe('projeção em tempo real (emuladores)', () => {
         nivel: 4,
         justificativa: 'Educação integrada ao PIA com metas e responsáveis definidos.',
         paginas: [3, 4],
-        decisao: 'unanimidade',
         sessaoId: SESSAO,
       },
-      relator.token,
+      presidente.token,
     )
     expect(r.status).toBe(200)
+    const foco = { tipo: 'subcriterio', propostaId: PROP, subcriterio: '2.1' }
+    expect((await chamar(sessao, 'PATCH', { chamamentoId: CH, sessaoId: SESSAO, acao: 'foco', foco }, presidente.token)).status).toBe(200)
 
     expect(await screen.findByRole('heading', { name: /^2\.1 — / }, { timeout: 15_000 })).toBeInTheDocument()
     expect(await screen.findByText('Educação integrada ao PIA com metas e responsáveis definidos.', {}, { timeout: 15_000 })).toBeInTheDocument()

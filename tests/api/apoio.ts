@@ -1,6 +1,5 @@
 // Apoio aos testes da /api contra os emuladores (npm run test:api).
 
-import type { Timestamp } from 'firebase-admin/firestore'
 import { obterAdmin } from '../../api/_lib/admin'
 
 const PROJETO = process.env.GCLOUD_PROJECT ?? 'demo-siap-seds'
@@ -13,44 +12,20 @@ export interface Usuario {
   uid: string
   email: string
   token: string
-}
-
-export interface RegistroAuditoria {
-  caminho: string
-  acao: 'criar' | 'editar' | 'excluir'
-  antes: Record<string, unknown> | null
-  depois: Record<string, unknown> | null
-  uid: string
-  /** Só na exclusão: motivo informado e fotografia das subcoleções apagadas. */
-  justificativa?: string
-  subcolecoes?: Record<string, unknown>
-  /** Sessão da Comissão em que a gravação foi feita (admissibilidade, D1, D2, desempate). */
-  sessaoId?: string
-  /** Só no reset: a sessão cujos registros foram revertidos. */
-  resetDaSessao?: string
-  /** 'admin' ou 'usuario' (quem gravou). */
-  perfil: string
-  dataHora: Timestamp
+  /** Nome no cadastro usuarios/{uid} (vai para atualizadoPor). */
+  nome?: string
 }
 
 /**
- * Cenários de teste com os nomes dos antigos perfis, traduzidos para o acesso atual (usuarios/{uid}:
- * admin, permissoes e papel na Comissão). Mantém legíveis os testes de cada rota.
+ * Perfis de teste: os dois perfis do app (admin e presidente) e um cadastro do modelo anterior (relator,
+ * membro ou controle: permissões por área e papel na Comissão, sem perfil), que não tem mais acesso.
  */
-export type PerfilTeste = 'admin' | 'presidente' | 'relator' | 'membro' | 'controle'
+export type PerfilTeste = 'admin' | 'presidente' | 'antigo'
 
-const AVALIACAO = ['admissibilidade', 'nivelD1', 'experienciasD2', 'diligencias']
-
-export const ACESSO_TESTE: Record<PerfilTeste, { admin: boolean; permissoes: string[]; comissao: string | null }> = {
-  admin: { admin: true, permissoes: [], comissao: null },
-  presidente: {
-    admin: false,
-    permissoes: ['consultar', ...AVALIACAO, 'sessaoAbrirEncerrar', 'sessaoConduzir', 'homologar', 'reabrir', 'desempate', 'resetarSessao'],
-    comissao: 'presidente',
-  },
-  relator: { admin: false, permissoes: ['consultar', ...AVALIACAO, 'sessaoConduzir'], comissao: 'relator' },
-  membro: { admin: false, permissoes: ['consultar', 'nivelD1'], comissao: 'membro' },
-  controle: { admin: false, permissoes: ['consultar'], comissao: null },
+export const ACESSO_TESTE: Record<PerfilTeste, Record<string, unknown>> = {
+  admin: { perfil: 'admin' },
+  presidente: { perfil: 'presidente' },
+  antigo: { admin: false, permissoes: ['consultar', 'nivelD1'], comissao: 'relator' },
 }
 
 /** Cadastros (usuarios/{uid}) dos usuários de teste: limparFirestore os regrava. */
@@ -97,8 +72,9 @@ export async function criarUsuario(perfil: PerfilTeste | null, extras: Record<st
   sequencia += 1
   const email = `${perfil ?? 'sem-cadastro'}-${sequencia}@teste.go.gov.br`
   const usuario = await auth.createUser({ email, password: SENHA })
-  if (perfil) await cadastrar(usuario.uid, { email, nome: `Pessoa ${sequencia}`, ativo: true, ...ACESSO_TESTE[perfil], ...extras })
-  return { uid: usuario.uid, email, token: await entrar(email) }
+  const nome = `Pessoa ${sequencia}`
+  if (perfil) await cadastrar(usuario.uid, { email, nome, ativo: true, ...ACESSO_TESTE[perfil], ...extras })
+  return { uid: usuario.uid, email, token: await entrar(email), ...(perfil ? { nome: (extras.nome as string | undefined) ?? nome } : {}) }
 }
 
 /** Cria só a conta no Authentication (sem cadastro em usuarios/{uid}), já logada. */
@@ -148,15 +124,9 @@ export async function ler(caminho: string): Promise<Record<string, unknown> | un
   return (await obterAdmin().db.doc(caminho).get()).data()
 }
 
-export async function auditoriaDe(caminho: string): Promise<RegistroAuditoria[]> {
-  const consulta = await obterAdmin().db.collection('auditoria').where('caminho', '==', caminho).get()
-  return consulta.docs
-    .map((d) => d.data() as RegistroAuditoria)
-    .sort((a, b) => a.dataHora.toMillis() - b.dataHora.toMillis())
-}
-
-export async function totalAuditoria(): Promise<number> {
-  return (await obterAdmin().db.collection('auditoria').count().get()).data().count
+/** Quem gravou, como fica em cada documento: nome do cadastro (ou null) e e-mail. */
+export function autoria(usuario: Usuario): { nome: string | null; email: string } {
+  return { nome: usuario.nome ?? null, email: usuario.email }
 }
 
 export const DATA_LIMITE = '2026-10-31'
@@ -165,10 +135,16 @@ export const PROP = 'p1'
 export const CAMINHO_PROPOSTA = `chamamentos/${CH}/propostas/${PROP}`
 /** Sessão da Comissão semeada aberta por semearProposta (a avaliação exige sessão aberta). */
 export const SESSAO = 'sessao-1'
+/** Presentes da sessão: só nomes e papéis (sem login), com exatamente um presidente. */
+export const PRESENTES = [
+  { nome: 'Ana Presidente', papel: 'presidente' },
+  { nome: 'Bruno Membro', papel: 'membro' },
+  { nome: 'Carla Membro', papel: 'membro' },
+]
 
 /** Chamamento (com data limite), OSC, proposta e sessão aberta prontos para avaliação. */
 export async function semearProposta(
-  opcoes: { justificativaMinima?: number; bloqueada?: boolean; sessao?: 'aberta' | 'encerrada' | null } = {},
+  opcoes: { justificativaMinima?: number; sessao?: 'aberta' | 'encerrada' | null } = {},
 ): Promise<void> {
   const { db } = obterAdmin()
   await db.doc(`chamamentos/${CH}`).set({
@@ -180,7 +156,7 @@ export async function semearProposta(
     ...(opcoes.justificativaMinima !== undefined ? { justificativaMinima: opcoes.justificativaMinima } : {}),
   })
   await db.doc('oscs/11222333000181').set({ cnpj: '11222333000181', razaoSocial: 'Instituto Esperança' })
-  await db.doc(CAMINHO_PROPOSTA).set({ loteCodigo: 'L1', oscCnpj: '11222333000181', bloqueada: opcoes.bloqueada ?? false })
+  await db.doc(CAMINHO_PROPOSTA).set({ loteCodigo: 'L1', oscCnpj: '11222333000181' })
   const sessao = opcoes.sessao === undefined ? 'aberta' : opcoes.sessao
   if (sessao) await semearSessao(SESSAO, { status: sessao })
 }
@@ -189,7 +165,7 @@ export async function semearProposta(
 export async function semearSessao(id: string, dados: Record<string, unknown> = {}): Promise<void> {
   await obterAdmin()
     .db.doc(`chamamentos/${CH}/sessoes/${id}`)
-    .set({ data: '2026-11-10', pauta: [PROP], status: 'aberta', presentes: [], declaracoes: [], foco: null, ...dados })
+    .set({ data: '2026-11-10', lotes: ['L1'], status: 'aberta', presentes: PRESENTES, foco: null, ...dados })
 }
 
 /** Regrava o cadastro (usuarios/{uid}) do usuário com o cenário `perfil`. */
@@ -206,16 +182,15 @@ export async function semearNiveis(niveis: Record<string, number>): Promise<void
       nivel,
       justificativa: 'Semente de teste com justificativa suficiente.',
       paginas: [],
-      decisao: 'unanimidade',
       sessaoId: 's0',
     })
   }
   await lote.commit()
 }
 
-/** Remove os campos de data que o servidor acrescenta, para comparar com o domínio. */
+/** Remove os campos de autoria que o servidor acrescenta (atualizadoPor e atualizadoEm), para comparar com o domínio. */
 export function semCarimbos<T extends Record<string, unknown> | undefined>(dados: T): Record<string, unknown> {
-  const { criadoEm: _c, atualizadoEm: _a, ...resto } = (dados ?? {}) as Record<string, unknown>
+  const { atualizadoPor: _p, atualizadoEm: _a, ...resto } = (dados ?? {}) as Record<string, unknown>
   return resto
 }
 
@@ -223,7 +198,7 @@ export function semCarimbos<T extends Record<string, unknown> | undefined>(dados
 export async function semearPropostaComTotais(
   id: string,
   nf: number,
-  dados: { status?: string; bloqueada?: boolean; d1?: number } = {},
+  dados: { status?: string; d1?: number } = {},
 ): Promise<void> {
   const d1 = dados.d1 ?? nf - 5
   await obterAdmin()
@@ -231,7 +206,6 @@ export async function semearPropostaComTotais(
     .set({
       loteCodigo: 'L1',
       oscCnpj: '11222333000181',
-      bloqueada: dados.bloqueada ?? false,
       totais: { d1, d2: nf - d1, nf, status: dados.status ?? 'apta', completa: true, pendentes: [], totaisPorPA: [], motivos: [] },
     })
 }

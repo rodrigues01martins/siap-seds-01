@@ -1,7 +1,7 @@
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { obterAdmin } from '../../api/_lib/admin'
 import * as rota from '../../api/chamamentos'
-import { auditoriaDe, chamar, criarUsuario, ler, limparAuth, limparFirestore, type Usuario } from './apoio'
+import { autoria, chamar, criarUsuario, ler, limparAuth, limparFirestore, type Usuario } from './apoio'
 
 const VALIDO = {
   numero: '001/2026',
@@ -15,12 +15,12 @@ const VALIDO = {
 }
 
 let admin: Usuario
-let relator: Usuario
+let antigo: Usuario
 
 beforeAll(async () => {
   await limparAuth()
   admin = await criarUsuario('admin')
-  relator = await criarUsuario('relator')
+  antigo = await criarUsuario('antigo')
 })
 beforeEach(limparFirestore)
 
@@ -36,8 +36,8 @@ describe('/api/chamamentos — acesso', () => {
     expect((await chamar(rota, 'POST', VALIDO, null)).status).toBe(401)
   })
 
-  it('perfil sem permissão (relator) → 403', async () => {
-    expect((await chamar(rota, 'POST', VALIDO, relator.token)).status).toBe(403)
+  it('cadastro antigo, sem perfil novo → 403', async () => {
+    expect((await chamar(rota, 'POST', VALIDO, antigo.token)).status).toBe(403)
   })
 })
 
@@ -100,28 +100,18 @@ describe('/api/chamamentos — validação', () => {
 })
 
 describe('/api/chamamentos — criar e editar', () => {
-  it('admin cria → 201, documento gravado e auditado', async () => {
+  it('admin cria → 201, documento gravado com atualizadoPor', async () => {
     const r = await chamar(rota, 'POST', VALIDO, admin.token)
     expect(r.status).toBe(201)
     const id = r.corpo?.id as string
-    expect(await ler(`chamamentos/${id}`)).toMatchObject(VALIDO)
-
-    const [registro] = await auditoriaDe(`chamamentos/${id}`)
-    expect(registro).toMatchObject({ acao: 'criar', antes: null, depois: VALIDO, uid: admin.uid, perfil: 'admin' })
+    expect(await ler(`chamamentos/${id}`)).toMatchObject({ ...VALIDO, atualizadoPor: autoria(admin) })
   })
 
-  it('admin edita → 200, auditoria com antes e depois', async () => {
+  it('admin edita → 200, campos mesclados', async () => {
     const id = (await chamar(rota, 'POST', VALIDO, admin.token)).corpo?.id as string
     const r = await chamar(rota, 'PATCH', { id, titulo: 'Título corrigido' }, admin.token)
     expect(r).toMatchObject({ status: 200, corpo: { id } })
-
-    const registros = await auditoriaDe(`chamamentos/${id}`)
-    expect(registros).toHaveLength(2)
-    expect(registros[1]).toMatchObject({
-      acao: 'editar',
-      antes: { titulo: VALIDO.titulo },
-      depois: { titulo: 'Título corrigido', numero: VALIDO.numero },
-    })
+    expect(await ler(`chamamentos/${id}`)).toMatchObject({ titulo: 'Título corrigido', numero: VALIDO.numero })
   })
 
   it('editar sem nenhum campo além do id → 400', async () => {
@@ -132,7 +122,7 @@ describe('/api/chamamentos — criar e editar', () => {
   it('data limite não muda depois que a avaliação começou (totais já calculados) → 409', async () => {
     const id = (await chamar(rota, 'POST', VALIDO, admin.token)).corpo?.id as string
     const { db } = obterAdmin()
-    await db.doc(`chamamentos/${id}/propostas/p1`).set({ loteCodigo: 'L1', bloqueada: false })
+    await db.doc(`chamamentos/${id}/propostas/p1`).set({ loteCodigo: 'L1' })
     expect((await chamar(rota, 'PATCH', { id, dataLimitePropostas: '2026-11-30' }, admin.token)).status).toBe(200)
 
     await db.doc(`chamamentos/${id}/propostas/p1`).update({ totais: { d1: 3 } })

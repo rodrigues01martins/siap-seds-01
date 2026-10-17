@@ -1,9 +1,10 @@
 // /chamamentos/:ch/sessoes/:s/ata — minuta de ata da sessão: texto gerado dos registros, editável,
 // exportado em PDF com o rodapé de verificação (dados usados + texto final) e "MINUTA" se houver
-// proposta da pauta não homologada.
+// proposta da pauta não concluída.
 
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router'
+import { rotaSessao } from '../../lib/rotas'
 import { FormPage } from '../../components/templates/paginas'
 import { AlertaErroApi } from '../../components/ui/AlertaErroApi'
 import { EmptyState } from '../../components/ui/EmptyState'
@@ -49,7 +50,7 @@ export function TelaAta() {
         trilha: [
           { rotulo: 'Chamamentos', para: '/' },
           { rotulo: `Chamamento ${dados.chamamento.numero}`, para: `/chamamentos/${ch}` },
-          { rotulo: `Sessão de ${dataBr(dados.sessao.data)}`, para: `/chamamentos/${ch}/sessoes/${s}` },
+          { rotulo: `Sessão de ${dataBr(dados.sessao.data)}`, para: rotaSessao(ch, s) },
           { rotulo: 'Minuta de ata' },
         ],
         titulo: `Minuta de ata — sessão de ${dataBr(dados.sessao.data)}`,

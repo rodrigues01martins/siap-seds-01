@@ -9,7 +9,7 @@ import { TelaProjecao } from './TelaProjecao'
 
 // ---- Firestore e usuário simulados (a tela só lê) ----
 const estado = vi.hoisted(() => ({
-  acesso: { admin: false, ativo: true, permissoes: ['consultar'] } as Acesso,
+  acesso: { perfil: 'presidente', ativo: true } as Acesso,
   documentos: {} as Record<string, unknown>,
   colecoes: {} as Record<string, unknown[]>,
 }))
@@ -37,7 +37,7 @@ const P = 'chamamentos/ch1/propostas/p1'
 function semear(foco: Record<string, unknown> | null) {
   estado.documentos = {
     'chamamentos/ch1': { numero: '001/2026', titulo: 'Chamamento Público SEDS/GO 2026', lotes: [{ codigo: 'L1', descricao: 'CASE Goiânia' }] },
-    'chamamentos/ch1/sessoes/s1': { data: '2026-11-10', status: 'aberta', pauta: ['p1'], foco, atualizadoEm: quando('2026-11-10T13:05:09Z') },
+    'chamamentos/ch1/sessoes/s1': { data: '2026-11-10', status: 'aberta', lotes: ['L1'], foco, atualizadoEm: quando('2026-11-10T13:05:09Z') },
     [P]: {
       loteCodigo: 'L1',
       oscCnpj: '11222333000181',
@@ -47,7 +47,7 @@ function semear(foco: Record<string, unknown> | null) {
       atualizadoEm: quando('2026-11-10T13:07:41Z'),
     },
     'oscs/11222333000181': { cnpj: '11222333000181', razaoSocial: 'Instituto Esperança' },
-    [`${P}/avaliacoes/3.1`]: { nivel: 2, justificativa: 'Lacunas nos fluxos.', paginas: [2], decisao: 'unanimidade', sessaoId: 's1' },
+    [`${P}/avaliacoes/3.1`]: { nivel: 2, justificativa: 'Lacunas nos fluxos.', paginas: [2], sessaoId: 's1' },
     [`${P}/resultadoD2/atual`]: resultadoD2Exemplo(),
   }
   estado.colecoes = { [`${P}/experiencias`]: [{ id: 'e1', descricao: 'Gestão do CASE Goiânia' }] }
@@ -78,26 +78,25 @@ const FOCOS = [
   null,
 ]
 
-/** Acessos de quem abre a projeção: o telão (só Consulta), um avaliador e o administrador. */
+/** Acessos de quem abre a projeção: os dois perfis (admin e presidente). */
 const ACESSOS: Record<string, Acesso> = {
-  telao: { admin: false, ativo: true, permissoes: ['consultar'] },
-  avaliador: { admin: false, ativo: true, permissoes: ['nivelD1', 'sessaoConduzir'] },
-  administrador: { admin: true, ativo: true, permissoes: [] },
+  presidente: { perfil: 'presidente', ativo: true },
+  admin: { perfil: 'admin', ativo: true },
 }
 
 beforeEach(() => {
-  estado.acesso = ACESSOS.telao!
+  estado.acesso = ACESSOS.presidente!
 })
 
 describe('/projecao — acesso', () => {
-  it('o usuário do telão, só com a permissão Consulta, abre a projeção', () => {
+  it('o presidente (ou o admin) abre a projeção', () => {
     semear(null)
     montar()
     expect(screen.getByRole('heading', { name: /Chamamento 001\/2026/ })).toBeInTheDocument()
   })
 
-  it('conta sem nenhuma permissão não abre', () => {
-    estado.acesso = { admin: false, ativo: true, permissoes: [] }
+  it('cadastro antigo, sem perfil novo, não abre', () => {
+    estado.acesso = { perfil: null, ativo: true }
     semear(null)
     montar()
     expect(screen.getByRole('heading', { name: 'Acesso não autorizado' })).toBeInTheDocument()

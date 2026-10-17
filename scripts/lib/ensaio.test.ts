@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { problemasDaAdmissibilidade, type Admissibilidade } from '../../src/domain/admissibilidade'
-import { problemasDoRegistro } from '../../src/domain/avaliacao'
 import { classificarLote } from '../../src/domain/classificacao'
 import { cnpjValido } from '../../src/domain/cnpj'
 import { problemasDaExperiencia } from '../../src/domain/d2'
 import { MATRIZ_2026 } from '../../src/domain/matriz'
 import { consolidarProposta, type TotaisProposta } from '../../src/domain/proposta'
 import { statusDaProposta } from '../../src/domain/statusProposta'
+import { problemasDaAdmissao, type CamposAdmissibilidade } from '../../src/esquemas/admissibilidade'
+import { problemasDoNivel, type CamposRegistro } from '../../src/esquemas/avaliacao'
 import { paraExperiencia } from '../../src/esquemas/experiencia'
 import { CHAMAMENTO_ENSAIO, montarEnsaio } from './ensaio'
 
@@ -20,9 +20,9 @@ interface PropostaDoc {
   id: string
   loteCodigo: string
   oscCnpj: string
-  bloqueada?: boolean
+  concluida?: boolean
   totais?: TotaisProposta
-  admissibilidade?: Admissibilidade
+  admissibilidade?: CamposAdmissibilidade & { situacao: 'admitida' | 'nao_admitida'; sessaoId: string }
 }
 const propostas = () => daColecao(`${base}/propostas`).map(([c, d]) => ({ ...(d as Doc), id: c.split('/').at(-1)! }) as PropostaDoc)
 
@@ -74,15 +74,19 @@ describe('ensaio — dados fictícios do dev', () => {
 
   it('registros válidos pelas regras do domínio (avaliações, experiências, admissibilidade)', () => {
     for (const [caminho, a] of Object.entries(docs).filter(([c]) => c.includes('/avaliacoes/'))) {
-      const registro = { codigo: caminho.split('/').at(-1)!, ...(a as Doc) } as Parameters<typeof problemasDoRegistro>[0]
-      expect(problemasDoRegistro(registro), caminho).toEqual({})
+      const { sessaoId: _s, ...campos } = a as Doc
+      const registro = { codigo: caminho.split('/').at(-1)!, ...campos } as CamposRegistro
+      expect(problemasDoNivel(registro), caminho).toEqual({})
+      expect(campos).not.toHaveProperty('decisao')
       expect((a as { sessaoId: string }).sessaoId).toBe(ensaio.sessaoId)
     }
     const experiencias = Object.entries(docs).filter(([c]) => c.includes('/experiencias/'))
     expect(experiencias.length).toBeGreaterThan(0)
     for (const [caminho, e] of experiencias) expect(problemasDaExperiencia(paraExperiencia(caminho, e as Doc)), caminho).toEqual({})
     for (const p of propostas()) {
-      expect(problemasDaAdmissibilidade(p.admissibilidade!), p.id).toEqual({})
+      const { admitida, motivo, planos } = p.admissibilidade!
+      expect(problemasDaAdmissao({ admitida, motivo, planos }), p.id).toEqual({})
+      expect(p.admissibilidade).not.toHaveProperty('requisitos')
     }
   })
 
@@ -99,10 +103,13 @@ describe('ensaio — dados fictícios do dev', () => {
     }
   })
 
-  it('sessão encerrada do ensaio com a pauta das propostas avaliadas', () => {
-    const sessao = docs[`${base}/sessoes/${ensaio.sessaoId}`] as { status: string; data: string; pauta: string[] }
+  it('sessão encerrada do ensaio: lotes das propostas avaliadas e presentes por nome (um presidente)', () => {
+    const sessao = docs[`${base}/sessoes/${ensaio.sessaoId}`] as { status: string; data: string; lotes: string[]; presentes: { nome: string; papel: string }[] }
     expect(sessao).toMatchObject({ status: 'encerrada', data: '2026-11-10' })
-    const avaliadas = propostas().filter((p) => p.totais).map((p) => p.id)
-    expect([...sessao.pauta].sort()).toEqual(avaliadas.sort())
+    expect(sessao).not.toHaveProperty('pauta')
+    expect(sessao).not.toHaveProperty('declaracoes')
+    const lotes = [...new Set(propostas().filter((p) => p.totais).map((p) => p.loteCodigo as string))].sort()
+    expect(sessao.lotes).toEqual(lotes)
+    expect(sessao.presentes.filter((p) => p.papel === 'presidente')).toHaveLength(1)
   })
 })

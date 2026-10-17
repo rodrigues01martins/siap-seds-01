@@ -8,7 +8,7 @@ import { conferirCredencial, identificarExecutor, lerCredencial, resolverProjeto
 export interface ContextoAdmin {
   app: App
   projectId: string
-  /** Quem executou (github:usuario ou local:usuario), registrado na auditoria. */
+  /** Quem executou (github:usuario ou local:usuario), registrado em atualizadoPor. */
   executor: string
 }
 

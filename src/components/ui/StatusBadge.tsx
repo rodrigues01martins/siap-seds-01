@@ -3,7 +3,7 @@
 // Mapeamento de cor (decisão do sistema, tons do DS §7):
 // | Status          | Tom     | Por quê                                             |
 // | apta            | success | passou nas eliminatórias e está completa            |
-// | homologada      | info    | ato oficial concluído (azul institucional, estável) |
+// | concluída       | info    | avaliação concluída (azul institucional, estável)   |
 // | inapta          | warning | D1 abaixo do corte de 67,2 (resultado, não falha)   |
 // | empatada        | warning | exige atenção: critérios do Edital ou da Comissão   |
 // | desclassificada | error   | eliminada (nível 0 em 1.1/1.2 ou PA ausente)        |
@@ -12,12 +12,12 @@
 
 import { cx } from './cx'
 
-export type StatusSelo = 'apta' | 'homologada' | 'inapta' | 'empatada' | 'desclassificada' | 'nao_admitida' | 'pendente'
+export type StatusSelo = 'apta' | 'concluida' | 'inapta' | 'empatada' | 'desclassificada' | 'nao_admitida' | 'pendente'
 export type TomSelo = 'success' | 'info' | 'warning' | 'error' | 'neutral'
 
 export const MAPA_STATUS: Record<StatusSelo, { tom: TomSelo; rotulo: string }> = {
   apta: { tom: 'success', rotulo: 'Apta' },
-  homologada: { tom: 'info', rotulo: 'Homologada' },
+  concluida: { tom: 'info', rotulo: 'Concluída' },
   inapta: { tom: 'warning', rotulo: 'Inapta' },
   empatada: { tom: 'warning', rotulo: 'Empatada' },
   desclassificada: { tom: 'error', rotulo: 'Desclassificada' },

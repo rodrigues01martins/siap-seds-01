@@ -1,15 +1,13 @@
-// /chamamentos/:ch/sessoes/:s (DetailPage) — sessão: foco da projeção { tipo, propostaId, subcriterio? }
-// (quem conduz), presentes e declarações, pauta e encerrar (presidente, com confirmação destrutiva).
-// Reset da sessão (permissão resetarSessao + papel de presidente): seção própria no fim da página, fora das
-// ações do cabeçalho, com DialogoResetSessao. Sessão reiniciada mostra quem resetou, quando e por quê.
-// Os demais perfis só leem.
+// /sessao/:id?ch= (DetailPage) — sessão (Simplificação 3/4): presentes (nome e papel, editáveis com o mesmo bloco
+// da abertura) e a pauta — as propostas dos lotes da sessão, cada uma com o progresso ("D1 18/28 · D2 ok"), o
+// status e "Avaliar" (/avaliar, a proposta inteira numa tela). O telão acompanha a tela de avaliação
+// (interruptor "Projetar"); aqui só se vê o que está projetado. Encerrar (confirmação destrutiva) e, numa seção
+// própria no fim, excluir a sessão e tudo o que foi registrado com ela (prévia no DialogoExclusao).
 
-import { FileText, MonitorUp, Power, RotateCcw, SquarePen } from 'lucide-react'
+import { ClipboardCheck, FileText, MonitorUp, Power, SquarePen, Trash2 } from 'lucide-react'
 import { useState } from 'react'
-import { useWatch } from 'react-hook-form'
-import { useParams } from 'react-router'
+import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { DetailPage } from '../../components/templates/paginas'
-import { Alert } from '../../components/ui/Alert'
 import { AlertaErroApi } from '../../components/ui/AlertaErroApi'
 import { Button, classesBotao } from '../../components/ui/Button'
 import { ButtonLink } from '../../components/ui/ButtonLink'
@@ -18,51 +16,41 @@ import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { DataTable } from '../../components/ui/DataTable'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { ErrorState } from '../../components/ui/ErrorState'
-import { CampoLista, FormularioApi } from '../../components/ui/FormularioApi'
+import { FormularioApi } from '../../components/ui/FormularioApi'
 import { Icone } from '../../components/ui/Icone'
 import { Skeleton } from '../../components/ui/Skeleton'
-import { Badge } from '../../components/ui/StatusBadge'
-import { useToast } from '../../components/ui/Toast'
+import { Badge, StatusBadge } from '../../components/ui/StatusBadge'
+import { situacaoDaProposta } from '../../domain/situacaoProposta'
+import { rotaAvaliar } from '../../lib/rotas'
 import { ROTULO_PAPEL } from '../../domain/comissao'
-import { MATRIZ_2026 } from '../../domain/matriz'
 import { podeFazer } from '../../domain/permissoes'
 import type { z } from '../../esquemas/base'
-import { TIPOS_FOCO, esquemaAbrirSessao, esquemaFoco } from '../../esquemas/sessao'
+import { esquemaAbrirSessao } from '../../esquemas/sessao'
 import { chamarApi } from '../../lib/api'
-import { dataBr, dataHoraBr } from '../../lib/datas'
-import { useColecao, useDocumento } from '../../lib/firestore'
-import type { Chamamento, Osc, Proposta, Sessao } from '../../lib/tipos'
+import { dataBr } from '../../lib/datas'
+import { useColecao, useDocumento, type ComId } from '../../lib/firestore'
+import type { Avaliacao, Chamamento, Osc, Proposta, Sessao } from '../../lib/tipos'
 import { useUsuario } from '../auth/useUsuario'
-import { ROTULO_TIPO_FOCO, descreverFoco } from '../projecao/foco'
-import { DialogoResetSessao } from './DialogoResetSessao'
-import { campoDosMembros, corpoDosMembros, LinhasMembros } from './FormAberturaSessao'
+import { descreverFoco } from '../projecao/foco'
+import { ordenarPauta, progressoD1, textoProgresso } from '../avaliar/pauta'
+import { useExclusao } from '../exclusao/useExclusao'
+import { CamposPresentes, PRESENTES_INICIAIS } from './FormAberturaSessao'
 import { SeloSessao } from './SeloSessao'
-import { useComissao } from './useComissao'
-
-const SUBCRITERIOS = MATRIZ_2026.dimensao1.planos.flatMap((pa) =>
-  pa.subcriterios.map((s) => ({ valor: s.codigo, rotulo: `${pa.codigo} · ${s.codigo} — ${s.titulo}` })),
-)
-
-/** Subcritério só aparece quando o tipo do foco é "subcritério". */
-function CampoSubcriterio() {
-  const tipo = useWatch({ name: 'tipo' }) as string | undefined
-  return tipo === 'subcriterio' ? <CampoLista nome="subcriterio" rotulo="Subcritério" opcoes={SUBCRITERIOS} /> : null
-}
 
 type Presente = Sessao['presentes'][number]
 
 export function ConduzirSessao() {
-  const { ch, s } = useParams()
+  const { id: s = '' } = useParams()
+  const [consulta] = useSearchParams()
+  const ch = consulta.get('ch') ?? ''
   const { usuario } = useUsuario()
   const acesso = usuario?.acesso ?? null
   const chamamento = useDocumento<Chamamento>(`chamamentos/${ch}`)
   const sessao = useDocumento<Sessao>(`chamamentos/${ch}/sessoes/${s}`)
   const propostas = useColecao<Proposta>(`chamamentos/${ch}/propostas`)
   const oscs = useColecao<Osc>('oscs')
-  // Papel na Comissão de quem está logado: o reset exige ser o presidente (além da permissão).
-  const cadastro = useDocumento<{ comissao?: string }>(usuario ? `usuarios/${usuario.uid}` : null)
-  const { mostrar } = useToast()
-  const [resetando, setResetando] = useState(false)
+  const navegar = useNavigate()
+  const exclusao = useExclusao({ aoExcluir: () => navegar(`/chamamentos/${ch}`) })
   const [erro, setErro] = useState<unknown>(null)
   const [confirmarEncerrar, setConfirmarEncerrar] = useState(false)
   const [encerrando, setEncerrando] = useState(false)
@@ -76,10 +64,14 @@ export function ConduzirSessao() {
 
   const dados = sessao.dados
   const aberta = dados.status === 'aberta'
-  const conduz = aberta && podeFazer(acesso, 'sessaoConduzir')
-  const encerra = aberta && podeFazer(acesso, 'sessaoAbrirEncerrar')
-  const podeResetar = podeFazer(acesso, 'resetarSessao') && cadastro.dados?.comissao === 'presidente'
+  // Admin e presidente fazem tudo (a rota já exige um dos perfis).
+  const podeGravar = podeFazer(acesso)
+  const conduz = aberta && podeGravar
+  const encerra = aberta && podeGravar
   const nomeOsc = new Map(oscs.dados.map((o) => [o.cnpj, o.razaoSocial]))
+  // Pauta: as propostas dos lotes da sessão, por lote e nome da OSC.
+  const lotesPauta = dados.lotes ?? []
+  const pauta = ordenarPauta(propostas.dados, lotesPauta, nomeOsc)
   const rotuloProposta = (id: string) => {
     const p = propostas.dados.find((x) => x.id === id)
     return p ? `${nomeOsc.get(p.oscCnpj) ?? p.oscCnpj} — Lote ${p.loteCodigo}` : id
@@ -95,7 +87,6 @@ export function ConduzirSessao() {
     }
   }
 
-  const declaracao = (uid: string) => dados.declaracoes.find((d) => d.uid === uid)
   const caminho = `/chamamentos/${ch}`
   const titulo = `Sessão de ${dataBr(dados.data)}`
 
@@ -104,12 +95,7 @@ export function ConduzirSessao() {
       cabecalho={{
         trilha: [{ rotulo: 'Chamamentos', para: '/' }, { rotulo: `Chamamento ${chamamento.dados?.numero ?? ch}`, para: caminho }, { rotulo: titulo }],
         titulo,
-        descricao: {
-          aberta: 'Sessão aberta: a Comissão registra avaliações e o relator conduz a projeção.',
-          encerrada: 'Sessão encerrada: somente consulta.',
-          reiniciando: 'Reset em andamento ou interrompido: nenhum registro novo entra nesta sessão.',
-          reiniciada: 'Sessão reiniciada: os registros feitos nela foram desconsiderados. Somente consulta.',
-        }[dados.status],
+        descricao: aberta ? 'Sessão aberta: escolha a proposta e avalie; o telão acompanha a tela de avaliação.' : 'Sessão encerrada: somente consulta.',
         acoesSecundarias: (
           <>
             <ButtonLink para={`${caminho}/sessoes/${s}/ata`} variante="secondary" icone={FileText}>
@@ -134,139 +120,66 @@ export function ConduzirSessao() {
         { termo: 'Situação', valor: <SeloSessao status={dados.status} /> },
         { termo: 'Data', valor: dataBr(dados.data) },
         { termo: 'Presentes', valor: dados.presentes.length },
-        { termo: 'Propostas na pauta', valor: dados.pauta.length },
+        { termo: 'Lotes em pauta', valor: lotesPauta.join(', ') || '—' },
+        { termo: 'Propostas na pauta', valor: pauta.length },
+        { termo: 'No telão', valor: dados.foco ? `${rotuloProposta(dados.foco.propostaId)} · ${descreverFoco(dados.foco)}` : 'Pauta (sem foco)' },
       ]}
     >
       <AlertaErroApi erro={erro} />
-      {dados.status === 'reiniciada' && (
-        <Alert tom="info" titulo="Sessão reiniciada" rotulo="Sessão reiniciada" papel="status">
-          Resetada por {dados.reiniciadaPor?.email ?? dados.reiniciadaPor?.uid ?? 'presidente'}
-          {dados.reiniciadaEm ? ` em ${dataHoraBr(dados.reiniciadaEm.toDate())}` : ''}
-          {(dados.resets ?? 1) > 1 ? ` (${dados.resets} resets)` : ''}. Motivo: {dados.motivo}
-        </Alert>
-      )}
-      {dados.status === 'reiniciando' && (
-        <Alert tom="warning" titulo="Reset não concluído" papel="status">
-          O reset desta sessão começou e não terminou. O presidente pode repeti-lo para concluir.
-        </Alert>
-      )}
 
       <Card
-        titulo="Foco da projeção"
-        descricao={dados.foco ? `${rotuloProposta(dados.foco.propostaId)} · ${descreverFoco(dados.foco)}` : 'Sem foco definido: o telão mostra a pauta.'}
-      >
-        {conduz && (
-          <FormularioApi
-            key={JSON.stringify(dados.foco)}
-            rotulo="Foco da projeção"
-            esquema={esquemaFoco}
-            valoresIniciais={{ tipo: dados.foco?.tipo ?? 'subcriterio', propostaId: dados.foco?.propostaId ?? '', subcriterio: dados.foco?.subcriterio ?? '' }}
-            transformar={(v) => ({
-              tipo: v.tipo,
-              propostaId: v.propostaId,
-              ...(v.tipo === 'subcriterio' ? { subcriterio: v.subcriterio } : {}),
-            })}
-            rotuloEnviar="Definir foco"
-            campoDoFormulario={(campo) => campo.replace(/^foco\./, '')}
-            onEnviar={(foco) => alterar({ acao: 'foco', foco }).then(() => undefined)}
-            acoesSecundarias={
-              dados.foco ? (
-                <Button variante="secondary" onClick={() => void executar(() => alterar({ acao: 'foco', foco: null }))}>
-                  Limpar foco
-                </Button>
-              ) : undefined
-            }
-          >
-            <div className="grid gap-4 md:grid-cols-2">
-              <CampoLista nome="tipo" rotulo="O que projetar" opcoes={TIPOS_FOCO.map((t) => ({ valor: t, rotulo: ROTULO_TIPO_FOCO[t] }))} />
-              <CampoLista nome="propostaId" rotulo="Proposta" opcoes={dados.pauta.map((id) => ({ valor: id, rotulo: rotuloProposta(id) }))} />
-            </div>
-            <CampoSubcriterio />
-          </FormularioApi>
-        )}
-      </Card>
-
-      <Card
-        titulo="Presentes e declarações de impedimento"
+        titulo="Presentes"
         acoes={
           conduz && !editandoPresentes ? (
             <Button variante="secondary" tamanho="sm" icone={SquarePen} onClick={() => setEditandoPresentes(true)}>
-              Alterar presentes e declarações
+              Alterar presentes
             </Button>
           ) : undefined
         }
       >
         {editandoPresentes ? (
-          <EditorMembros sessao={dados} alterar={alterar} aoConcluir={() => setEditandoPresentes(false)} />
+          <EditorPresentes sessao={dados} alterar={alterar} aoConcluir={() => setEditandoPresentes(false)} />
         ) : (
-          <DataTable<Presente>
+          <DataTable<Presente & { indice: number }>
             rotulo="Presentes"
-            linhas={dados.presentes}
-            chave={(p) => p.uid}
+            linhas={dados.presentes.map((p, indice) => ({ ...p, indice }))}
+            chave={(p) => String(p.indice)}
             vazio={{ titulo: 'Nenhum presente registrado' }}
             colunas={[
-              { id: 'membro', titulo: 'Membro', celula: (p) => p.email ?? p.uid },
-              { id: 'papel', titulo: 'Papel', celula: (p) => ROTULO_PAPEL[p.perfil] ?? p.perfil },
-              {
-                id: 'declaracao',
-                titulo: 'Declaração',
-                celula: (p) => {
-                  const d = declaracao(p.uid)
-                  if (!d) return <Badge tom="warning">Sem declaração</Badge>
-                  return d.semImpedimento ? (
-                    <Badge tom="success">Sem impedimento</Badge>
-                  ) : (
-                    <span className="flex flex-wrap items-center gap-2">
-                      <Badge tom="error">Impedido</Badge>
-                      <span className="text-body-sm text-text-secondary">{d.motivo}</span>
-                    </span>
-                  )
-                },
-              },
+              { id: 'nome', titulo: 'Nome', celula: (p) => p.nome },
+              { id: 'papel', titulo: 'Papel', celula: (p) => <Badge tom={p.papel === 'presidente' ? 'info' : 'neutral'}>{ROTULO_PAPEL[p.papel] ?? p.papel}</Badge> },
             ]}
           />
         )}
       </Card>
 
-      <Card titulo="Pauta" descricao="Propostas avaliadas nesta sessão, na ordem da pauta.">
-        <ol className="divide-y divide-border-default">
-          {dados.pauta.map((id, i) => (
-            <li key={id} className="flex flex-wrap items-center justify-between gap-3 py-3">
-              <span className="text-body-md text-text-primary">
-                <span className="mr-2 text-label-md text-text-secondary">{i + 1}.</span>
-                {rotuloProposta(id)}
-              </span>
-              <ButtonLink para={`${caminho}/propostas/${id}/d1`} variante="tertiary" tamanho="sm" aria-label={`Avaliação D1: ${rotuloProposta(id)}`}>
-                Avaliação D1
-              </ButtonLink>
-            </li>
-          ))}
-        </ol>
+      <Card titulo="Pauta" descricao={`Propostas do(s) lote(s) ${lotesPauta.join(', ') || '—'}, analisadas nesta sessão.`}>
+        {pauta.length === 0 ? (
+          <p className="text-body-sm text-text-secondary">Nenhuma proposta nos lotes da pauta.</p>
+        ) : (
+          <ol aria-label="Propostas da pauta" className="divide-y divide-border-default">
+            {pauta.map((id, i) => (
+              <LinhaPauta key={id} ch={ch} numero={i + 1} proposta={propostas.dados.find((x) => x.id === id)!} rotulo={rotuloProposta(id)} justificativaMinima={chamamento.dados?.justificativaMinima} />
+            ))}
+          </ol>
+        )}
       </Card>
 
-      {podeResetar && (
+      {podeGravar && (
         <Card
-          titulo="Reset da sessão"
-          descricao="Descarta tudo o que a Comissão registrou nesta sessão: cada registro volta ao estado anterior. Exige justificativa e fica na ata."
+          titulo="Exclusão da sessão"
+          descricao="Apaga a sessão e tudo o que a Comissão registrou com ela (admissibilidade, níveis, experiências e desempates); os totais das propostas são recalculados."
         >
-          <Button variante="destructive" icone={RotateCcw} onClick={() => setResetando(true)}>
-            Resetar sessão
+          <Button
+            variante="destructive"
+            icone={Trash2}
+            onClick={() => exclusao.abrir({ rota: '/api/sessao', ids: { chamamentoId: ch, sessaoId: s }, nome: `sessão de ${dataBr(dados.data)}` })}
+          >
+            Excluir sessão
           </Button>
         </Card>
       )}
-
-      <DialogoResetSessao
-        aberto={resetando}
-        chamamentoId={ch ?? ''}
-        sessaoId={s ?? ''}
-        rotuloSessao={`sessão de ${dataBr(dados.data)}`}
-        nomeProposta={rotuloProposta}
-        onFechar={() => setResetando(false)}
-        onConcluido={({ revertidos, apagados }) => {
-          setResetando(false)
-          mostrar({ tom: 'success', titulo: 'Sessão reiniciada', mensagem: `${revertidos} registro(s) revertido(s) e ${apagados} apagado(s).` })
-        }}
-      />
+      {exclusao.dialogo}
 
       <ConfirmDialog
         aberto={confirmarEncerrar}
@@ -286,10 +199,10 @@ export function ConduzirSessao() {
   )
 }
 
-const esquemaMembros = esquemaAbrirSessao.pick({ presentes: true, declaracoes: true })
+const esquemaPresentes = esquemaAbrirSessao.pick({ presentes: true })
 
-/** Mesma lista de membros da abertura, aplicada como presentes + declarações. */
-function EditorMembros({
+/** Mesma lista de presentes da abertura (nome e papel), aplicada à sessão. */
+function EditorPresentes({
   sessao,
   alterar,
   aoConcluir,
@@ -298,36 +211,62 @@ function EditorMembros({
   alterar: (corpo: Record<string, unknown>) => Promise<unknown>
   aoConcluir: () => void
 }) {
-  const comissao = useComissao()
-  if (comissao.carregando) return <Skeleton linhas={3} rotulo="Carregando Comissão" />
-  if (comissao.erro) return <ErrorState mensagem={comissao.erro} />
-
-  const presentes = new Set(sessao.presentes.map((p) => p.uid))
-  const linhas = comissao.dados.map((m) => {
-    const d = sessao.declaracoes.find((x) => x.uid === m.uid)
-    return { uid: m.uid, presente: presentes.has(m.uid), semImpedimento: d ? d.semImpedimento : true, motivo: d?.motivo ?? '' }
-  })
-
   return (
     <FormularioApi
-      rotulo="Presentes e declarações"
-      esquema={esquemaMembros}
-      valoresIniciais={{ membros: linhas }}
-      transformar={(valores) => corpoDosMembros(valores.membros ?? [])}
-      campoDoFormulario={(campo, corpo) => campoDosMembros(campo, corpo, linhas)}
-      rotuloEnviar="Salvar presentes e declarações"
+      rotulo="Presentes"
+      esquema={esquemaPresentes}
+      valoresIniciais={{ presentes: sessao.presentes.length > 0 ? sessao.presentes : PRESENTES_INICIAIS }}
+      rotuloEnviar="Salvar presentes"
       acoesSecundarias={
         <Button variante="secondary" onClick={aoConcluir}>
           Cancelar
         </Button>
       }
-      onEnviar={async ({ presentes: uids, declaracoes }: z.output<typeof esquemaMembros>) => {
-        await alterar({ acao: 'presentes', presentes: uids })
-        await alterar({ acao: 'declaracoes', declaracoes })
+      onEnviar={async ({ presentes }: z.output<typeof esquemaPresentes>) => {
+        await alterar({ acao: 'presentes', presentes })
         aoConcluir()
       }}
     >
-      <LinhasMembros membros={comissao.dados} />
+      <CamposPresentes />
     </FormularioApi>
+  )
+}
+
+/** Proposta da pauta: progresso (D1 completos de 28 · D2 com experiência), status e "Avaliar". */
+function LinhaPauta({
+  ch,
+  numero,
+  proposta,
+  rotulo,
+  justificativaMinima,
+}: {
+  ch: string
+  numero: number
+  proposta: ComId<Proposta>
+  rotulo: string
+  justificativaMinima?: number
+}) {
+  const base = `chamamentos/${ch}/propostas/${proposta.id}`
+  const avaliacoes = useColecao<Avaliacao>(`${base}/avaliacoes`)
+  const experiencias = useColecao(`${base}/experiencias`)
+  const progresso = textoProgresso(progressoD1(avaliacoes.dados, justificativaMinima), experiencias.dados.length)
+  const admissao = proposta.admissibilidade ? 'Admissão ok' : 'Admissão pendente'
+  return (
+    <li aria-label={rotulo} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3">
+      <span className="min-w-0 flex-1 text-body-md text-text-primary">
+        <span className="mr-2 text-label-md text-text-secondary">{numero}.</span>
+        {rotulo}
+      </span>
+      <span className="text-body-sm text-text-secondary tabular-nums">
+        {admissao} · {avaliacoes.carregando || experiencias.carregando ? '…' : progresso}
+      </span>
+      <span className="flex gap-2">
+        <StatusBadge status={situacaoDaProposta(proposta)} />
+        {proposta.concluida && <StatusBadge status="concluida" />}
+      </span>
+      <ButtonLink para={rotaAvaliar(ch, proposta.id)} variante="secondary" tamanho="sm" icone={ClipboardCheck} aria-label={`Avaliar ${rotulo}`}>
+        Avaliar
+      </ButtonLink>
+    </li>
   )
 }

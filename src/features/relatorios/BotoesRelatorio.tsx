@@ -10,7 +10,7 @@ import { montarQuadro, quadroPdf, type CabecalhoQuadro, type DecisaoComJustifica
 import { carregarEspelho } from './carregar'
 import { useGeracao } from './useGeracao'
 
-export function BotaoEspelho({ ch, p }: { ch: string; p: string }) {
+export function BotaoEspelho({ ch, p, rotulo = 'Espelho (PDF)' }: { ch: string; p: string; rotulo?: string }) {
   const { gerando, erro, gerar, rodape } = useGeracao()
   return (
     <>
@@ -28,7 +28,7 @@ export function BotaoEspelho({ ch, p }: { ch: string; p: string }) {
           })
         }
       >
-        {gerando ? 'Gerando…' : 'Espelho (PDF)'}
+        {gerando ? 'Gerando…' : rotulo}
       </Button>
       <AlertaErroApi erro={erro} />
     </>
@@ -47,7 +47,7 @@ export function BotoesQuadro({
   const { gerando, erro, gerar, rodape } = useGeracao()
   // Só os campos que a classificação usa, em ordem fixa: o código de verificação não varia com o resto.
   const ordenadas = propostas
-    .map(({ id, nomeOsc, totais, bloqueada, admissibilidade }) => ({ id, nomeOsc, totais, bloqueada, admissibilidade }))
+    .map(({ id, nomeOsc, totais, concluida, admissibilidade }) => ({ id, nomeOsc, totais, concluida, admissibilidade }))
     .sort((a, b) => a.id.localeCompare(b.id))
   const dadosUsados = () => ({
     cabecalho,

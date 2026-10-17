@@ -1,8 +1,10 @@
 // Formato dos documentos lidos do Firestore pelas telas (gravados pela /api).
 
 import type { StatusD1 } from '../domain/d1'
-import type { PapelComissao } from '../domain/comissao'
-import type { Permissao } from '../domain/permissoes'
+import type { Desconsideracao } from '../domain/d2'
+import type { DocumentoExperiencia, Modalidade } from '../esquemas/experiencia'
+import type { PapelSessao } from '../domain/comissao'
+import type { Perfil } from '../domain/permissoes'
 
 export interface Lote {
   codigo: string
@@ -16,15 +18,12 @@ export interface Chamamento {
   dataLimitePropostas?: string
   justificativaMinima?: number
   lotes: Lote[]
-  /** "excluindo": exclusão registrada pela /api e ainda não concluída. */
-  status?: 'excluindo'
 }
 
 export interface Osc {
   cnpj: string
   razaoSocial: string
   nomeFantasia?: string
-  status?: 'excluindo'
 }
 
 export interface Proposta {
@@ -33,64 +32,91 @@ export interface Proposta {
   protocolo?: string
   numeroSEI?: string
   observacao?: string
-  bloqueada?: boolean
+  /** Concluída (ação reversível): relatórios saem como finais; alterar a avaliação desfaz a conclusão. */
+  concluida?: boolean
   totais?: { status?: StatusD1; d1?: number; d2?: number; nf?: number }
-  admissibilidade?: { situacao?: 'admitida' | 'nao_admitida' | 'desclassificada' }
-  status?: 'excluindo'
+  admissibilidade?: AdmissibilidadeGravada
+  atualizadoPor?: AtualizadoPor
 }
 
-export interface PresenteSessao {
-  uid: string
+/** Quem gravou o documento por último (sem auditoria detalhada). */
+export interface AtualizadoPor {
+  nome: string | null
   email: string | null
-  /** Papel na Comissão no momento da sessão. */
-  perfil: PapelComissao
 }
 
-export interface DeclaracaoSessao {
-  uid: string
-  semImpedimento: boolean
+/** Página inicial/final de um PA, com limite, página de corte e excedente (Anexo III, 7.1). */
+export interface PlanoAdmissibilidadeGravado {
+  codigo: string
+  paginaInicial: number | null
+  paginaFinal: number | null
+  limite: number
+  paginas: number | null
+  paginaCorte: number | null
+  excede: number
+}
+
+/** Admissibilidade simplificada: admitida (sim/não), motivo e páginas por PA. */
+export interface AdmissibilidadeGravada {
+  admitida?: boolean
   motivo?: string
+  planos?: PlanoAdmissibilidadeGravado[]
+  /** desclassificada só em registros anteriores à Simplificação 2/4. */
+  situacao?: 'admitida' | 'nao_admitida' | 'desclassificada'
+  sessaoId?: string
 }
 
-/** Reset da sessão (presidente): quem, quando e por quê. */
-export interface ResetSessao {
-  por: { uid: string; email: string | null }
-  em: { toDate(): Date }
-  motivo: string
+/** Quem está presente na sessão: só o nome e o papel (sem login). */
+export interface PresenteSessao {
+  nome: string
+  papel: PapelSessao
 }
 
 export interface Sessao {
   data: string
-  /** reiniciando: reset em andamento (ou interrompido); reiniciada: registros desconsiderados (sem novos registros). */
-  status: 'aberta' | 'encerrada' | 'reiniciando' | 'reiniciada'
-  reiniciadaPor?: { uid: string; email: string | null }
-  reiniciadaEm?: { toDate(): Date }
-  motivo?: string
-  resets?: number
-  historicoResets?: ResetSessao[]
-  pauta: string[]
+  status: 'aberta' | 'encerrada'
+  /** Lote(s) em pauta: as propostas desses lotes são as analisadas na sessão. */
+  lotes: string[]
   presentes: PresenteSessao[]
-  declaracoes: DeclaracaoSessao[]
   /** O que o telão mostra; dados anteriores à Etapa 5 não têm `tipo` (= subcritério). */
   foco: { tipo?: 'admissibilidade' | 'subcriterio' | 'd2' | 'resumo'; propostaId: string; subcriterio?: string } | null
-  abertaPor?: { uid: string; email: string | null }
 }
 
 export interface Avaliacao {
-  nivel: number
+  /** null: rascunho do salvamento automático só com justificativa ou páginas (subcritério ainda pendente). */
+  nivel: number | null
   justificativa: string
   paginas: number[]
-  decisao: 'unanimidade' | 'maioria'
-  votoDivergente?: string
   sessaoId: string
+  atualizadoPor?: AtualizadoPor
 }
 
 /** Cadastro em usuarios/{uid} (tela Usuários, /api/usuarios). */
 export interface UsuarioCadastro {
   email: string
   nome?: string
+  /** admin ou presidente; ausente ou outro valor = cadastro do modelo anterior, sem acesso. */
+  perfil?: Perfil | string | null
+  /** Só no cadastro do modelo anterior (o administrador antigo continua admin). */
   admin?: boolean
   ativo?: boolean
-  permissoes?: Permissao[]
-  comissao?: PapelComissao | null
+}
+
+/** Experiência da OSC (D2), em .../propostas/{p}/experiencias/{id}. */
+export interface ExperienciaGravada {
+  id: string
+  descricao: string
+  categorias: string[]
+  modalidade?: Modalidade
+  orgaoParceiro?: string
+  instrumento?: string
+  mrosc?: boolean
+  inicio: string
+  fim: string | null
+  vagas?: number | null
+  unidades?: number | null
+  trabalhadores?: number | null
+  valorAnualCentavos?: number | null
+  documentos?: DocumentoExperiencia[]
+  desconsideracoes?: Desconsideracao[]
 }

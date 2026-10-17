@@ -1,20 +1,16 @@
-// POST /api/propostas (criar) e PATCH /api/propostas (editar). Perfil: admin.
+// POST /api/propostas (criar) e PATCH /api/propostas (editar). Perfis: admin e presidente.
 // Proposta em chamamentos/{chamamentoId}/propostas/{id}; exige chamamento, lote e OSC existentes.
-// "bloqueada" só muda pela homologação (Etapa 3b): este endpoint não aceita o campo.
-// DELETE (excluir, somente admin, com justificativa) e GET ?simular=true (prévia): ver _lib/exclusao.ts.
-// Proposta homologada não pode ser excluída (409: reabra antes); apaga todas as subcoleções.
+// "concluida" só muda por /api/concluir: este endpoint não aceita o campo. A proposta nasce não concluída.
+// DELETE { chamamentoId, propostaId } apaga a proposta e tudo dentro dela; GET ?simular=true: prévia.
+// Ver _lib/cascata.ts.
 
 import type { Transaction } from 'firebase-admin/firestore'
-import {
-  esquemaCriarProposta,
-  esquemaEditarProposta,
-  esquemaExcluirProposta,
-  esquemaPreviaProposta,
-} from '../src/esquemas/cadastros.js'
+import { esquemaCriarProposta, esquemaEditarProposta } from '../src/esquemas/cadastros.js'
+import { esquemaExcluirProposta, esquemaPreviaProposta } from '../src/esquemas/exclusao.js'
 import { obterAdmin } from './_lib/admin.js'
+import { alvoProposta, excluir, previaExclusao } from './_lib/cascata.js'
 import { ErroApi, MENSAGENS } from './_lib/erros.js'
-import { alvoProposta, excluirComSeguranca, previaExclusao } from './_lib/exclusao.js'
-import { conferirDesbloqueada, gravar } from './_lib/gravar.js'
+import { gravar } from './_lib/gravar.js'
 import { criarRota, json } from './_lib/http.js'
 import { autenticar } from './_lib/porteiro.js'
 import { lerConsulta, lerCorpo } from './_lib/validacao.js'
@@ -38,10 +34,6 @@ async function conferirReferencias(
   }
   if (!osc.exists) campos.oscCnpj = 'OSC não cadastrada.'
   if (Object.keys(campos).length > 0) throw new ErroApi(400, MENSAGENS.dadosInvalidos, campos)
-  // A OSC é referência por campo (não fica acima da proposta no caminho): a trava do gravar não a vê.
-  if (osc.get('status') === 'excluindo' || chamamento.get('status') === 'excluindo') {
-    throw new ErroApi(409, MENSAGENS.emExclusao)
-  }
 }
 
 /** Uma proposta por OSC em cada lote do chamamento. */
@@ -64,13 +56,13 @@ async function conferirDuplicidade(
 
 export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   GET: async (requisicao) => {
-    await autenticar(requisicao, 'admin')
+    await autenticar(requisicao)
     const { chamamentoId, propostaId } = lerConsulta(requisicao, esquemaPreviaProposta)
     return json(200, await previaExclusao(alvoProposta(chamamentoId, propostaId)))
   },
 
   POST: async (requisicao) => {
-    const autor = await autenticar(requisicao, 'propostas')
+    const autor = await autenticar(requisicao)
     const { chamamentoId, loteCodigo: lote, oscCnpj, ...demais } = await lerCorpo(requisicao, esquemaCriarProposta)
     const id = obterAdmin().db.collection(`chamamentos/${chamamentoId}/propostas`).doc().id
     await gravar(autor, async (transacao) => {
@@ -80,7 +72,7 @@ export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
         {
           caminho: `chamamentos/${chamamentoId}/propostas/${id}`,
           acao: 'criar',
-          dados: { loteCodigo: lote, oscCnpj, ...demais, bloqueada: false },
+          dados: { loteCodigo: lote, oscCnpj, ...demais, concluida: false },
         },
       ]
     })
@@ -88,14 +80,12 @@ export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   },
 
   PATCH: async (requisicao) => {
-    const autor = await autenticar(requisicao, 'propostas')
+    const autor = await autenticar(requisicao)
     const { chamamentoId, propostaId, ...alteracoes } = await lerCorpo(requisicao, esquemaEditarProposta)
     const caminho = `chamamentos/${chamamentoId}/propostas/${propostaId}`
     await gravar(autor, async (transacao) => {
       const atual = await transacao.get(obterAdmin().db.doc(caminho))
       if (!atual.exists) throw new ErroApi(404, MENSAGENS.naoEncontrado)
-      // Homologada → 409 antes de qualquer outra validação.
-      await conferirDesbloqueada(transacao, caminho)
       const lote = alteracoes.loteCodigo ?? (atual.get('loteCodigo') as string)
       const osc = alteracoes.oscCnpj ?? (atual.get('oscCnpj') as string)
       if (alteracoes.loteCodigo !== undefined || alteracoes.oscCnpj !== undefined) {
@@ -108,8 +98,8 @@ export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   },
 
   DELETE: async (requisicao) => {
-    const autor = await autenticar(requisicao, 'admin')
-    const { chamamentoId, propostaId, justificativa } = await lerCorpo(requisicao, esquemaExcluirProposta)
-    return json(200, await excluirComSeguranca(autor, alvoProposta(chamamentoId, propostaId), justificativa))
+    const autor = await autenticar(requisicao)
+    const { chamamentoId, propostaId } = await lerCorpo(requisicao, esquemaExcluirProposta)
+    return json(200, await excluir(autor, alvoProposta(chamamentoId, propostaId)))
   },
 })

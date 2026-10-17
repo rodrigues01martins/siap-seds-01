@@ -1,20 +1,11 @@
-// Exclusão nas telas de lista: abrir(alvo) mostra o DialogoExclusao; ao concluir, aviso (toast) e fecha.
-// Também o selo "Em exclusão" para registro marcado pela /api (status "excluindo") cuja exclusão não terminou.
+// Exclusão nas telas: botao(alvo) é a lixeira do item; abre o DialogoExclusao; ao concluir, aviso (toast) com
+// o que foi apagado e fecha. A lista se atualiza sozinha (as telas leem com onSnapshot).
 
-import { Trash2 } from 'lucide-react'
-import { useState } from 'react'
-import type { ItemMenuAcoes } from '../../components/ui/MenuAcoes'
-import { Badge } from '../../components/ui/StatusBadge'
+import { useState, type ReactNode } from 'react'
 import { useToast } from '../../components/ui/Toast'
-import { DialogoExclusao, type AlvoDialogoExclusao } from './DialogoExclusao'
+import { BotaoExcluir, DialogoExclusao, type AlvoDialogoExclusao } from './DialogoExclusao'
 
-export const emExclusao = (registro: { status?: string }) => registro.status === 'excluindo'
-
-export function SeloEmExclusao() {
-  return <Badge tom="error">Em exclusão</Badge>
-}
-
-export function useExclusao() {
+export function useExclusao(opcoes: { aoExcluir?: () => void } = {}) {
   const [alvo, setAlvo] = useState<AlvoDialogoExclusao | null>(null)
   const { mostrar } = useToast()
 
@@ -22,15 +13,15 @@ export function useExclusao() {
     <DialogoExclusao
       alvo={alvo}
       onFechar={() => setAlvo(null)}
-      onExcluido={({ total }) => {
-        mostrar({ tom: 'success', titulo: 'Exclusão concluída', mensagem: `${alvo?.nome ?? 'Registro'}: ${total} ${total === 1 ? 'documento apagado' : 'documentos apagados'}.` })
+      onExcluido={({ resumo }) => {
+        mostrar({ tom: 'success', titulo: 'Exclusão concluída', mensagem: `${alvo?.nome ?? 'Registro'}: apagados ${resumo}.` })
         setAlvo(null)
+        opcoes.aoExcluir?.()
       }}
     />
   )
 
-  /** Item "Excluir" do menu de ações da linha. */
-  const itemExcluir = (novo: AlvoDialogoExclusao): ItemMenuAcoes => ({ rotulo: 'Excluir', icone: Trash2, destrutivo: true, onSelecionar: () => setAlvo(novo) })
+  const botao = (novo: AlvoDialogoExclusao): ReactNode => <BotaoExcluir nome={novo.nome} onClick={() => setAlvo(novo)} />
 
-  return { dialogo, itemExcluir }
+  return { dialogo, botao, abrir: setAlvo }
 }

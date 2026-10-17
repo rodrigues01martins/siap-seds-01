@@ -39,7 +39,8 @@ Os passos detalhados estão no [README](../README.md) (seções 1 a 4).
 ## 4. Matriz
 
 - [ ] O app usa a matriz do código (`src/domain/matriz/matriz_2026.json`); nada a fazer no console.
-- [ ] Opcional: registrar em `matrizes/2026` pelo terminal (`npm run seed:matriz -- --projeto prod --confirmar`).
+- [ ] `matrizes/2026` atual: **Administração → Limpar base → Recarregar matriz** (o selo fica "Atual"), ou pelo
+      terminal (`npm run seed:matriz -- --projeto prod --confirmar`).
 
 ## 5. Primeiro administrador e usuários reais
 
@@ -48,16 +49,16 @@ Os passos detalhados estão no [README](../README.md) (seções 1 a 4).
 - [ ] *Authentication → Templates → Password reset*: texto do e-mail de convite/senha (ex.: "SIAP SEDS — crie
       sua senha").
 - [ ] Demais pessoas: tela **Usuários → Novo usuário** (a pessoa recebe o e-mail para criar a senha).
-- [ ] Papel na Comissão de cada membro (presidente, relator, membro) conforme a portaria de designação.
-- [ ] Permissões por pessoa: só o necessário (ex.: quem cadastra não precisa avaliar; controle interno só
-      **Consulta**). Mais de um administrador é recomendado (se um ficar sem acesso, o outro resolve).
+- [ ] Perfil de cada pessoa: **admin** (faz tudo e gerencia usuários) ou **presidente** (faz tudo, menos usuários).
+      Cadastro antigo (sem perfil) não entra até receber um. Mais de um administrador é recomendado (se um ficar
+      sem acesso, o outro resolve). Os presentes da sessão são só nomes, digitados na abertura.
 - [ ] Quem sai da Comissão: **Gerenciar → Desativar** (bloqueia o login e encerra as sessões abertas).
 
 ## 6. Usuário do telão
 
 - [ ] **Usuários → Novo usuário** só para o projetor (ex.: `telao.sessao@seds.go.gov.br`), com senha forte
       guardada pela Comissão.
-- [ ] Só a permissão **Consulta** (lê tudo e não grava nada).
+- [ ] Perfil **presidente** (não há perfil só de leitura); a projeção não tem controles de escrita.
 - [ ] Testar no computador da sala: login → tela da sessão → **Abrir projeção (telão)** → **Tela cheia**.
 
 ## 7. Backup antes e depois de cada sessão 🔁
@@ -77,10 +78,9 @@ Pelo terminal, com a chave do Admin SDK do **prod** em `FIREBASE_SERVICE_ACCOUNT
 
 - [ ] **Prod**: nenhum chamamento, OSC ou proposta de teste. Em *Firestore → Data*, confira as coleções
       `chamamentos` e `oscs`. O script de ensaio **não roda em prod**; mesmo assim, procure ids `ensaio-` e
-      nomes com `(ENSAIO)`. O app não exclui chamamentos nem propostas: se houver dado de teste em prod,
-      apague-o **antes de cadastrar dados reais**, no Firebase Console (*Firestore → documento → Delete
-      document*, marcando a exclusão das subcoleções). Exclusão pelo Console não entra na trilha de
-      auditoria: registre-a no processo SEI e rode um backup em seguida.
+      nomes com `(ENSAIO)`. Se houver dado de teste em prod, apague-o **antes de cadastrar dados reais**
+      pela lixeira do próprio app (exclusão em cascata, com a prévia do que será apagado) e rode um backup
+      em seguida.
 - [ ] **Prod**: nenhum usuário de teste no Authentication (item 2).
 - [ ] **Dev**: depois do ensaio, `npm run ensaio -- --projeto dev --remover`. Depois de testar uma restauração
       de prod no dev, apague o chamamento restaurado (o dev passa a ter dados reais).
@@ -91,6 +91,6 @@ Pelo terminal, com a chave do Admin SDK do **prod** em `FIREBASE_SERVICE_ACCOUNT
 
 - [ ] `npm run ensaio -- --projeto dev` (ou `--recriar`) e uma sessão simulada completa com o roteiro
       ([ROTEIRO-SESSAO.md](ROTEIRO-SESSAO.md)): abrir a sessão, avaliar a proposta pendente, registrar o
-      desempate, homologar, gerar os PDFs, ata e encerramento.
+      desempate, concluir, gerar os PDFs, ata e encerramento.
 - [ ] Simular a queda de internet (desligar o Wi-Fi) e a sessão expirada (sair e entrar) seguindo o roteiro.
 - [ ] Remover o ensaio ao terminar.

@@ -2,7 +2,9 @@ rules_version = '2';
 
 // Regras do Firestore — SIAP SEDS/GO 2026.
 // O cliente NUNCA escreve: toda escrita passa pela /api (firebase-admin ignora estas regras).
-// Leitura conforme o cadastro do usuário em usuarios/{uid} (admin, permissoes, ativo), gravado pela /api.
+// Leitura conforme o cadastro do usuário em usuarios/{uid} (perfil admin ou presidente, ativo), gravado pela
+// /api. Admin e presidente leem tudo. Cadastro do modelo anterior (sem perfil) não lê nada; o administrador
+// antigo (admin: true, sem o campo perfil) continua administrador.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -20,13 +22,15 @@ service cloud.firestore {
         && cadastro().get('ativo', true) != false;
     }
 
-    function administrador() {
-      return ativo() && cadastro().get('admin', false) == true;
+    // Perfil válido: o campo perfil (admin ou presidente) ou, sem ele, o administrador antigo (admin: true).
+    function temPerfil(c) {
+      return ('perfil' in c && c.perfil in ['admin', 'presidente'])
+        || (!('perfil' in c) && c.get('admin', false) == true);
     }
 
-    // Lê os dados do app: conta ativa, administradora ou com ao menos uma permissão.
+    // Lê os dados do app: conta ativa com perfil admin ou presidente.
     function leitor() {
-      return ativo() && (cadastro().get('admin', false) == true || cadastro().get('permissoes', []).size() > 0);
+      return ativo() && temPerfil(cadastro());
     }
 
     // Matriz de avaliação: qualquer usuário autenticado.
@@ -46,18 +50,13 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Histórico de alterações: só o administrador.
-    match /auditoria/{eventoId} {
-      allow read: if administrador();
-      allow write: if false;
-    }
-
-    // Cadastro do usuário: o próprio (o app lê o seu acesso) e os leitores (listam a Comissão na sessão).
+    // Cadastro do usuário: o próprio (o app lê o seu acesso) e os leitores (tela Usuários).
     match /usuarios/{uid} {
       allow read: if logado() && (request.auth.uid == uid || leitor());
       allow write: if false;
     }
 
-    // Qualquer outro caminho: negado por padrão (nenhuma regra o libera).
+    // Qualquer outro caminho: negado por padrão (nenhuma regra o libera). Inclui auditoria/: sem auditoria
+    // detalhada desde a Simplificação 2/4, os registros antigos não são lidos pelo app.
   }
 }

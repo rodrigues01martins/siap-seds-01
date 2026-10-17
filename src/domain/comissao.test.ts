@@ -1,17 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { PAPEIS_COMISSAO, ROTULO_PAPEL, ehPapelComissao } from './comissao'
+import { PAPEIS_SESSAO, ROTULO_PAPEL, ehPapelSessao } from './comissao'
 
-describe('papel na Comissão de Seleção (aparece na sessão e na ata; não dá permissão)', () => {
-  it('são presidente, relator e membro, nessa ordem', () => {
-    expect([...PAPEIS_COMISSAO]).toEqual(['presidente', 'relator', 'membro'])
-    expect(ROTULO_PAPEL).toEqual({ presidente: 'Presidente', relator: 'Relator', membro: 'Membro' })
+describe('papel de quem está presente na sessão (só o nome e o papel; não é login)', () => {
+  it('são presidente e membro, nessa ordem', () => {
+    expect([...PAPEIS_SESSAO]).toEqual(['presidente', 'membro'])
+    expect(ROTULO_PAPEL).toEqual({ presidente: 'Presidente', membro: 'Membro' })
   })
 
-  it.each(['presidente', 'relator', 'membro'])('"%s" é papel válido', (p) => {
-    expect(ehPapelComissao(p)).toBe(true)
+  it.each(['presidente', 'membro'])('"%s" é papel válido', (p) => {
+    expect(ehPapelSessao(p)).toBe(true)
   })
 
-  it.each(['admin', 'controle', 'Presidente', '', null, undefined, 1])('%j não é papel', (p) => {
-    expect(ehPapelComissao(p)).toBe(false)
+  it.each(['relator', 'admin', 'controle', 'Presidente', '', null, undefined, 1])('%j não é papel', (p) => {
+    expect(ehPapelSessao(p)).toBe(false)
   })
 })

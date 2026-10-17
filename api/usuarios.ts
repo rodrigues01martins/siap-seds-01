@@ -1,15 +1,17 @@
-// /api/usuarios — gestão de usuários (tela Usuários). Cadastro em usuarios/{uid}: nome, e-mail, admin,
-// permissoes, ativo e papel na Comissão (comissao). Tudo com histórico (auditoria).
-// POST (administrador): novo usuário. Cria a conta no Firebase Authentication com senha aleatória; o app
+// /api/usuarios — gestão de usuários (tela Usuários, só o admin). Cadastro em usuarios/{uid}: nome, e-mail,
+// perfil (admin ou presidente) e ativo, com atualizadoPor e atualizadoEm.
+// POST (admin): novo usuário com perfil. Cria a conta no Firebase Authentication com senha aleatória; o app
 //   envia em seguida o e-mail "redefinir senha" do Firebase, com que a pessoa cria a própria senha.
-// PATCH (administrador): permissões, administrador, nome, papel e ativo. Desativar bloqueia a conta no
-//   Authentication e encerra as sessões. Ninguém tira o próprio acesso de administrador nem se desativa.
-// PUT (qualquer conta logada): primeiro acesso. Conta sem acesso (sem cadastro ou com cadastro antigo, do
-//   modelo de perfis), e-mail em api/_lib/adminsIniciais.ts e nenhum administrador no projeto → vira
-//   administrador. Quem já tem acesso recebe 200 sem mudança.
+// PATCH (admin): perfil, nome e ativo. Dar perfil a um cadastro do modelo anterior apaga os campos antigos
+//   (admin, permissoes, comissao). Desativar bloqueia a conta no Authentication e encerra as sessões.
+//   Ninguém tira o próprio perfil de administrador nem se desativa.
+// PUT (qualquer conta logada): primeiro acesso. Conta sem acesso (sem cadastro ou com cadastro antigo),
+//   e-mail em api/_lib/adminsIniciais.ts e nenhum administrador no projeto → vira admin. Quem já tem perfil
+//   recebe 200 sem mudança; cadastro antigo fora da lista → 403 pedindo a atualização pelo admin.
 
 import { randomBytes } from 'node:crypto'
-import { podeLer } from '../src/domain/permissoes.js'
+import { FieldValue } from 'firebase-admin/firestore'
+import { ACESSO_DESATUALIZADO, podeLer, precisaAtualizarAcesso } from '../src/domain/permissoes.js'
 import { esquemaAlterarUsuario, esquemaNovoUsuario } from '../src/esquemas/usuarios.js'
 import { obterAdmin } from './_lib/admin.js'
 import { ADMINS_INICIAIS } from './_lib/adminsIniciais.js'
@@ -20,6 +22,9 @@ import { autenticar, identificar } from './_lib/porteiro.js'
 import { lerCorpo } from './_lib/validacao.js'
 
 const SEM_ACESSO = 'Sua conta ainda não tem acesso. Peça ao administrador que a libere na tela Usuários.'
+
+/** Campos do modelo anterior, apagados quando o cadastro recebe um perfil. */
+const CAMPOS_ANTIGOS = { admin: FieldValue.delete(), permissoes: FieldValue.delete(), comissao: FieldValue.delete() }
 
 /** Conta do Authentication com este e-mail, ou null. */
 async function contaPorEmail(email: string) {
@@ -61,14 +66,15 @@ export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   PATCH: async (requisicao) => {
     const autor = await autenticar(requisicao, 'admin')
     const { uid, ...alteracao } = await lerCorpo(requisicao, esquemaAlterarUsuario)
-    if (uid === autor.uid && alteracao.admin === false) {
+    if (uid === autor.uid && alteracao.perfil !== undefined && alteracao.perfil !== 'admin') {
       throw new ErroApi(409, 'Você não pode tirar o seu próprio acesso de administrador.')
     }
     if (uid === autor.uid && alteracao.ativo === false) {
       throw new ErroApi(409, 'Você não pode desativar a sua própria conta.')
     }
 
-    await gravar(autor, () => [{ caminho: `usuarios/${uid}`, acao: 'editar', dados: alteracao }])
+    const dados = alteracao.perfil ? { ...alteracao, ...CAMPOS_ANTIGOS } : alteracao
+    await gravar(autor, () => [{ caminho: `usuarios/${uid}`, acao: 'editar', dados }])
 
     const { auth } = obterAdmin()
     if (alteracao.ativo !== undefined) await auth.updateUser(uid, { disabled: !alteracao.ativo })
@@ -79,26 +85,30 @@ export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
 
   PUT: async (requisicao) => {
     const quem = await identificar(requisicao)
-    if (podeLer(quem.acesso)) return json(200, { uid: quem.uid, admin: quem.acesso!.admin })
+    if (podeLer(quem.acesso)) return json(200, { uid: quem.uid, perfil: quem.acesso!.perfil })
 
     const email = quem.email?.toLowerCase() ?? ''
-    if (!ADMINS_INICIAIS.map((e) => e.toLowerCase()).includes(email)) throw new ErroApi(403, SEM_ACESSO)
+    const semAcesso = precisaAtualizarAcesso(quem.acesso) ? ACESSO_DESATUALIZADO : SEM_ACESSO
+    if (!ADMINS_INICIAIS.map((e) => e.toLowerCase()).includes(email)) throw new ErroApi(403, semAcesso)
 
     const { db } = obterAdmin()
     const autor = { uid: quem.uid, email, perfil: 'admin' as const }
     await gravar(autor, async (transacao) => {
       // Dentro da transação: dois primeiros acessos ao mesmo tempo não criam dois administradores.
-      const admins = await transacao.get(db.collection('usuarios').where('admin', '==', true).limit(1))
-      if (!admins.empty) throw new ErroApi(403, SEM_ACESSO)
+      // Já há administrador: perfil admin ou o administrador do modelo anterior (admin: true, sem perfil).
+      const [admins, antigos] = await Promise.all([
+        transacao.get(db.collection('usuarios').where('perfil', '==', 'admin').limit(1)),
+        transacao.get(db.collection('usuarios').where('admin', '==', true)),
+      ])
+      if (!admins.empty || antigos.docs.some((d) => d.get('perfil') === undefined)) throw new ErroApi(403, semAcesso)
       const atual = await transacao.get(db.doc(`usuarios/${quem.uid}`))
+      const dados = { email, nome: (atual.get('nome') as string | undefined) ?? email, perfil: 'admin', ativo: true }
       return [
-        {
-          caminho: `usuarios/${quem.uid}`,
-          acao: atual.exists ? 'editar' : 'criar',
-          dados: { email, nome: (atual.get('nome') as string | undefined) ?? email, admin: true, ativo: true, permissoes: [], comissao: null },
-        },
+        atual.exists
+          ? { caminho: `usuarios/${quem.uid}`, acao: 'editar', dados: { ...dados, ...CAMPOS_ANTIGOS } }
+          : { caminho: `usuarios/${quem.uid}`, acao: 'criar', dados },
       ]
     })
-    return json(200, { uid: quem.uid, admin: true })
+    return json(200, { uid: quem.uid, perfil: 'admin' })
   },
 })

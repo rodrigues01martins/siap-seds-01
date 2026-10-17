@@ -1,12 +1,12 @@
 // Itens da navegação lateral, agrupados por domínio (§12): Sessão | Avaliação | Resultado | Cadastros |
 // Administração, mais "Início". Sessão, Avaliação e Resultado dependem do chamamento aberto na rota.
-// Cada item só aparece para quem tem a permissão (src/domain/permissoes). Separado do React para teste.
+// Admin e presidente veem tudo; "Usuários" só o admin (src/domain/permissoes). Separado do React para teste.
 
 import {
+  DatabaseZap,
   Building2,
   ClipboardList,
   FilePlus2,
-  History,
   LayoutGrid,
   ListChecks,
   Presentation,
@@ -16,6 +16,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { podeFazer, podeLer, type Acesso, type Exigencia } from '../../domain/permissoes'
+import { rotaSessao } from '../../lib/rotas'
 
 export interface ItemNavegacao {
   rotulo: string
@@ -52,8 +53,8 @@ export function gruposDeNavegacao(acesso: Acesso | null, { chamamento, sessaoAbe
       itens: !ch
         ? []
         : sessaoAberta
-          ? [{ rotulo: 'Sessão em andamento', caminho: `${ch}/sessoes/${sessaoAberta}`, icone: Presentation }]
-          : [{ rotulo: 'Abrir sessão', caminho: `${ch}/sessoes/nova`, icone: Presentation, exige: 'sessaoAbrirEncerrar' }],
+          ? [{ rotulo: 'Sessão em andamento', caminho: rotaSessao(chamamento!.id, sessaoAberta), icone: Presentation }]
+          : [{ rotulo: 'Abrir sessão', caminho: `${ch}/sessoes/nova`, icone: Presentation }],
     },
     {
       id: 'avaliacao',
@@ -75,12 +76,12 @@ export function gruposDeNavegacao(acesso: Acesso | null, { chamamento, sessaoAbe
       itens: [
         ...(ch
           ? [
-              { rotulo: 'Dados do chamamento', caminho: `${ch}/editar`, icone: SquarePen, exige: 'chamamentos' as const },
-              { rotulo: 'Nova proposta', caminho: `${ch}/propostas/nova`, icone: FilePlus2, exige: 'propostas' as const },
+              { rotulo: 'Dados do chamamento', caminho: `${ch}/editar`, icone: SquarePen },
+              { rotulo: 'Nova proposta', caminho: `${ch}/propostas/nova`, icone: FilePlus2 },
             ]
           : []),
-        { rotulo: 'Novo chamamento', caminho: '/chamamentos/novo', icone: ClipboardList, exige: 'chamamentos' },
-        { rotulo: 'OSCs', caminho: '/oscs', icone: Building2, exige: 'oscs' },
+        { rotulo: 'Novo chamamento', caminho: '/chamamentos/novo', icone: ClipboardList },
+        { rotulo: 'OSCs', caminho: '/oscs', icone: Building2 },
       ],
     },
     {
@@ -88,7 +89,7 @@ export function gruposDeNavegacao(acesso: Acesso | null, { chamamento, sessaoAbe
       rotulo: 'Administração',
       itens: [
         { rotulo: 'Usuários', caminho: '/usuarios', icone: Users, exige: 'admin' },
-        { rotulo: 'Histórico de alterações', caminho: '/auditoria', icone: History, exige: 'admin' },
+        { rotulo: 'Limpar base', caminho: '/admin/limpar-base', icone: DatabaseZap, exige: 'admin' },
       ],
     },
   ]

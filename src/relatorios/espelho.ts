@@ -1,25 +1,33 @@
-// Espelho de avaliação da proposta (PDF): identificação, admissibilidade, os 28 subcritérios da D1 com
-// nível, decisão, voto divergente, justificativa e páginas citadas, totais por PA, D1, memória da D2,
-// NF e status. Tudo a partir do que a /api gravou; nenhum peso ou faixa fixo aqui (vem da matriz).
+// Espelho de avaliação da proposta (PDF): identificação, admissibilidade (admitida, motivo e páginas por PA
+// com página de corte), os 28 subcritérios da D1 com nível, justificativa e páginas citadas, totais por PA,
+// D1, memória da D2, NF e status. Tudo a partir do que a /api gravou; nenhum peso ou faixa fixo aqui (vem da
+// matriz). Proposta não concluída sai com a marca MINUTA; concluída sai como final.
 
 import type { Content, TDocumentDefinitions } from 'pdfmake/interfaces'
-import type { Admissibilidade } from '../domain/admissibilidade.js'
 import { formatarCnpj } from '../domain/cnpj.js'
-import type { DecisaoComissao } from '../domain/avaliacao.js'
 import type { ResultadoD2 } from '../domain/d2.js'
 import { formatarNumero } from '../domain/formatacao.js'
 import { MATRIZ_2026, type Matriz } from '../domain/matriz/index.js'
 import type { TotaisProposta } from '../domain/proposta.js'
-import { ROTULO_STATUS, type StatusPainel } from '../domain/statusProposta.js'
+import { ROTULO_SITUACAO, type SituacaoProposta } from '../domain/situacaoProposta.js'
 import { montarPdf, precisaMinuta, tabela, type Rodape } from './documento.js'
 import { criteriosDaMemoria, legivel, memoriaExibida } from './memoriaD2.js'
 
 export interface AvaliacaoEspelho {
-  nivel: number
-  decisao: DecisaoComissao
-  votoDivergente?: string
+  /** null: rascunho do salvamento automático, sem nível ainda. */
+  nivel: number | null
   justificativa: string
   paginas: number[]
+}
+
+/** Admissibilidade gravada (registros anteriores à Simplificação 2/4 têm motivos, motivacao e ausente). */
+export interface AdmissibilidadeEspelho {
+  admitida?: boolean
+  situacao: 'admitida' | 'nao_admitida' | 'desclassificada'
+  motivo?: string
+  motivos?: string[]
+  motivacao?: string
+  planos: { codigo: string; paginaInicial: number | null; paginaFinal: number | null; limite: number; paginaCorte: number | null; excede: number; ausente?: boolean }[]
 }
 
 export interface DadosEspelho {
@@ -30,11 +38,11 @@ export interface DadosEspelho {
     id: string
     numeroSEI?: string
     protocolo?: string
-    bloqueada: boolean
-    status: StatusPainel
+    concluida: boolean
+    status: SituacaoProposta
     totais: TotaisProposta | null
   }
-  admissibilidade: Admissibilidade | null
+  admissibilidade: AdmissibilidadeEspelho | null
   /** Registro da Comissão por código do subcritério (avaliacoes/{codigo}). */
   avaliacoes: Record<string, AvaliacaoEspelho>
   /** Memória da D2 gravada pela /api (resultadoD2/atual). */
@@ -48,14 +56,9 @@ export interface LinhaEspelho {
   codigo: string
   titulo: string
   nivel: number | null
-  decisao: DecisaoComissao | null
-  votoDivergente: string | null
   justificativa: string | null
   paginas: number[]
 }
-
-const ROTULO_DECISAO: Record<DecisaoComissao, string> = { unanimidade: 'Unanimidade', maioria: 'Maioria' }
-const ROTULO_ADMISSAO = { admitida: 'Admitida', nao_admitida: 'Não admitida', desclassificada: 'Desclassificada' }
 
 /** Os subcritérios da matriz, na ordem, com o registro da Comissão (null = não avaliado). */
 export function linhasDoEspelho(dados: DadosEspelho, matriz: Matriz = MATRIZ_2026): LinhaEspelho[] {
@@ -67,8 +70,6 @@ export function linhasDoEspelho(dados: DadosEspelho, matriz: Matriz = MATRIZ_202
         codigo: s.codigo,
         titulo: s.titulo,
         nivel: a?.nivel ?? null,
-        decisao: a?.decisao ?? null,
-        votoDivergente: a?.votoDivergente ?? null,
         justificativa: a?.justificativa ?? null,
         paginas: a?.paginas ?? [],
       }
@@ -96,42 +97,34 @@ function identificacao({ chamamento, lote, osc, proposta }: DadosEspelho): Conte
       linha('Lote', lote.descricao ? `${lote.codigo} — ${lote.descricao}` : lote.codigo),
       linha('Nº SEI do Caderno', proposta.numeroSEI ?? '—'),
       linha('Protocolo', proposta.protocolo ?? '—'),
-      linha('Status', ROTULO_STATUS[proposta.status]),
+      linha('Status', ROTULO_SITUACAO[proposta.status]),
+      linha('Avaliação', proposta.concluida ? 'Avaliação concluída' : 'Não concluída (minuta)'),
     ],
   }
 }
 
-function secaoAdmissibilidade(adm: Admissibilidade | null, matriz: Matriz): Content[] {
+function secaoAdmissibilidade(adm: AdmissibilidadeEspelho | null): Content[] {
   const titulo = { text: 'Admissibilidade (Anexo III, item 28)', style: 'secao' }
   if (!adm) return [titulo, { text: 'Admissibilidade não registrada.' }]
-  const regras = matriz.admissibilidade
-  const textoIrregularidade = new Map(regras.irregularidadesFormais.tipos.map((t) => [t.codigo, t.descricao]))
+  const admitida = adm.admitida ?? adm.situacao === 'admitida'
+  const motivos = [...(adm.motivos ?? []), ...(adm.motivacao ? [adm.motivacao] : []), ...(adm.motivo ? [adm.motivo] : [])]
   return [
     titulo,
-    { text: [{ text: 'Situação: ', bold: true }, ROTULO_ADMISSAO[adm.situacao]] },
-    ...(adm.motivos.length > 0 ? [{ ul: adm.motivos }] : []),
-    ...(adm.motivacao ? [{ text: `Motivação: ${adm.motivacao}` }] : []),
-    { text: 'Requisitos essenciais (28.1)', bold: true, margin: [0, 6, 0, 2] },
-    tabela(
-      ['Código', 'Requisito', 'Atendido'],
-      regras.requisitosEssenciais.map((r) => [r.codigo, r.descricao, adm.requisitos[r.codigo] === false ? 'Não' : 'Sim']),
-      [45, '*', 45],
-    ),
-    { text: 'Páginas dos Planos de Ação', bold: true, margin: [0, 6, 0, 2] },
-    tabela(
-      ['PA', 'Páginas', 'Limite', 'Página de corte', 'Excede'],
-      adm.planos.map((p) => [
-        p.codigo,
-        p.ausente ? 'Ausente' : `${p.paginaInicial ?? '—'} a ${p.paginaFinal ?? '—'}`,
-        String(p.limite),
-        num(p.paginaCorte),
-        p.excede > 0 ? `${p.excede} pág.` : '—',
-      ]),
-    ),
-    ...(adm.irregularidadesFormais.length > 0
+    { text: `Admitida: ${admitida ? 'Sim' : 'Não'}`, bold: true },
+    ...(motivos.length > 0 ? [{ text: `Motivo: ${motivos.join('; ')}` }] : []),
+    ...(adm.planos.length > 0
       ? [
-          { text: 'Irregularidades meramente formais (28.5)', bold: true, margin: [0, 6, 0, 2] } as Content,
-          { ul: adm.irregularidadesFormais.map((c) => `${c} — ${textoIrregularidade.get(c) ?? ''}`) } as Content,
+          { text: 'Páginas dos Planos de Ação', bold: true, margin: [0, 6, 0, 2] } as Content,
+          tabela(
+            ['PA', 'Páginas', 'Limite', 'Página de corte', 'Excede'],
+            adm.planos.map((p) => [
+              p.codigo,
+              p.ausente ? 'Ausente' : `${p.paginaInicial ?? '—'} a ${p.paginaFinal ?? '—'}`,
+              String(p.limite),
+              num(p.paginaCorte),
+              p.excede > 0 ? `${p.excede} pág.` : '—',
+            ]),
+          ),
         ]
       : []),
   ]
@@ -144,7 +137,7 @@ function secaoD1(dados: DadosEspelho, matriz: Matriz): Content[] {
     conteudo.push({ text: `${plano.codigo} — ${plano.titulo}`, bold: true, margin: [0, 8, 0, 2] })
     conteudo.push(
       tabela(
-        ['Subcritério', 'Nível', 'Decisão e justificativa'],
+        ['Subcritério', 'Nível', 'Justificativa e páginas'],
         linhas
           .filter((l) => l.plano === plano.codigo)
           .map((l) => [
@@ -154,8 +147,6 @@ function secaoD1(dados: DadosEspelho, matriz: Matriz): Content[] {
               ? { text: 'Não avaliado', italics: true }
               : {
                   stack: [
-                    { text: `Decisão: ${ROTULO_DECISAO[l.decisao!]}`, bold: true },
-                    ...(l.votoDivergente ? [{ text: `Voto divergente: ${l.votoDivergente}` }] : []),
                     { text: l.justificativa ?? '' },
                     { text: `Páginas citadas: ${l.paginas.length > 0 ? l.paginas.join(', ') : '—'}`, style: 'pequeno' },
                   ],
@@ -212,7 +203,7 @@ function secaoResultado(dados: DadosEspelho, matriz: Matriz): Content[] {
         `D1: ${num(t?.d1)}`,
         `D2: ${num(t?.d2)}`,
         { text: `NF: ${num(t?.nf)} / ${formatarNumero(matriz.notaFinalMaxima)}`, bold: true },
-        `Status: ${ROTULO_STATUS[dados.proposta.status]}`,
+        `Status: ${ROTULO_SITUACAO[dados.proposta.status]}`,
       ],
     },
   ]
@@ -224,7 +215,7 @@ export function montarEspelho(dados: DadosEspelho, rodape: Rodape, matriz: Matri
     subtitulo: `Matriz de Avaliação (Anexo IV), versão ${matriz.versao}. O Caderno é consultado no SEI pelo nº informado.`,
     conteudo: [
       identificacao(dados),
-      ...secaoAdmissibilidade(dados.admissibilidade, matriz),
+      ...secaoAdmissibilidade(dados.admissibilidade),
       ...secaoD1(dados, matriz),
       ...secaoTotais(dados, matriz),
       ...secaoD2(dados, matriz),

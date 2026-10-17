@@ -21,7 +21,7 @@ export function EditorAta({ textoInicial, minuta, onExportar, exportando = false
     <div className="space-y-4">
       {minuta && (
         <Alert tom="warning" papel="status" titulo="Documento sai como MINUTA">
-          Há proposta da pauta não homologada: o PDF sai com a marca d’água "MINUTA".
+          Há proposta da pauta não concluída: o PDF sai com a marca d’água "MINUTA".
         </Alert>
       )}
       <TextArea

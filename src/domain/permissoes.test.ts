@@ -1,77 +1,69 @@
 import { describe, expect, it } from 'vitest'
-import { AREAS, PERMISSOES, lerAcesso, podeFazer, podeLer, type Acesso } from './permissoes'
+import { ACESSO_DESATUALIZADO, PERFIS, ROTULO_PERFIL, lerAcesso, podeFazer, podeLer, precisaAtualizarAcesso, type Acesso } from './permissoes'
 
-const usuario = (permissoes: Acesso['permissoes'], extras: Partial<Acesso> = {}): Acesso => ({
-  admin: false,
-  ativo: true,
-  permissoes,
-  ...extras,
-})
+const acesso = (perfil: Acesso['perfil'], ativo = true): Acesso => ({ perfil, ativo })
 
-describe('áreas e permissões (espelho da seção do CLAUDE.md)', () => {
-  it('correspondem exatamente à tabela aprovada', () => {
-    expect(AREAS.map((a) => [a.rotulo, a.permissoes.map((p) => p.id)])).toEqual([
-      ['Consulta', ['consultar']],
-      ['Cadastros', ['chamamentos', 'oscs', 'propostas']],
-      ['Avaliação', ['admissibilidade', 'nivelD1', 'experienciasD2', 'diligencias']],
-      ['Sessão e resultado', ['sessaoAbrirEncerrar', 'sessaoConduzir', 'homologar', 'reabrir', 'desempate', 'resetarSessao']],
-    ])
-    expect(PERMISSOES).toHaveLength(14)
-    expect(new Set(PERMISSOES).size).toBe(14)
+describe('perfis (espelho da seção do CLAUDE.md)', () => {
+  it('só dois: admin e presidente', () => {
+    expect([...PERFIS]).toEqual(['admin', 'presidente'])
+    expect(ROTULO_PERFIL).toEqual({ admin: 'Administrador', presidente: 'Presidente' })
   })
 })
 
-describe('podeFazer', () => {
-  it('administrador pode tudo, inclusive a gestão de usuários', () => {
-    const admin = usuario([], { admin: true })
-    for (const p of PERMISSOES) expect(podeFazer(admin, p)).toBe(true)
-    expect(podeFazer(admin, 'admin')).toBe(true)
+describe('podeFazer: os dois fazem tudo; só o admin gerencia usuários', () => {
+  it('admin: tudo, inclusive usuários', () => {
+    expect(podeFazer(acesso('admin'))).toBe(true)
+    expect(podeFazer(acesso('admin'), 'admin')).toBe(true)
   })
 
-  it('usuário comum só faz o que foi liberado e nunca a gestão de usuários', () => {
-    const avaliador = usuario(['consultar', 'nivelD1'])
-    expect(podeFazer(avaliador, 'nivelD1')).toBe(true)
-    expect(podeFazer(avaliador, 'homologar')).toBe(false)
-    expect(podeFazer(avaliador, 'admin')).toBe(false)
+  it('presidente: tudo, menos usuários e perfis', () => {
+    expect(podeFazer(acesso('presidente'))).toBe(true)
+    expect(podeFazer(acesso('presidente'), 'usuario')).toBe(true)
+    expect(podeFazer(acesso('presidente'), 'admin')).toBe(false)
   })
 
-  it('conta desativada ou sem cadastro não faz nada', () => {
-    expect(podeFazer(usuario(['nivelD1'], { ativo: false }), 'nivelD1')).toBe(false)
-    expect(podeFazer(usuario([], { admin: true, ativo: false }), 'admin')).toBe(false)
-    expect(podeFazer(null, 'consultar')).toBe(false)
+  it('sem perfil (cadastro antigo), desativado ou sem cadastro: nada', () => {
+    expect(podeFazer(acesso(null))).toBe(false)
+    expect(podeFazer(acesso('admin', false), 'admin')).toBe(false)
+    expect(podeFazer(null)).toBe(false)
   })
 })
 
-describe('podeLer (entra no app e consulta os dados)', () => {
-  it('administrador ou quem tem ao menos uma permissão', () => {
-    expect(podeLer(usuario([], { admin: true }))).toBe(true)
-    expect(podeLer(usuario(['consultar']))).toBe(true)
-    expect(podeLer(usuario(['homologar']))).toBe(true)
-  })
-
-  it('sem nenhuma permissão, desativado ou sem cadastro: não', () => {
-    expect(podeLer(usuario([]))).toBe(false)
-    expect(podeLer(usuario(['consultar'], { ativo: false }))).toBe(false)
+describe('podeLer e acesso desatualizado', () => {
+  it('entra quem está ativo com perfil', () => {
+    expect(podeLer(acesso('admin'))).toBe(true)
+    expect(podeLer(acesso('presidente'))).toBe(true)
+    expect(podeLer(acesso(null))).toBe(false)
+    expect(podeLer(acesso('presidente', false))).toBe(false)
     expect(podeLer(null)).toBe(false)
+  })
+
+  it('cadastro ativo sem perfil novo: "Seu acesso precisa ser atualizado pelo administrador."', () => {
+    expect(ACESSO_DESATUALIZADO).toBe('Seu acesso precisa ser atualizado pelo administrador.')
+    expect(precisaAtualizarAcesso(acesso(null))).toBe(true)
+    expect(precisaAtualizarAcesso(acesso('presidente'))).toBe(false)
+    expect(precisaAtualizarAcesso(acesso(null, false))).toBe(false)
+    expect(precisaAtualizarAcesso(null)).toBe(false)
   })
 })
 
 describe('lerAcesso (documento usuarios/{uid})', () => {
-  it('lê admin, ativo e permissões, descartando as desconhecidas', () => {
-    expect(lerAcesso({ email: 'a@b.c', admin: true, permissoes: ['nivelD1', 'superpoder', 3], ativo: true })).toEqual({
-      admin: true,
-      ativo: true,
-      permissoes: ['nivelD1'],
-    })
+  it('lê o perfil e o ativo', () => {
+    expect(lerAcesso({ email: 'a@b.c', perfil: 'presidente' })).toEqual({ perfil: 'presidente', ativo: true })
+    expect(lerAcesso({ perfil: 'admin', ativo: false })).toEqual({ perfil: 'admin', ativo: false })
   })
 
-  it('campos ausentes: não admin, ativo e sem permissões', () => {
-    expect(lerAcesso({ email: 'a@b.c' })).toEqual({ admin: false, ativo: true, permissoes: [] })
-    expect(lerAcesso({ admin: 'sim', permissoes: 'nivelD1', ativo: 'não' })).toEqual({ admin: false, ativo: true, permissoes: [] })
+  it('cadastro do modelo anterior (relator, membro, controle) fica sem perfil', () => {
+    expect(lerAcesso({ admin: false, permissoes: ['consultar', 'nivelD1'], comissao: 'relator' })).toEqual({ perfil: null, ativo: true })
+    expect(lerAcesso({ perfil: 'relator' })).toEqual({ perfil: null, ativo: true })
   })
 
-  it('ativo=false desativa; documento ausente é null', () => {
-    expect(lerAcesso({ admin: true, ativo: false })).toMatchObject({ ativo: false })
+  it('administrador do modelo anterior (admin: true, sem perfil) continua admin; o perfil novo vale mais', () => {
+    expect(lerAcesso({ admin: true, permissoes: [] })).toEqual({ perfil: 'admin', ativo: true })
+    expect(lerAcesso({ admin: true, perfil: 'presidente' })).toEqual({ perfil: 'presidente', ativo: true })
+  })
+
+  it('documento ausente é null', () => {
     expect(lerAcesso(undefined)).toBeNull()
     expect(lerAcesso(null)).toBeNull()
   })

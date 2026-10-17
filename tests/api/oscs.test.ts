@@ -1,16 +1,16 @@
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import * as rota from '../../api/oscs'
-import { auditoriaDe, chamar, criarUsuario, ler, limparAuth, limparFirestore, type Usuario } from './apoio'
+import { autoria, chamar, criarUsuario, ler, limparAuth, limparFirestore, type Usuario } from './apoio'
 
 const VALIDA = { cnpj: '11.222.333/0001-81', razaoSocial: 'Instituto Esperança', nomeFantasia: 'Esperança' }
 
 let admin: Usuario
-let presidente: Usuario
+let antigo: Usuario
 
 beforeAll(async () => {
   await limparAuth()
   admin = await criarUsuario('admin')
-  presidente = await criarUsuario('presidente')
+  antigo = await criarUsuario('antigo')
 })
 beforeEach(limparFirestore)
 
@@ -20,7 +20,7 @@ describe('/api/oscs — acesso', () => {
     expect(r.status).toBe(405)
     expect(r.headers.get('Allow')).toBe('GET, POST, PATCH, DELETE')
     expect((await chamar(rota, 'POST', VALIDA, null)).status).toBe(401)
-    expect((await chamar(rota, 'POST', VALIDA, presidente.token)).status).toBe(403)
+    expect((await chamar(rota, 'POST', VALIDA, antigo.token)).status).toBe(403)
   })
 })
 
@@ -49,23 +49,16 @@ describe('/api/oscs — CNPJ', () => {
 })
 
 describe('/api/oscs — criar e editar', () => {
-  it('criação auditada', async () => {
+  it('criação grava a OSC com atualizadoPor', async () => {
     await chamar(rota, 'POST', VALIDA, admin.token)
-    const [registro] = await auditoriaDe('oscs/11222333000181')
-    expect(registro).toMatchObject({ acao: 'criar', antes: null, uid: admin.uid, perfil: 'admin' })
-    expect(registro!.depois).toMatchObject({ razaoSocial: 'Instituto Esperança' })
+    expect(await ler('oscs/11222333000181')).toMatchObject({ razaoSocial: 'Instituto Esperança', atualizadoPor: autoria(admin) })
   })
 
-  it('edição → 200 com antes e depois', async () => {
+  it('edição → 200, campos mesclados', async () => {
     await chamar(rota, 'POST', VALIDA, admin.token)
     const r = await chamar(rota, 'PATCH', { cnpj: '11222333000181', razaoSocial: 'Instituto Nova Esperança' }, admin.token)
     expect(r.status).toBe(200)
-    const registros = await auditoriaDe('oscs/11222333000181')
-    expect(registros[1]).toMatchObject({
-      acao: 'editar',
-      antes: { razaoSocial: 'Instituto Esperança' },
-      depois: { razaoSocial: 'Instituto Nova Esperança', nomeFantasia: 'Esperança' },
-    })
+    expect(await ler('oscs/11222333000181')).toMatchObject({ razaoSocial: 'Instituto Nova Esperança', nomeFantasia: 'Esperança' })
   })
 
   it('editar OSC inexistente → 404', async () => {
