@@ -179,7 +179,7 @@ test('presidente: projeta, homologa, reabre com justificativa, gera a ata e o es
 })
 
 test('cadastro antigo: acesso precisa ser atualizado; o admin dá o perfil e libera na hora', async ({ browser, baseURL }) => {
-  const antigo = await browser.newPage({ baseURL, locale: 'pt-BR' })
+  const antigo = await (await browser.newContext({ baseURL, locale: 'pt-BR' })).newPage()
   const t = cronometro('cadastro antigo', 'ver o aviso e ser liberado pelo admin (perfil presidente)')
 
   await t.etapa('login mostra "Seu acesso precisa ser atualizado pelo administrador"', async () => {
@@ -198,7 +198,10 @@ test('cadastro antigo: acesso precisa ser atualizado; o admin dá o perfil e lib
     const linha = admin.getByRole('row').filter({ hasText: 'Cadastro antigo E2E' })
     await expect(linha).toContainText('Precisa de perfil')
     await linha.getByRole('button', { name: /^Gerenciar/ }).click()
-    await admin.getByRole('dialog', { name: 'Cadastro antigo E2E' }).getByRole('radio', { name: /^Presidente/ }).check()
+    // O rádio reflete o cadastro gravado: marca quando a /api grava e o onSnapshot traz o perfil novo.
+    const presidente = admin.getByRole('dialog', { name: 'Cadastro antigo E2E' }).getByRole('radio', { name: /^Presidente/ })
+    await presidente.click()
+    await expect(presidente).toBeChecked({ timeout: 30_000 })
     await expect(linha).toContainText('Presidente')
   })
 
