@@ -154,6 +154,7 @@ passa por uma função `/api`, que:
 4. grava numa transação junto com um registro em `auditoria/{id}`
    `{ caminho, acao, antes, depois, uid, email, perfil: 'admin' | 'usuario', dataHora }`;
 5. recusa qualquer escrita em proposta homologada (`bloqueada = true`) ou em suas subcoleções → **409**.
+6. recusa qualquer escrita em registro **em exclusão** (`status: "excluindo"`) ou abaixo dele → **409**.
 
 ### Endpoints de cadastros e usuários
 
@@ -162,6 +163,8 @@ passa por uma função `/api`, que:
 | `/api/chamamentos` | `POST` criar, `PATCH` editar | `{ numero, titulo, processoSei, dataLimitePropostas, justificativaMinima?, lotes: [{ codigo, descricao }] }` (`PATCH` com `id`) | `chamamentos` |
 | `/api/oscs` | `POST` criar, `PATCH` editar | `{ cnpj, razaoSocial, nomeFantasia? }` — CNPJ numérico ou alfanumérico | `oscs` |
 | `/api/propostas` | `POST` criar, `PATCH` editar | `{ chamamentoId, loteCodigo, oscCnpj, protocolo, numeroSEI, observacao? }` (`PATCH` com `propostaId`) | `propostas` |
+| `/api/chamamentos`, `/api/oscs`, `/api/propostas` | `DELETE` excluir | `{ id, justificativa }` · `{ cnpj, justificativa }` · `{ chamamentoId, propostaId, justificativa }` (justificativa com 20+ caracteres) | administrador |
+| `/api/chamamentos`, `/api/oscs`, `/api/propostas` | `GET` prévia da exclusão | `?id=…&simular=true` · `?cnpj=…&simular=true` · `?chamamentoId=…&propostaId=…&simular=true` → `{ existe, emExclusao, subcolecoes: { nome: n }, total, bloqueios: [{ mensagem, itens }] }` | administrador |
 | `/api/usuarios` | `POST` novo usuário | `{ nome, email, admin, permissoes: [...], comissao: 'presidente' \| 'relator' \| 'membro' \| null }` | administrador |
 | `/api/usuarios` | `PATCH` alterar | `{ uid, nome?, admin?, ativo?, permissoes?, comissao? }` | administrador |
 | `/api/usuarios` | `PUT` primeiro acesso | — | qualquer conta logada: cria o administrador inicial (seção 4); quem já tem cadastro recebe 200 |
@@ -176,6 +179,27 @@ passa por uma função `/api`, que:
   Comissão **já atualizados conforme o Edital** (Anexo IV, 3.5.1, IV); a memória de cálculo e o espelho dizem isso.
   Enviar `indiceCorrecao` ou `dataBaseCorrecao` dá **400** ("Campo não permitido."). Para apagar esses campos de
   chamamentos antigos: `npm run remover-campos-correcao` (seção 7).
+
+### Exclusão de cadastros (somente administrador)
+
+| Cadastro | Bloqueio (**409**) | O que é apagado |
+|---|---|---|
+| Proposta | homologada: "Reabra a proposta antes de excluir" | a proposta e **todas** as subcoleções (avaliações, experiências e seus documentos, resultado da D2, diligências…) |
+| OSC | há proposta vinculada (a mensagem diz quantas e quais) | a OSC |
+| Chamamento | há propostas ou sessões | o chamamento e seus lotes |
+
+Como o Firestore não apaga subcoleções sozinho e a transação aceita no máximo 500 escritas, a exclusão
+(`api/_lib/exclusao.ts`) tem duas etapas: **(a)** numa transação, confere os bloqueios, marca o documento com
+`status: "excluindo"` e grava na auditoria a ação `excluir` com a **fotografia completa** (campo `antes` = documento,
+`subcolecoes` = todas as subcoleções, recursivamente), a `justificativa`, `uid` e `perfil`; **(b)** apaga com
+`recursiveDelete`. Se (b) falhar, a resposta é **503** ("Repita a operação para concluir"): o registro fica
+"excluindo" (escritas recusadas, selo **Em exclusão** nas telas) e repetir a exclusão termina o serviço, sem nova
+fotografia.
+
+Na tela, **Excluir** fica no menu de ações da linha (botão ⋯ nas listas de chamamentos, OSCs e propostas do
+painel), só para administrador. O diálogo mostra a prévia (o que será apagado ou o bloqueio, em alerta de erro)
+e só habilita **Excluir definitivamente** com a justificativa e o identificador digitado (nº do chamamento, CNPJ
+da OSC ou protocolo da proposta).
 
 ### Endpoint da Etapa 4a (sessão da Comissão)
 
@@ -238,7 +262,8 @@ O administrador tem todas. Para os demais, cada permissão é ligada na tela Usu
 | Avaliação | `admissibilidade`, `nivelD1`, `experienciasD2`, `diligencias` | registrar cada etapa da avaliação |
 | Sessão e resultado | `sessaoAbrirEncerrar`, `sessaoConduzir`, `homologar`, `reabrir`, `desempate` | sessão, telão e resultado |
 
-Quem tem qualquer permissão também lê os dados. Gestão de usuários e histórico de alterações: só administrador.
+Quem tem qualquer permissão também lê os dados. Gestão de usuários, histórico de alterações e **exclusão de
+cadastros** (chamamento, OSC, proposta): só administrador.
 A fonte única no código é `src/domain/permissoes.ts` (um teste garante que ela bate com esta tabela).
 
 ### Telas (Etapa 4a)
@@ -495,6 +520,7 @@ FASE_ETAPA4=antes npm run test:e2e:etapa4   # só screenshots, para comparar ant
 FASE_AUDITORIA=depois npm run test:e2e:baseline   # medição depois + comparativo com o antes (docs/auditoria-design/depois/)
 npm run test:e2e:uso        # testes de uso por perfil (relator, membro, presidente, controle, telão), com tempos
 npm run test:e2e:acessibilidade   # teclado, foco visível, zoom 200% e erros anunciados em todas as rotas
+npm run test:e2e:exclusao   # exclusão de cadastros: menu da linha, bloqueios, confirmação e axe (docs/auditoria-design/exclusao/)
 ```
 
 Resultados e decisões: [`docs/auditoria-design/README.md`](docs/auditoria-design/README.md) (antes × depois),

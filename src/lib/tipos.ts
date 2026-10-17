@@ -16,12 +16,15 @@ export interface Chamamento {
   dataLimitePropostas?: string
   justificativaMinima?: number
   lotes: Lote[]
+  /** "excluindo": exclusão registrada pela /api e ainda não concluída. */
+  status?: 'excluindo'
 }
 
 export interface Osc {
   cnpj: string
   razaoSocial: string
   nomeFantasia?: string
+  status?: 'excluindo'
 }
 
 export interface Proposta {
@@ -33,6 +36,7 @@ export interface Proposta {
   bloqueada?: boolean
   totais?: { status?: StatusD1; d1?: number; d2?: number; nf?: number }
   admissibilidade?: { situacao?: 'admitida' | 'nao_admitida' | 'desclassificada' }
+  status?: 'excluindo'
 }
 
 export interface PresenteSessao {

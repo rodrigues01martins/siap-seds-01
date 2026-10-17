@@ -32,5 +32,7 @@ export const MENSAGENS = {
   naoEmpatadas: 'As propostas informadas não formam um empate atual neste lote.',
   naoAdmitida: 'Proposta não admitida (Anexo III, item 28): não segue para avaliação.',
   semSessaoAberta: 'Avaliação só pode ser registrada em sessão aberta da Comissão.',
+  emExclusao: 'Registro em exclusão: alteração não permitida.',
+  exclusaoIncompleta: 'A exclusão foi registrada, mas não terminou. Repita a operação para concluir.',
   interno: 'Erro interno no servidor. Tente novamente.',
 } as const

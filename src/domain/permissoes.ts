@@ -44,7 +44,7 @@ export type Permissao = (typeof AREAS)[number]['permissoes'][number]['id']
 
 export const PERMISSOES: readonly Permissao[] = AREAS.flatMap((a) => a.permissoes.map((p) => p.id))
 
-/** O que a operação exige: uma permissão ou ser administrador (gestão de usuários e histórico). */
+/** O que a operação exige: uma permissão ou ser administrador (gestão de usuários, histórico e exclusão de cadastros). */
 export type Exigencia = Permissao | 'admin'
 
 export interface Acesso {

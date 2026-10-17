@@ -1,5 +1,6 @@
 // Gravação única da /api: tudo em runTransaction, com um registro em auditoria/{id}
-// por operação (quem: uid, e-mail e perfil admin/usuario), no mesmo commit. Bloqueia escrita em proposta homologada (bloqueada = true).
+// por operação (quem: uid, e-mail e perfil admin/usuario), no mesmo commit. Bloqueia escrita em proposta homologada (bloqueada = true)
+// e em registro em exclusão (status "excluindo", ver exclusao.ts): no próprio documento ou abaixo dele.
 
 import { FieldValue, type Transaction } from 'firebase-admin/firestore'
 import { obterAdmin } from './admin.js'
@@ -26,6 +27,21 @@ export async function conferirDesbloqueada(transacao: Transaction, caminhoPropos
   if (proposta.exists && proposta.get('bloqueada') === true) throw new ErroApi(409, MENSAGENS.homologada)
 }
 
+/** Documentos que contêm `caminho`, inclusive ele mesmo (ex.: chamamentos/c, chamamentos/c/propostas/p). */
+export function documentosDoCaminho(caminho: string): string[] {
+  const partes = caminho.split('/')
+  const documentos: string[] = []
+  for (let i = 2; i <= partes.length; i += 2) documentos.push(partes.slice(0, i).join('/'))
+  return documentos
+}
+
+/** Lança 409 se o documento estiver em exclusão. Use dentro da transação. */
+export async function conferirForaDeExclusao(transacao: Transaction, caminhos: Iterable<string>): Promise<void> {
+  const { db } = obterAdmin()
+  const documentos = await Promise.all([...new Set(caminhos)].map((c) => transacao.get(db.doc(c))))
+  if (documentos.some((d) => d.get('status') === 'excluindo')) throw new ErroApi(409, MENSAGENS.emExclusao)
+}
+
 function semIndefinidos(dados: Record<string, unknown> = {}): Record<string, unknown> {
   return Object.fromEntries(Object.entries(dados).filter(([, valor]) => valor !== undefined))
 }
@@ -49,6 +65,8 @@ export async function gravar(
     if (!opcoes.permitirPropostaHomologada) {
       for (const caminho of propostas) await conferirDesbloqueada(transacao, caminho)
     }
+    // Trava de exclusão: registro "excluindo" (ou um documento acima dele) não aceita escrita.
+    await conferirForaDeExclusao(transacao, operacoes.flatMap((op) => documentosDoCaminho(op.caminho)))
     const atuais = await Promise.all(operacoes.map((op) => transacao.get(db.doc(op.caminho))))
 
     // Escritas.

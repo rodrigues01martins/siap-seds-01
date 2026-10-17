@@ -38,6 +38,14 @@ Eliminatórias: D1 < 67,2 → inapta; nível 0 em 1.1 ou 1.2 → desclassificada
 - Relatórios (espelho, quadro-resumo, ata) e a exportação da auditoria são gerados no navegador (pdfmake,
   exceljs), sem gravar nada. Rodapé com código de verificação = SHA-256 dos dados usados; "MINUTA" se houver
   proposta não homologada no documento.
+- Exclusão de cadastros (chamamento, OSC, proposta): somente admin, justificativa obrigatória (mín. 20 caracteres).
+  Proposta homologada → 409 ("Reabra a proposta antes de excluir"); apaga a proposta e TODAS as subcoleções.
+  OSC com proposta vinculada → 409 (quantas e quais). Chamamento com propostas ou sessões → 409; apaga o chamamento
+  e seus lotes. Ordem (api/_lib/exclusao.ts): transação confere bloqueios, marca status "excluindo" (o gravar recusa
+  com 409 toda escrita no documento "excluindo" ou abaixo dele) e grava auditoria "excluir" com fotografia completa
+  (documento + subcoleções), justificativa, uid e perfil; depois recursiveDelete; se falhar, fica "excluindo" e a
+  repetição conclui (idempotente). Prévia: GET ?simular=true. Na tela: "Excluir" no menu de ações da linha
+  (MenuAcoes), nunca ação primária; ConfirmDialog com a prévia, a justificativa e o identificador digitado.
 - O catálogo de componentes não faz parte do sistema; a documentação de componentes é mantida fora do
   repositório. Decisão de 15/10/2026. (Rota inexistente, como /ui, mostra a página "não encontrado".)
 
@@ -60,6 +68,7 @@ Fonte no código: src/domain/permissoes.ts (teste garante que bate com esta tabe
 | Cadastros | chamamentos, oscs, propostas |
 | Avaliação | admissibilidade, nivelD1, experienciasD2, diligencias |
 | Sessão e resultado | sessaoAbrirEncerrar, sessaoConduzir, homologar, reabrir, desempate |
+| Exclusão de cadastros | — somente administrador (não é permissão liberável; exigência 'admin' do porteiro) |
 
 Empate de NF (RF-27): aplicam-se, em ordem, os critérios do Edital da matriz (matriz_2026.json: desempate e
 fonteDesempate; src/domain/classificacao.ts). Só se persistir o empate a Comissão decide e quem tem a permissão
@@ -95,6 +104,7 @@ npm run test:e2e:baseline (Playwright + axe nos emuladores; FASE_AUDITORIA=antes
 npm run test:e2e:etapa3 (telas migradas: teclado, axe 1280/768 e screenshots → docs/auditoria-design/etapa-3/)
 npm run test:e2e:etapa4 (telas operacionais: axe, screenshots antes/depois e fluxo completo pela /api nos emuladores)
 npm run test:e2e:uso (testes de uso por perfil, com tempos) | npm run test:e2e:acessibilidade (teclado, foco, zoom 200%, aria-live)
+npm run test:e2e:exclusao (exclusão de cadastros pela interface: bloqueios, confirmação, axe → docs/auditoria-design/exclusao/)
 Teste com usuários: docs/TESTE-USABILIDADE.md · Backlog de interface: docs/auditoria-design/pendencias.md
 npm run seed:matriz -- --projeto dev|prod | npm run tornar-admin -- --projeto dev|prod --email X (emergência)
 npm run backup -- --projeto dev|prod [--chamamento ID] | npm run restaurar -- --projeto dev --arquivo F | npm run ensaio -- --projeto dev

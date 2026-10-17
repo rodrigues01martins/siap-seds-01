@@ -4,7 +4,7 @@ import { initializeApp } from 'firebase-admin/app'
 import { getAuth } from 'firebase-admin/auth'
 import { getFirestore } from 'firebase-admin/firestore'
 import { CHAMAMENTO_ENSAIO, montarEnsaio } from '../../scripts/lib/ensaio'
-import { CHAMAMENTO_FLUXO, CHAMAMENTOS_USO, PERFIS_E2E, PERFIS_USO, PROPOSTA_FLUXO, PROPOSTA_USO, SENHA_E2E, SESSAO_ABERTA, propostaE2E } from './perfis'
+import { CHAMAMENTO_EXCLUIR, CHAMAMENTO_EXCLUIR_PROPOSTA, CHAMAMENTO_FLUXO, CHAMAMENTOS_USO, PROPOSTA_EXCLUIR, PERFIS_E2E, PERFIS_USO, PROPOSTA_FLUXO, PROPOSTA_USO, SENHA_E2E, SESSAO_ABERTA, propostaE2E } from './perfis'
 
 export default async function semear(): Promise<void> {
   if (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_HOST) {
@@ -88,6 +88,16 @@ export default async function semear(): Promise<void> {
         abertaPor: { uid: 'e2e', email: null },
       })
     }
+  }
+  // Exclusão de cadastros (exclusao.spec.ts): um chamamento sem propostas nem sessões e uma proposta (com as
+  // subcoleções da proposta do ensaio) num chamamento próprio — os dois são apagados pelo teste.
+  const chamamentoEnsaio = ensaio.documentos[`chamamentos/${CHAMAMENTO_ENSAIO}`]
+  lote.set(db.doc(`chamamentos/${CHAMAMENTO_EXCLUIR}`), { ...chamamentoEnsaio, numero: 'E2E-EXCLUIR/2026', titulo: 'E2E — chamamento cadastrado por engano' })
+  lote.set(db.doc(`chamamentos/${CHAMAMENTO_EXCLUIR_PROPOSTA}`), { ...chamamentoEnsaio, numero: 'E2E-EXCLUIR-PROP/2026', titulo: 'E2E — proposta cadastrada por engano' })
+  const excluir = `chamamentos/${CHAMAMENTO_EXCLUIR_PROPOSTA}/propostas/${PROPOSTA_EXCLUIR}`
+  lote.set(db.doc(excluir), { ...ensaio.documentos[origem]!, protocolo: 'E2E-EXCLUIR-001', bloqueada: false })
+  for (const [caminho, dados] of Object.entries(ensaio.documentos)) {
+    if (caminho.startsWith(`${origem}/`)) lote.set(db.doc(`${excluir}/${caminho.slice(origem.length + 1)}`), dados)
   }
   await lote.commit()
 }

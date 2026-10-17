@@ -59,6 +59,10 @@ export const PERFIS_USO: PerfilE2E[] = [
 /** Chamamentos dos testes de uso: um por fluxo, para os fluxos não interferirem entre si. */
 export const CHAMAMENTOS_USO = { relator: 'uso-relator', membro: 'uso-membro', presidente: 'uso-presidente', telao: 'uso-telao' } as const
 export const PROPOSTA_USO = 'uso-p1'
+/** Exclusão de cadastros (exclusao.spec.ts): chamamento vazio e proposta com subcoleções, só para apagar. */
+export const CHAMAMENTO_EXCLUIR = 'e2e-excluir'
+export const CHAMAMENTO_EXCLUIR_PROPOSTA = 'e2e-excluir-prop'
+export const PROPOSTA_EXCLUIR = 'e2e-excluir-p1'
 
 /** Primeira proposta avaliada do ensaio (a mais completa: apta). */
 export const propostaE2E = (propostas: { id: string; esperado: string }[]) => propostas.find((p) => p.esperado === 'apta')!.id

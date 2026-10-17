@@ -22,3 +22,11 @@ export async function lerCorpo<T extends z.ZodType>(requisicao: Request, esquema
   if (!resultado.success) throw new ErroApi(400, MENSAGENS.dadosInvalidos, camposDoErro(resultado.error))
   return resultado.data
 }
+
+/** Parâmetros da URL (?chave=valor), validados como o corpo: erro → 400 { erro, campos }. */
+export function lerConsulta<T extends z.ZodType>(requisicao: Request, esquema: T): z.output<T> {
+  const dados = Object.fromEntries(new URL(requisicao.url).searchParams)
+  const resultado = esquema.safeParse(dados)
+  if (!resultado.success) throw new ErroApi(400, MENSAGENS.dadosInvalidos, camposDoErro(resultado.error))
+  return resultado.data
+}

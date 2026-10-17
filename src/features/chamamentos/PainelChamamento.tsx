@@ -1,4 +1,5 @@
 // /chamamentos/:ch (DetailPage): dados do chamamento, propostas por lote com status e sessões.
+// Admin: "Excluir" proposta no menu de ações da linha (DialogoExclusao; homologada fica bloqueada).
 
 import { FilePlus2, Presentation, SquarePen, Trophy } from 'lucide-react'
 import { useParams } from 'react-router'
@@ -6,6 +7,7 @@ import { DetailPage } from '../../components/templates/paginas'
 import { ButtonLink } from '../../components/ui/ButtonLink'
 import { Card } from '../../components/ui/Card'
 import { DataTable } from '../../components/ui/DataTable'
+import { MenuAcoes } from '../../components/ui/MenuAcoes'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { ErrorState } from '../../components/ui/ErrorState'
 import { Badge, StatusBadge } from '../../components/ui/StatusBadge'
@@ -17,6 +19,7 @@ import { statusDaProposta } from '../../domain/statusProposta'
 import { useColecao, useDocumento, type ComId } from '../../lib/firestore'
 import type { Chamamento, Osc, Proposta, Sessao } from '../../lib/tipos'
 import { useUsuario } from '../auth/useUsuario'
+import { emExclusao, SeloEmExclusao, useExclusao } from '../exclusao/useExclusao'
 
 const numero = (valor: number | undefined) => (valor === undefined ? '—' : valor.toLocaleString('pt-BR', { maximumFractionDigits: 2 }))
 
@@ -28,6 +31,7 @@ export function PainelChamamento() {
   const propostas = useColecao<Proposta>(`chamamentos/${ch}/propostas`)
   const oscs = useColecao<Osc>('oscs')
   const sessoes = useColecao<Sessao>(`chamamentos/${ch}/sessoes`)
+  const exclusao = useExclusao()
 
   const carregando = chamamento.carregando || propostas.carregando || oscs.carregando || sessoes.carregando
   const erro = chamamento.erro ?? propostas.erro ?? oscs.erro ?? sessoes.erro
@@ -40,6 +44,7 @@ export function PainelChamamento() {
   const nomeOsc = new Map(oscs.dados.map((o) => [o.cnpj, o.razaoSocial]))
   const podeEditar = podeFazer(acesso, 'chamamentos')
   const podeProposta = podeFazer(acesso, 'propostas')
+  const admin = acesso?.admin === true
   const sessaoAberta = sessoes.dados.find((s) => s.status === 'aberta')
   const caminho = `/chamamentos/${ch}`
 
@@ -96,7 +101,7 @@ export function PainelChamamento() {
               { id: 'protocolo', titulo: 'Protocolo', celula: (p) => p.protocolo ?? '—' },
               { id: 'sei', titulo: 'Nº SEI', celula: (p) => p.numeroSEI ?? '—' },
               { id: 'nf', titulo: 'NF', celula: (p) => numero(p.totais?.nf), ordenar: (p) => p.totais?.nf ?? -1, alinhar: 'direita' },
-              { id: 'status', titulo: 'Status', celula: (p) => <StatusBadge status={statusDaProposta(p)} /> },
+              { id: 'status', titulo: 'Status', celula: (p) => (emExclusao(p) ? <SeloEmExclusao /> : <StatusBadge status={statusDaProposta(p)} />) },
             ]}
             acoes={(p) => {
               const nome = nomeOsc.get(p.oscCnpj) ?? p.id
@@ -119,6 +124,19 @@ export function PainelChamamento() {
                     <ButtonLink para={`${base}/editar`} variante="tertiary" tamanho="sm" aria-label={`Editar proposta — ${nome}`}>
                       Editar
                     </ButtonLink>
+                  )}
+                  {admin && (
+                    <MenuAcoes
+                      rotulo={`Mais ações — proposta ${p.protocolo ?? p.id}`}
+                      itens={[
+                        exclusao.itemExcluir({
+                          tipo: 'proposta',
+                          ids: { chamamentoId: ch ?? '', propostaId: p.id },
+                          identificador: p.protocolo ?? p.id,
+                          nome: `proposta ${p.protocolo ?? p.id} — ${nome}`,
+                        }),
+                      ]}
+                    />
                   )}
                 </span>
               )
@@ -155,6 +173,7 @@ export function PainelChamamento() {
           )}
         />
       </Card>
+      {exclusao.dialogo}
     </DetailPage>
   )
 }
