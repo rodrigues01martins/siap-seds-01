@@ -28,6 +28,7 @@ function corpo(dados: Record<string, unknown> = {}) {
   return {
     chamamentoId: CH,
     propostaId: PROP,
+    sessaoId: SESSAO,
     requisitos: Object.fromEntries(REQUISITOS.map((c) => [c, true])),
     irregularidadesFormais: [],
     planos: LIMITES.map((limite, i): PaginasPlano => {
@@ -162,7 +163,7 @@ describe('proposta não admitida não segue para avaliação', () => {
     const exp = await chamar(
       experiencia,
       'POST',
-      { chamamentoId: CH, propostaId: PROP, descricao: 'X', categorias: ['C'], modalidade: 'outra', inicio: '2020-01-01' },
+      { chamamentoId: CH, propostaId: PROP, sessaoId: SESSAO, descricao: 'X', categorias: ['C'], modalidade: 'outra', inicio: '2020-01-01' },
       relator.token,
     )
     expect(exp).toMatchObject({ status: 409, corpo: { erro: mensagem } })

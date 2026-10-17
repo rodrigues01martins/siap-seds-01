@@ -24,6 +24,8 @@ export interface RegistroAuditoria {
   /** Só na exclusão: motivo informado e fotografia das subcoleções apagadas. */
   justificativa?: string
   subcolecoes?: Record<string, unknown>
+  /** Sessão da Comissão em que a gravação foi feita (admissibilidade, D1, D2, desempate). */
+  sessaoId?: string
   /** 'admin' ou 'usuario' (quem gravou). */
   perfil: string
   dataHora: Timestamp
