@@ -66,7 +66,6 @@ describe('projeção em tempo real (emuladores)', () => {
         nivel: 4,
         justificativa: 'Educação integrada ao PIA com metas e responsáveis definidos.',
         paginas: [3, 4],
-        decisao: 'unanimidade',
         sessaoId: SESSAO,
       },
       presidente.token,

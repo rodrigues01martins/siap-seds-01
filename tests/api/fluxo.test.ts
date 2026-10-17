@@ -1,11 +1,12 @@
-// Fluxo completo contra os emuladores: uma proposta fictícia do cadastro à homologação,
-// passando só pela /api (como as telas fazem) e conferindo totais, memória da D2 e auditoria.
+// Fluxo completo contra os emuladores: uma proposta fictícia do cadastro à conclusão,
+// passando só pela /api (como as telas fazem) e conferindo totais, memória da D2 e a conclusão reversível.
 
 import { beforeAll, describe, expect, it } from 'vitest'
+import * as admissibilidade from '../../api/admissibilidade'
 import * as avaliacao from '../../api/avaliacao'
 import * as chamamentos from '../../api/chamamentos'
 import * as experiencia from '../../api/experiencia'
-import * as homologar from '../../api/homologar'
+import * as concluir from '../../api/concluir'
 import * as oscs from '../../api/oscs'
 import * as propostas from '../../api/propostas'
 import * as sessao from '../../api/sessao'
@@ -18,8 +19,8 @@ import {
   ler,
   limparAuth,
   limparFirestore,
+  autoria,
   semCarimbos,
-  totalAuditoria,
   type Usuario,
 } from './apoio'
 
@@ -48,7 +49,7 @@ async function exigir<T = Record<string, unknown>>(
   return r.corpo as T
 }
 
-describe('fluxo completo: cadastro → sessão → D2 → D1 → homologação', () => {
+describe('fluxo completo: cadastro → sessão → admissibilidade → D2 → D1 → conclusão', () => {
   it('avalia uma proposta fictícia do início ao fim', async () => {
     // 1. Cadastros (admin)
     await exigir(oscs, 'POST', { cnpj: '11.222.333/0001-81', razaoSocial: 'Instituto Esperança' }, admin, 201)
@@ -148,7 +149,6 @@ describe('fluxo completo: cadastro → sessão → D2 → D1 → homologação',
           nivel: niveis[codigo],
           justificativa: `Fundamentação da Comissão para o subcritério ${codigo}.`,
           paginas: [1],
-          decisao: 'unanimidade',
           sessaoId: s,
         },
         avaliadores[i % 2]!,
@@ -174,19 +174,27 @@ describe('fluxo completo: cadastro → sessão → D2 → D1 → homologação',
     expect(semCarimbos(await ler(`${caminho}/resultadoD2/atual`))).toEqual(JSON.parse(JSON.stringify(d2)))
     expect((await ler(`chamamentos/${ch}/sessoes/${s}`))?.foco).toEqual({ tipo: 'subcriterio', propostaId: p, subcriterio: CODIGOS.at(-1) })
 
-    // 6. Homologação (presidente) e trava
-    await exigir(homologar, 'POST', alvo, presidente)
-    expect(await ler(caminho)).toMatchObject({ bloqueada: true })
-    const depois = await chamar(
+    // 6. Conclusão (exige a admissibilidade) e "Desfazer conclusão", sem justificativa
+    const sinal = await chamar(concluir, 'POST', { ...alvo, acao: 'concluir' }, presidente.token)
+    expect(sinal).toMatchObject({ status: 409, corpo: { erro: 'Não é possível concluir: registre a admissibilidade.' } })
+    const planos = [12, 12, 8, 12, 10, 8].map((limite, i, todos) => {
+      const inicio = 3 + todos.slice(0, i).reduce((a, b) => a + b, 0)
+      return { codigo: `PA${i + 1}`, paginaInicial: inicio, paginaFinal: inicio + limite - 1 }
+    })
+    await exigir(admissibilidade, 'PUT', { ...alvo, sessaoId: s, admitida: true, planos }, admin)
+    await exigir(concluir, 'POST', { ...alvo, acao: 'concluir' }, presidente)
+    expect(await ler(caminho)).toMatchObject({ concluida: true, atualizadoPor: autoria(presidente) })
+
+    // 7. Sem trava: alterar um nível grava e desfaz a conclusão; concluir de novo
+    await exigir(
       avaliacao,
       'PUT',
-      { ...alvo, codigo: '1.1', nivel: 0, justificativa: 'Tentativa após homologação.', paginas: [], decisao: 'unanimidade', sessaoId: s },
-      presidente.token,
+      { ...alvo, codigo: '1.1', nivel: 3, justificativa: 'Revisão do nível pela Comissão.', paginas: [], sessaoId: s },
+      admin,
     )
-    expect(depois.status).toBe(409)
-
-    // 7. Cada escrita foi auditada: cadastros (3) + sessão (1) + experiências (2 × 3 documentos)
-    //    + níveis (28 × 4: avaliação, totais, resultadoD2, foco da sessão) + homologação (1)
-    expect(await totalAuditoria()).toBe(3 + 1 + 2 * 3 + 28 * 4 + 1)
+    expect(await ler(caminho)).toMatchObject({ concluida: false })
+    await exigir(concluir, 'POST', { ...alvo, acao: 'concluir' }, presidente)
+    await exigir(concluir, 'POST', { ...alvo, acao: 'desfazer' }, admin)
+    expect(await ler(caminho)).toMatchObject({ concluida: false })
   })
 })

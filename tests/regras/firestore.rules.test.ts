@@ -78,8 +78,8 @@ const LEITURA: Record<string, Ator[]> = {
   'chamamentos/ch1/propostas/p1/avaliacoes/a1': LEITORES,
   'chamamentos/ch1/sessoes/s1': LEITORES,
   'oscs/osc1': LEITORES,
-  // Admin e presidente fazem tudo no sistema, inclusive ver o histórico.
-  'auditoria/ev1': LEITORES,
+  // Sem auditoria detalhada (Simplificação 2/4): registros antigos em auditoria/ não são lidos por ninguém.
+  'auditoria/ev1': [],
   // O próprio cadastro (o app lê para saber o acesso) e os leitores.
   'usuarios/uid-admin': LEITORES,
   'usuarios/uid-antigo': ['antigo', ...LEITORES],
@@ -109,11 +109,8 @@ describe('leitura de coleção (list)', () => {
     await assertFails(getDocs(collection(bancoDe(ator), 'usuarios')))
   })
 
-  it('admin e presidente ativos listam a auditoria; cadastro antigo e desativado, não', async () => {
-    for (const ator of ['admin', 'presidente'] as const) await assertSucceeds(getDocs(collection(bancoDe(ator), 'auditoria')))
-    for (const ator of ['antigo', 'perfil-invalido', 'admin-desativado'] as const) {
-      await assertFails(getDocs(collection(bancoDe(ator), 'auditoria')))
-    }
+  it('ninguém lista a auditoria antiga (a tela /auditoria saiu)', async () => {
+    for (const ator of ATORES) await assertFails(getDocs(collection(bancoDe(ator), 'auditoria')))
   })
 })
 

@@ -3,7 +3,7 @@ import { obterAdmin } from '../../api/_lib/admin'
 import { ADMINS_INICIAIS } from '../../api/_lib/adminsIniciais'
 import * as oscs from '../../api/oscs'
 import * as rota from '../../api/usuarios'
-import { auditoriaDe, chamar, criarConta, criarUsuario, ler, limparAuth, limparFirestore, totalAuditoria, type Usuario } from './apoio'
+import { autoria, chamar, criarConta, criarUsuario, ler, limparAuth, limparFirestore, type Usuario } from './apoio'
 
 const auth = () => obterAdmin().auth
 
@@ -20,15 +20,14 @@ describe('PUT /api/usuarios — primeiro administrador (e-mail em api/_lib/admin
     expect((await chamar(rota, 'DELETE', undefined, conta.token)).status).toBe(405)
   })
 
-  it('e-mail da lista e nenhum administrador: vira administrador (perfil admin), com cadastro e histórico', async () => {
+  it('e-mail da lista e nenhum administrador: vira administrador (perfil admin), com cadastro e atualizadoPor', async () => {
     const conta = await criarConta(ADMINS_INICIAIS[0]!.toUpperCase())
     const r = await chamar(rota, 'PUT', undefined, conta.token)
     expect(r).toMatchObject({ status: 200, corpo: { uid: conta.uid, perfil: 'admin' } })
     const cadastro = await ler(`usuarios/${conta.uid}`)
     expect(cadastro).toMatchObject({ email: ADMINS_INICIAIS[0], perfil: 'admin', ativo: true })
     expect(cadastro).not.toHaveProperty('permissoes')
-    const [registro] = await auditoriaDe(`usuarios/${conta.uid}`)
-    expect(registro).toMatchObject({ acao: 'criar', antes: null, uid: conta.uid, perfil: 'admin' })
+    expect(cadastro).toMatchObject({ atualizadoPor: { nome: null, email: ADMINS_INICIAIS[0] } })
   })
 
   it('e-mail fora da lista: 403 com orientação, nada gravado', async () => {
@@ -36,7 +35,6 @@ describe('PUT /api/usuarios — primeiro administrador (e-mail em api/_lib/admin
     const r = await chamar(rota, 'PUT', undefined, conta.token)
     expect(r).toMatchObject({ status: 403, corpo: { erro: expect.stringMatching(/administrador/) } })
     expect(await ler(`usuarios/${conta.uid}`)).toBeUndefined()
-    expect(await totalAuditoria()).toBe(0)
   })
 
   it.each([
@@ -58,15 +56,13 @@ describe('PUT /api/usuarios — primeiro administrador (e-mail em api/_lib/admin
     const cadastro = await ler(`usuarios/${conta.uid}`)
     expect(cadastro).toMatchObject({ perfil: 'admin', ativo: true })
     for (const antigo of ['admin', 'permissoes', 'comissao']) expect(cadastro).not.toHaveProperty(antigo)
-    const [registro] = await auditoriaDe(`usuarios/${conta.uid}`)
-    expect(registro).toMatchObject({ acao: 'editar', antes: { comissao: 'relator' } })
   })
 
   it('quem já tem perfil: 200 sem alterar nada', async () => {
     const presidente = await criarUsuario('presidente')
     const r = await chamar(rota, 'PUT', undefined, presidente.token)
     expect(r).toMatchObject({ status: 200, corpo: { uid: presidente.uid, perfil: 'presidente' } })
-    expect(await totalAuditoria()).toBe(0)
+    expect(await ler(`usuarios/${presidente.uid}`)).not.toHaveProperty('atualizadoEm')
   })
 
   it('cadastro antigo fora da lista: 403 "Seu acesso precisa ser atualizado pelo administrador."', async () => {
@@ -102,16 +98,14 @@ describe('POST /api/usuarios — novo usuário (convite) com perfil admin ou pre
     })
   })
 
-  it('cria a conta no Authentication e o cadastro com o perfil, com histórico; a senha é definida pela pessoa', async () => {
+  it('cria a conta no Authentication e o cadastro com o perfil e atualizadoPor; a senha é definida pela pessoa', async () => {
     const r = await chamar(rota, 'POST', NOVO, admin.token)
     expect(r).toMatchObject({ status: 201, corpo: { email: 'maria.souza@goias.gov.br' } })
     const uid = r.corpo?.uid as string
     expect(await auth().getUser(uid)).toMatchObject({ email: 'maria.souza@goias.gov.br', displayName: 'Maria Souza', disabled: false })
     expect(await ler(`usuarios/${uid}`)).toEqual(
-      expect.objectContaining({ email: 'maria.souza@goias.gov.br', nome: 'Maria Souza', perfil: 'presidente', ativo: true }),
+      expect.objectContaining({ email: 'maria.souza@goias.gov.br', nome: 'Maria Souza', perfil: 'presidente', ativo: true, atualizadoPor: autoria(admin) }),
     )
-    const [registro] = await auditoriaDe(`usuarios/${uid}`)
-    expect(registro).toMatchObject({ acao: 'criar', antes: null, uid: admin.uid, perfil: 'admin' })
   })
 
   it('conta que já existe no Authentication, sem cadastro: aproveita a conta', async () => {
@@ -153,7 +147,7 @@ describe('PATCH /api/usuarios — perfil, nome e desativação', () => {
     expect((await chamar(rota, 'PATCH', { uid: presidente.uid, permissoes: ['oscs'] }, admin.token)).status).toBe(400)
   })
 
-  it('cadastro antigo recebe perfil novo: acesso vale na hora e os campos antigos saem (histórico)', async () => {
+  it('cadastro antigo recebe perfil novo: acesso vale na hora e os campos antigos saem', async () => {
     expect((await chamar(oscs, 'POST', OSC, antigo.token)).status).toBe(403)
     const r = await chamar(rota, 'PATCH', { uid: antigo.uid, perfil: 'presidente' }, admin.token)
     expect(r.status).toBe(200)
@@ -161,9 +155,6 @@ describe('PATCH /api/usuarios — perfil, nome e desativação', () => {
     const cadastro = await ler(`usuarios/${antigo.uid}`)
     expect(cadastro).toMatchObject({ perfil: 'presidente' })
     for (const campo of ['admin', 'permissoes', 'comissao']) expect(cadastro).not.toHaveProperty(campo)
-    const [registro] = await auditoriaDe(`usuarios/${antigo.uid}`)
-    expect(registro).toMatchObject({ acao: 'editar', antes: { comissao: 'relator' }, depois: { perfil: 'presidente' } })
-    expect(registro?.depois).not.toHaveProperty('comissao')
   })
 
   it('trocar perfil (presidente ↔ admin) e nome', async () => {

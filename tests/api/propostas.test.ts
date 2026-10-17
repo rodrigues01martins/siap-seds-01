@@ -1,7 +1,7 @@
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { obterAdmin } from '../../api/_lib/admin'
 import * as rota from '../../api/propostas'
-import { auditoriaDe, chamar, criarUsuario, ler, limparAuth, limparFirestore, totalAuditoria, type Usuario } from './apoio'
+import { autoria, chamar, criarUsuario, ler, limparAuth, limparFirestore, type Usuario } from './apoio'
 
 const CNPJ = '11222333000181'
 const VALIDA = {
@@ -65,14 +65,14 @@ describe('/api/propostas — referências', () => {
     })
   })
 
-  it('não aceita definir "bloqueada" por este endpoint → 400', async () => {
-    const r = await chamar(rota, 'POST', { ...VALIDA, bloqueada: true }, admin.token)
-    expect(r).toMatchObject({ status: 400, corpo: { campos: { bloqueada: 'Campo não permitido.' } } })
+  it('não aceita definir "bloqueada" nem "concluida" por este endpoint → 400', async () => {
+    const r = await chamar(rota, 'POST', { ...VALIDA, bloqueada: true, concluida: true }, admin.token)
+    expect(r).toMatchObject({ status: 400, corpo: { campos: { bloqueada: 'Campo não permitido.', concluida: 'Campo não permitido.' } } })
   })
 })
 
 describe('/api/propostas — criar e editar', () => {
-  it('criar → 201, nasce desbloqueada e auditada', async () => {
+  it('criar → 201, nasce não concluída, sem o campo bloqueada, com atualizadoPor', async () => {
     const id = await criar()
     const caminho = `chamamentos/ch1/propostas/${id}`
     expect(await ler(caminho)).toMatchObject({
@@ -80,10 +80,10 @@ describe('/api/propostas — criar e editar', () => {
       oscCnpj: CNPJ,
       protocolo: 'PROT-2026-0001',
       numeroSEI: '95574999',
-      bloqueada: false,
+      concluida: false,
+      atualizadoPor: autoria(admin),
     })
-    const [registro] = await auditoriaDe(caminho)
-    expect(registro).toMatchObject({ acao: 'criar', antes: null, depois: { oscCnpj: CNPJ }, uid: admin.uid })
+    expect(await ler(caminho)).not.toHaveProperty('bloqueada')
   })
 
   it('mesma OSC no mesmo lote → 409; em outro lote → permitido', async () => {
@@ -93,16 +93,11 @@ describe('/api/propostas — criar e editar', () => {
     await criar({ ...VALIDA, loteCodigo: 'L2' })
   })
 
-  it('editar → 200 com antes e depois', async () => {
+  it('editar → 200, campos mesclados', async () => {
     const id = await criar()
     const r = await chamar(rota, 'PATCH', { chamamentoId: 'ch1', propostaId: id, observacao: 'Protocolo 456' }, admin.token)
     expect(r.status).toBe(200)
-    const registros = await auditoriaDe(`chamamentos/ch1/propostas/${id}`)
-    expect(registros[1]).toMatchObject({
-      acao: 'editar',
-      antes: { observacao: 'Entregue em mídia física' },
-      depois: { observacao: 'Protocolo 456', loteCodigo: 'L1' },
-    })
+    expect(await ler(`chamamentos/ch1/propostas/${id}`)).toMatchObject({ observacao: 'Protocolo 456', loteCodigo: 'L1' })
   })
 
   it('editar proposta inexistente → 404', async () => {
@@ -111,15 +106,12 @@ describe('/api/propostas — criar e editar', () => {
   })
 })
 
-describe('/api/propostas — proposta homologada (B5)', () => {
-  it('editar proposta bloqueada → 409 e nada muda', async () => {
+describe('/api/propostas — sem trava de homologação', () => {
+  it('editar proposta com bloqueada=true (homologação antiga) → 200', async () => {
     const id = await criar()
     await obterAdmin().db.doc(`chamamentos/ch1/propostas/${id}`).update({ bloqueada: true })
-    const antes = await totalAuditoria()
-
     const r = await chamar(rota, 'PATCH', { chamamentoId: 'ch1', propostaId: id, observacao: 'alterada' }, admin.token)
-    expect(r).toMatchObject({ status: 409, corpo: { erro: 'Proposta homologada: alteração não permitida.' } })
-    expect(await ler(`chamamentos/ch1/propostas/${id}`)).toMatchObject({ observacao: 'Entregue em mídia física' })
-    expect(await totalAuditoria()).toBe(antes)
+    expect(r.status).toBe(200)
+    expect(await ler(`chamamentos/ch1/propostas/${id}`)).toMatchObject({ observacao: 'alterada' })
   })
 })

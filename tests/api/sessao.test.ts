@@ -6,7 +6,7 @@ import {
   CH,
   PRESENTES,
   PROP,
-  auditoriaDe,
+  autoria,
   chamar,
   criarUsuario,
   ler,
@@ -14,7 +14,6 @@ import {
   limparFirestore,
   semearProposta,
   semearSessao,
-  totalAuditoria,
   type Usuario,
 } from './apoio'
 
@@ -33,7 +32,7 @@ beforeEach(async () => {
   // Lote L2 com uma proposta, fora da pauta das sessões abertas com ['L1'].
   const { db } = obterAdmin()
   await db.doc(`chamamentos/${CH}`).update({ lotes: [{ codigo: 'L1', descricao: 'Lote 1' }, { codigo: 'L2', descricao: 'Lote 2' }] })
-  await db.doc(`chamamentos/${CH}/propostas/p2`).set({ loteCodigo: 'L2', oscCnpj: '11222333000181', bloqueada: false })
+  await db.doc(`chamamentos/${CH}/propostas/p2`).set({ loteCodigo: 'L2', oscCnpj: '11222333000181' })
 })
 
 const abertura = (dados: Record<string, unknown> = {}) => ({ chamamentoId: CH, data: '2026-11-10', lotes: ['L1'], presentes: PRESENTES, ...dados })
@@ -51,10 +50,9 @@ describe('/api/sessao — acesso (admin e presidente fazem tudo)', () => {
   it('405 com Allow, 401 sem token, 403 para cadastro antigo', async () => {
     const r = await chamar(rota, 'PUT', undefined, presidente.token)
     expect(r.status).toBe(405)
-    expect(r.headers.get('Allow')).toBe('GET, POST, PATCH')
+    expect(r.headers.get('Allow')).toBe('GET, POST, PATCH, DELETE')
     expect((await chamar(rota, 'POST', abertura(), null)).status).toBe(401)
     expect((await chamar(rota, 'POST', abertura(), antigo.token)).status).toBe(403)
-    expect(await totalAuditoria()).toBe(0)
   })
 
   it('presidente e admin abrem, conduzem e encerram', async () => {
@@ -67,7 +65,7 @@ describe('/api/sessao — acesso (admin e presidente fazem tudo)', () => {
 })
 
 describe('/api/sessao — abrir (data, lote(s) em pauta e presentes por nome)', () => {
-  it('grava a sessão aberta com lotes e presentes (nome e papel), sem login nem declarações, auditada', async () => {
+  it('grava a sessão aberta com lotes e presentes (nome e papel), sem login nem declarações; só atualizadoPor/Em', async () => {
     const id = await abrir({ presentes: [{ nome: '  Ana Presidente ', papel: 'presidente' }, ...PRESENTES.slice(1)] })
     const sessao = await ler(caminhoSessao(id))
     expect(sessao).toMatchObject({
@@ -76,13 +74,12 @@ describe('/api/sessao — abrir (data, lote(s) em pauta e presentes por nome)', 
       lotes: ['L1'],
       presentes: PRESENTES,
       foco: null,
-      abertaPor: { uid: presidente.uid, email: presidente.email },
+      atualizadoPor: autoria(presidente),
     })
     expect(sessao).not.toHaveProperty('pauta')
     expect(sessao).not.toHaveProperty('declaracoes')
-    expect(sessao?.abertaEm).toBeInstanceOf(Timestamp)
-    const [registro] = await auditoriaDe(caminhoSessao(id))
-    expect(registro).toMatchObject({ acao: 'criar', antes: null, uid: presidente.uid, perfil: 'presidente' })
+    expect(sessao).not.toHaveProperty('abertaPor')
+    expect(sessao?.atualizadoEm).toBeInstanceOf(Timestamp)
   })
 
   it.each([
@@ -98,7 +95,7 @@ describe('/api/sessao — abrir (data, lote(s) em pauta e presentes por nome)', 
   ])('%s → 400', async (_caso, ajuste, campo, mensagem) => {
     const r = await chamar(rota, 'POST', abertura(ajuste), presidente.token)
     expect(r).toMatchObject({ status: 400, corpo: { campos: { [campo]: mensagem } } })
-    expect(await totalAuditoria()).toBe(0)
+    expect((await obterAdmin().db.collection(`chamamentos/${CH}/sessoes`).get()).empty).toBe(true)
   })
 
   it('campos do modelo anterior (pauta de propostas, declarações, presentes por uid) → 400', async () => {
@@ -121,14 +118,11 @@ describe('/api/sessao — abrir (data, lote(s) em pauta e presentes por nome)', 
 })
 
 describe('/api/sessao — presentes e foco', () => {
-  it('atualiza presentes (mesmas regras: um presidente, nomes únicos); auditado com antes e depois', async () => {
+  it('atualiza presentes (mesmas regras: um presidente, nomes únicos)', async () => {
     const id = await abrir()
     const novos = [{ nome: 'Ana Presidente', papel: 'presidente' }, { nome: 'Fábio Membro', papel: 'membro' }]
     expect((await chamar(rota, 'PATCH', alterar(id, { acao: 'presentes', presentes: novos }), presidente.token)).status).toBe(200)
     expect((await ler(caminhoSessao(id)))?.presentes).toEqual(novos)
-    const registro = (await auditoriaDe(caminhoSessao(id))).at(-1)
-    expect((registro?.antes?.presentes as unknown[]).length).toBe(3)
-    expect((registro?.depois?.presentes as unknown[]).length).toBe(2)
 
     const semPresidente = await chamar(rota, 'PATCH', alterar(id, { acao: 'presentes', presentes: novos.slice(1) }), presidente.token)
     expect(semPresidente).toMatchObject({ status: 400, corpo: { campos: { presentes: 'Informe exatamente um presidente.' } } })
@@ -146,11 +140,10 @@ describe('/api/sessao — presentes e foco', () => {
     ['subcritério', { tipo: 'subcriterio', propostaId: PROP, subcriterio: '2.1' }],
     ['D2', { tipo: 'd2', propostaId: PROP }],
     ['resumo', { tipo: 'resumo', propostaId: PROP }],
-  ])('foco do tipo %s em proposta de lote da pauta; null limpa; auditado', async (_tipo, foco) => {
+  ])('foco do tipo %s em proposta de lote da pauta; null limpa', async (_tipo, foco) => {
     const id = await abrir()
     expect((await chamar(rota, 'PATCH', alterar(id, { acao: 'foco', foco }), presidente.token)).status).toBe(200)
     expect((await ler(caminhoSessao(id)))?.foco).toEqual(foco)
-    expect((await auditoriaDe(caminhoSessao(id))).at(-1)).toMatchObject({ acao: 'editar', depois: { foco } })
     expect((await chamar(rota, 'PATCH', alterar(id, { acao: 'foco', foco: null }), admin.token)).status).toBe(200)
     expect((await ler(caminhoSessao(id)))?.foco).toBeNull()
   })
@@ -178,14 +171,14 @@ describe('/api/sessao — presentes e foco', () => {
 })
 
 describe('/api/sessao — encerrar', () => {
-  it('encerra: status, encerradaPor/Em e foco limpo, auditado', async () => {
+  it('encerra: status, foco limpo e atualizadoPor/Em', async () => {
     const id = await abrir()
     await chamar(rota, 'PATCH', alterar(id, { acao: 'foco', foco: { tipo: 'subcriterio', propostaId: PROP, subcriterio: '1.1' } }), presidente.token)
     expect((await chamar(rota, 'PATCH', alterar(id, { acao: 'encerrar' }), presidente.token)).status).toBe(200)
     const sessao = await ler(caminhoSessao(id))
-    expect(sessao).toMatchObject({ status: 'encerrada', foco: null, encerradaPor: { uid: presidente.uid } })
-    expect(sessao?.encerradaEm).toBeInstanceOf(Timestamp)
-    expect((await auditoriaDe(caminhoSessao(id))).at(-1)).toMatchObject({ acao: 'editar', antes: { status: 'aberta' }, depois: { status: 'encerrada' } })
+    expect(sessao).toMatchObject({ status: 'encerrada', foco: null, atualizadoPor: autoria(presidente) })
+    expect(sessao?.atualizadoEm).toBeInstanceOf(Timestamp)
+    expect(sessao).not.toHaveProperty('encerradaPor')
   })
 
   it('sessão encerrada não aceita alterações → 409; nova sessão pode ser aberta', async () => {
@@ -201,5 +194,14 @@ describe('/api/sessao — encerrar', () => {
   it('sessão encerrada semeada também bloqueia', async () => {
     await semearSessao('antiga', { status: 'encerrada' })
     expect((await chamar(rota, 'PATCH', alterar('antiga', { acao: 'foco', foco: null }), presidente.token)).status).toBe(409)
+  })
+})
+
+describe('/api/sessao — reset removido (a sessão se apaga em cascata: DELETE)', () => {
+  it('ação "resetar" → 400 (ação inválida)', async () => {
+    const id = await abrir()
+    const r = await chamar(rota, 'PATCH', alterar(id, { acao: 'resetar', justificativa: 'Conflito de interesse declarado após a sessão.' }), presidente.token)
+    expect(r.status).toBe(400)
+    expect(r.corpo?.campos).toHaveProperty('acao')
   })
 })

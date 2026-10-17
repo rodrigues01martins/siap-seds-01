@@ -11,6 +11,8 @@ export interface Assinatura {
   uid: string
   email: string | null
   perfil: Perfil
+  /** Nome no cadastro usuarios/{uid} (vai para atualizadoPor); null se não houver. */
+  nome?: string | null
 }
 
 export interface Autor extends Assinatura {

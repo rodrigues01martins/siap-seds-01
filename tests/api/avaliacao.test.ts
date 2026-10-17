@@ -1,4 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { obterAdmin } from '../../api/_lib/admin'
 import * as rota from '../../api/avaliacao'
 import { calcularD1 } from '../../src/domain/d1'
 import { calcularD2 } from '../../src/domain/d2'
@@ -9,7 +10,7 @@ import {
   DATA_LIMITE,
   PROP,
   SESSAO,
-  auditoriaDe,
+  autoria,
   chamar,
   criarUsuario,
   ler,
@@ -19,7 +20,6 @@ import {
   semearNiveis,
   semearProposta,
   semearSessao,
-  totalAuditoria,
   type Usuario,
 } from './apoio'
 
@@ -32,7 +32,6 @@ const registro = (dados: Record<string, unknown> = {}) => ({
   nivel: 3,
   justificativa: 'Metodologia descrita com fluxos e responsáveis definidos.',
   paginas: [2, 5],
-  decisao: 'unanimidade',
   sessaoId: SESSAO,
   ...dados,
 })
@@ -72,17 +71,18 @@ describe('/api/avaliacao — validação (400)', () => {
     ['nível fora da escala', { nivel: 5 }, 'nivel', 'O nível deve ser um inteiro de 0 a 4.'],
     ['página acima do corte do PA3 (8)', { paginas: [9] }, 'paginas', 'Página 9 acima do limite de 8 páginas do PA3.'],
     ['justificativa curta', { justificativa: 'curta' }, 'justificativa', 'A justificativa deve ter ao menos 20 caracteres.'],
-    ['voto divergente com unanimidade', { votoDivergente: 'Membro X votou 2.' }, 'votoDivergente', 'Voto divergente só se aplica a decisão por maioria.'],
+    ['decisão (removida)', { decisao: 'maioria' }, 'decisao', 'Campo não permitido.'],
+    ['voto divergente (removido)', { votoDivergente: 'Membro X votou 2.' }, 'votoDivergente', 'Campo não permitido.'],
   ])('%s', async (_caso, ajuste, campo, mensagem) => {
     const r = await chamar(rota, 'PUT', registro(ajuste), presidente.token)
     expect(r).toMatchObject({ status: 400, corpo: { campos: { [campo]: mensagem } } })
-    expect(await totalAuditoria()).toBe(0)
+    expect(await ler(`${CAMINHO_PROPOSTA}/avaliacoes/3.1`)).toBeUndefined()
   })
 
-  it('decisão fora de unanimidade|maioria e nível não inteiro → 400', async () => {
-    const r = await chamar(rota, 'PUT', registro({ decisao: 'consenso', nivel: 2.5 }), presidente.token)
+  it('nível não inteiro → 400', async () => {
+    const r = await chamar(rota, 'PUT', registro({ nivel: 2.5 }), presidente.token)
     expect(r.status).toBe(400)
-    expect(Object.keys(r.corpo?.campos ?? {}).sort()).toEqual(['decisao', 'nivel'])
+    expect(Object.keys(r.corpo?.campos ?? {})).toEqual(['nivel'])
   })
 
   it('mínimo da justificativa vem do chamamento (configurável)', async () => {
@@ -97,26 +97,20 @@ describe('/api/avaliacao — validação (400)', () => {
   })
 })
 
-describe('/api/avaliacao — gravação, auditoria e recálculo (C4)', () => {
-  it('registra o nível e audita com antes = null', async () => {
-    const r = await chamar(rota, 'PUT', registro({ decisao: 'maioria', votoDivergente: 'Membro X: nível 2.' }), presidente.token)
+describe('/api/avaliacao — gravação e recálculo (C4)', () => {
+  it('registra nível, justificativa, páginas e sessaoId, com atualizadoPor (sem decisão nem voto divergente)', async () => {
+    const r = await chamar(rota, 'PUT', registro(), presidente.token)
     expect(r.status).toBe(200)
-    expect(await ler(`${CAMINHO_PROPOSTA}/avaliacoes/3.1`)).toMatchObject({
-      nivel: 3,
-      paginas: [2, 5],
-      decisao: 'maioria',
-      votoDivergente: 'Membro X: nível 2.',
-      sessaoId: SESSAO,
-    })
-    const [registroAuditoria] = await auditoriaDe(`${CAMINHO_PROPOSTA}/avaliacoes/3.1`)
-    expect(registroAuditoria).toMatchObject({ acao: 'criar', antes: null, depois: { nivel: 3 }, uid: presidente.uid, perfil: 'presidente' })
+    const avaliacao = await ler(`${CAMINHO_PROPOSTA}/avaliacoes/3.1`)
+    expect(avaliacao).toMatchObject({ nivel: 3, paginas: [2, 5], sessaoId: SESSAO, atualizadoPor: autoria(presidente) })
+    expect(avaliacao).not.toHaveProperty('decisao')
+    expect(avaliacao).not.toHaveProperty('votoDivergente')
   })
 
-  it('registrar de novo o mesmo subcritério → editar, com antes e depois', async () => {
+  it('registrar de novo o mesmo subcritério substitui o nível e a autoria', async () => {
     await chamar(rota, 'PUT', registro(), presidente.token)
-    await chamar(rota, 'PUT', registro({ nivel: 1 }), presidente.token)
-    const registros = await auditoriaDe(`${CAMINHO_PROPOSTA}/avaliacoes/3.1`)
-    expect(registros[1]).toMatchObject({ acao: 'editar', antes: { nivel: 3 }, depois: { nivel: 1 }, perfil: 'presidente' })
+    await chamar(rota, 'PUT', registro({ nivel: 1 }), admin.token)
+    expect(await ler(`${CAMINHO_PROPOSTA}/avaliacoes/3.1`)).toMatchObject({ nivel: 1, atualizadoPor: autoria(admin) })
   })
 
   it('recalcula totais da proposta na mesma gravação (avaliação incompleta → pendente)', async () => {
@@ -124,7 +118,6 @@ describe('/api/avaliacao — gravação, auditoria e recálculo (C4)', () => {
     expect(r.corpo?.totais).toMatchObject({ d1: 3, d2: 0, nf: 3, status: 'pendente', completa: false })
     const proposta = await ler(CAMINHO_PROPOSTA)
     expect(proposta?.totais).toMatchObject({ d1: 3, status: 'pendente' })
-    expect((await auditoriaDe(CAMINHO_PROPOSTA)).at(-1)).toMatchObject({ acao: 'editar', depois: { totais: { d1: 3 } } })
   })
 
   it('o resultado gravado é idêntico ao de src/domain para os mesmos dados', async () => {
@@ -165,48 +158,39 @@ describe('/api/avaliacao — gravação, auditoria e recálculo (C4)', () => {
 describe('/api/avaliacao — exige sessão aberta (Etapa 4a)', () => {
   const mensagem = 'Avaliação só pode ser registrada em sessão aberta da Comissão.'
 
-  it('sessão inexistente → 409, sem gravar nem auditar', async () => {
+  it('sessão inexistente → 409, sem gravar', async () => {
     const r = await chamar(rota, 'PUT', registro({ sessaoId: 'nao-existe' }), presidente.token)
     expect(r).toMatchObject({ status: 409, corpo: { erro: mensagem } })
     expect(await ler(`${CAMINHO_PROPOSTA}/avaliacoes/3.1`)).toBeUndefined()
-    expect(await totalAuditoria()).toBe(0)
   })
 
   it('sessão encerrada → 409', async () => {
     await semearProposta({ sessao: 'encerrada' })
     const r = await chamar(rota, 'PUT', registro(), presidente.token)
     expect(r).toMatchObject({ status: 409, corpo: { erro: mensagem } })
-    expect(await totalAuditoria()).toBe(0)
+    expect(await ler(`${CAMINHO_PROPOSTA}/avaliacoes/3.1`)).toBeUndefined()
   })
 })
 
 describe('/api/avaliacao — foco da sessão (Etapa 4b)', () => {
-  it('ao salvar, o subcritério vira o foco da sessão, na mesma gravação e auditado', async () => {
+  it('ao salvar, o subcritério vira o foco da sessão, na mesma gravação', async () => {
     const r = await chamar(rota, 'PUT', registro({ codigo: '2.1' }), admin.token)
     expect(r.status).toBe(200)
     const caminhoSessao = `chamamentos/${CH}/sessoes/${SESSAO}`
     expect((await ler(caminhoSessao))?.foco).toEqual({ tipo: 'subcriterio', propostaId: PROP, subcriterio: '2.1' })
-    expect((await auditoriaDe(caminhoSessao)).at(-1)).toMatchObject({
-      acao: 'editar',
-      depois: { foco: { tipo: 'subcriterio', propostaId: PROP, subcriterio: '2.1' } },
-      uid: admin.uid,
-    })
   })
 
   it('proposta fora da pauta da sessão → 409, sem gravar', async () => {
     await semearSessao(SESSAO, { lotes: ['L2'] })
     const r = await chamar(rota, 'PUT', registro(), presidente.token)
     expect(r).toMatchObject({ status: 409, corpo: { erro: 'Proposta fora da pauta da sessão.' } })
-    expect(await totalAuditoria()).toBe(0)
+    expect(await ler(`${CAMINHO_PROPOSTA}/avaliacoes/3.1`)).toBeUndefined()
   })
 })
 
-describe('/api/avaliacao — proposta homologada', () => {
-  it('→ 409, sem gravar nem auditar', async () => {
-    await semearProposta({ bloqueada: true })
-    const r = await chamar(rota, 'PUT', registro(), presidente.token)
-    expect(r).toMatchObject({ status: 409, corpo: { erro: 'Proposta homologada: alteração não permitida.' } })
-    expect(await ler(`${CAMINHO_PROPOSTA}/avaliacoes/3.1`)).toBeUndefined()
-    expect(await totalAuditoria()).toBe(0)
+describe('/api/avaliacao — sem trava de homologação', () => {
+  it('proposta com bloqueada=true (homologação antiga) aceita o registro', async () => {
+    await obterAdmin().db.doc(CAMINHO_PROPOSTA).set({ bloqueada: true }, { merge: true })
+    expect((await chamar(rota, 'PUT', registro(), presidente.token)).status).toBe(200)
   })
 })
