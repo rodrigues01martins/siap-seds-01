@@ -7,24 +7,25 @@ Zoom 200% = viewport CSS de 640×450 (1280×900 ampliado). Tabelas podem rolar d
 
 | Rota | 1º Tab = pular | Alcançados pelo Tab | Foco sem anel | Rolagem horizontal a 200% | Cortado a 200% |
 |---|---|---|---|---|---|
-| inicio | sim | 36/36 | 0 | 0 px | 0 |
-| painel-chamamento | sim | 51/51 | 0 | 0 px | 0 |
-| chamamento-novo | sim | 19/19 | 0 | 0 px | 0 |
-| chamamento-editar | sim | 30/30 | 0 | 0 px | 0 |
-| proposta-nova | sim | 23/23 | 0 | 0 px | 0 |
-| proposta-editar | sim | 23/23 | 0 | 0 px | 0 |
-| sessao-nova | sim | 24/24 | 0 | 0 px | 0 |
-| sessao | sim | 28/28 | 0 | 0 px | 0 |
-| ata | sim | 20/20 | 0 | 0 px | 0 |
-| admissibilidade | sim | 35/35 | 0 | 0 px | 0 |
-| d1 | sim | 168/168 | 0 | 0 px | 0 |
-| d2 | sim | 36/36 | 0 | 0 px | 0 |
-| resultado | sim | 24/24 | 0 | 0 px | 0 |
-| classificacao | sim | 24/24 | 0 | 0 px | 0 |
-| oscs | sim | 22/22 | 0 | 0 px | 0 |
-| usuarios | sim | 19/19 | 0 | 0 px | 0 |
+| inicio | sim | 37/37 | 0 | 0 px | 0 |
+| painel-chamamento | sim | 52/52 | 0 | 0 px | 0 |
+| chamamento-novo | sim | 20/20 | 0 | 0 px | 0 |
+| chamamento-editar | sim | 31/31 | 0 | 0 px | 0 |
+| proposta-nova | sim | 24/24 | 0 | 0 px | 0 |
+| proposta-editar | sim | 24/24 | 0 | 0 px | 0 |
+| sessao-nova | sim | 25/25 | 0 | 0 px | 0 |
+| sessao | sim | 29/29 | 0 | 0 px | 0 |
+| ata | sim | 21/21 | 0 | 0 px | 0 |
+| admissibilidade | sim | 36/36 | 0 | 0 px | 0 |
+| d1 | sim | 169/169 | 0 | 0 px | 0 |
+| d2 | sim | 37/37 | 0 | 0 px | 0 |
+| resultado | sim | 25/25 | 0 | 0 px | 0 |
+| classificacao | sim | 25/25 | 0 | 0 px | 0 |
+| oscs | sim | 23/23 | 0 | 0 px | 0 |
+| usuarios | sim | 20/20 | 0 | 0 px | 0 |
+| limpar-base | sim | 13/13 | 0 | 0 px | 0 |
 | projecao | — (sem elementos interativos, por desenho) | — | — | 0 px | 0 |
-| nao-encontrado | sim | 9/9 | 0 | 0 px | 0 |
+| nao-encontrado | sim | 10/10 | 0 | 0 px | 0 |
 
 
 ## Mensagens de erro anunciadas
