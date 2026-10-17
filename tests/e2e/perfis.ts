@@ -63,7 +63,7 @@ export const PROPOSTA_USO = 'uso-p1'
 export const CHAMAMENTO_EXCLUIR = 'e2e-excluir'
 export const CHAMAMENTO_EXCLUIR_PROPOSTA = 'e2e-excluir-prop'
 export const PROPOSTA_EXCLUIR = 'e2e-excluir-p1'
-/** Reset da sessão (resetSessao.spec.ts): chamamento com proposta admitida sem níveis e sessão aberta. */
+/** Reset da sessão e acessibilidade: chamamento com proposta sem admissibilidade nem níveis e sessão aberta. */
 export const CHAMAMENTO_RESET = 'e2e-reset'
 export const PROPOSTA_RESET = 'e2e-reset-p1'
 export const SESSAO_RESET = 'e2e-reset-sessao'

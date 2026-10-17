@@ -99,10 +99,12 @@ export default async function semear(): Promise<void> {
   for (const [caminho, dados] of Object.entries(ensaio.documentos)) {
     if (caminho.startsWith(`${origem}/`)) lote.set(db.doc(`${excluir}/${caminho.slice(origem.length + 1)}`), dados)
   }
-  // Reset da sessão (resetSessao.spec.ts): proposta admitida, sem níveis, numa sessão aberta só dela.
+  // Reset da sessão (resetSessao.spec.ts) e erros anunciados da admissibilidade (acessibilidade.spec.ts):
+  // proposta sem admissibilidade e sem níveis, numa sessão aberta só dela.
   lote.set(db.doc(`chamamentos/${CHAMAMENTO_RESET}`), { ...chamamentoEnsaio, numero: 'E2E-RESET/2026', titulo: 'E2E — reset da sessão' })
   const propostaReset: Record<string, unknown> = { ...ensaio.documentos[origem]!, protocolo: 'E2E-RESET-001', bloqueada: false }
   delete propostaReset.totais
+  delete propostaReset.admissibilidade // também serve ao teste de erros anunciados da admissibilidade
   lote.set(db.doc(`chamamentos/${CHAMAMENTO_RESET}/propostas/${PROPOSTA_RESET}`), propostaReset)
   lote.set(db.doc(`chamamentos/${CHAMAMENTO_RESET}/sessoes/${SESSAO_RESET}`), {
     data: '2026-11-10',

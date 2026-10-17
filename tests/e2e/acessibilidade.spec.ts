@@ -10,7 +10,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { montarEnsaio } from '../../scripts/lib/ensaio'
 import { comoPerfil, esperarTela, percorrerComTeclado } from './apoio'
-import { CHAMAMENTOS_USO, PROPOSTA_USO, propostaE2E, rotasE2E } from './perfis'
+import { CHAMAMENTO_RESET, CHAMAMENTOS_USO, PROPOSTA_RESET, PROPOSTA_USO, propostaE2E, rotasE2E } from './perfis'
 
 const PASTA = join('docs', 'auditoria-design', 'depois')
 const PROPOSTA = propostaE2E(montarEnsaio('2026-11-10').propostas)
@@ -128,7 +128,8 @@ test('mensagens de erro anunciadas (aria-live) nos formulários', async ({ brows
     ['novo chamamento vazio', '/chamamentos/novo', () => p.getByRole('button', { name: 'Cadastrar chamamento' }).click()],
     ['nova proposta vazia', `${CH}/propostas/nova`, () => p.getByRole('button', { name: 'Cadastrar proposta' }).click()],
     ['abertura de sessão sem data', `${CH}/sessoes/nova`, () => p.getByRole('button', { name: 'Avançar' }).click()],
-    ['admissibilidade sem resultado', `/chamamentos/${CHAMAMENTOS_USO.relator}/propostas/${PROPOSTA_USO}/admissibilidade`, () => p.getByRole('button', { name: 'Registrar admissibilidade' }).click()],
+    // Admissibilidade só se registra em sessão aberta: proposta da sessão aberta do E2E do reset.
+    ['admissibilidade sem resultado', `/chamamentos/${CHAMAMENTO_RESET}/propostas/${PROPOSTA_RESET}/admissibilidade`, () => p.getByRole('button', { name: 'Registrar admissibilidade' }).click()],
     ['D1 sem nível', `/chamamentos/${CHAMAMENTOS_USO.membro}/propostas/${PROPOSTA_USO}/d1`, () => p.getByRole('region', { name: 'Resumo da D1' }).getByRole('button', { name: /^Salvar/ }).click()],
     ['nova diligência vazia', `${P}/diligencias/nova`, () => p.getByRole('button', { name: 'Abrir diligência' }).click()],
   ]
