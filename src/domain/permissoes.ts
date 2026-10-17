@@ -36,6 +36,7 @@ export const AREAS = [
       { id: 'homologar', rotulo: 'Homologar proposta' },
       { id: 'reabrir', rotulo: 'Reabrir proposta homologada (RF-18)' },
       { id: 'desempate', rotulo: 'Registrar desempate da Comissão (RF-27)' },
+      { id: 'resetarSessao', rotulo: 'Resetar sessão (exige também o papel de presidente da Comissão)' },
     ],
   },
 ] as const

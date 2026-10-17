@@ -207,12 +207,37 @@ da OSC ou protocolo da proposta).
 |---|---|---|---|
 | `/api/sessao` | `POST` abrir | `{ chamamentoId, data, pauta: [propostaId], presentes?: [uid], declaracoes?: [{ uid, semImpedimento, motivo? }] }` | `sessaoAbrirEncerrar` |
 | `/api/sessao` | `PATCH` com `acao` | `{ chamamentoId, sessaoId, acao: 'presentes' \| 'declaracoes' \| 'foco' \| 'encerrar', ... }` | `sessaoConduzir` (`encerrar`: `sessaoAbrirEncerrar`) |
+| `/api/sessao` | `PATCH` resetar | `{ chamamentoId, sessaoId, acao: 'resetar', justificativa }` (20+ caracteres) | `resetarSessao` **e** papel presidente |
+| `/api/sessao` | `GET` prévia do reset | `?chamamentoId=…&sessaoId=…&simular=true` → `{ status, propostas: [{ propostaId, protocolo, reverter, apagar }], desempates, total, bloqueios }` | `resetarSessao` **e** papel presidente |
 
 - Sessão em `chamamentos/{ch}/sessoes/{id}`; **uma sessão aberta por chamamento** (abrir outra → **409**).
 - Presentes precisam ter papel na Comissão (presidente, relator ou membro, na tela Usuários); só presente declara; impedimento
   exige motivo. `foco` = `{ propostaId, subcriterio }` da pauta e da matriz (ou `null`).
 - Sessão encerrada não aceita alteração (**409**) e **a avaliação (C2) só é aceita em sessão aberta** (**409**).
 - Os esquemas zod ficam em `src/esquemas/` e são os mesmos na `/api` e nos formulários do app.
+
+### Reset da sessão (presidente)
+
+Descarta tudo o que a Comissão gravou **com o `sessaoId` da sessão**: admissibilidade, níveis da D1, experiências
+(e documentos) da D2 e decisões de desempate. **Diligências não são afetadas.** Cada documento volta ao estado
+anterior à sessão — o `antes` do primeiro registro de auditoria daquela sessão para ele; se não existia, é apagado.
+
+| Situação | Resposta |
+|---|---|
+| Proposta afetada homologada | **409** "Reabra antes de resetar" (lista os protocolos) |
+| Registro da sessão alterado depois, em outra sessão (não resetada) ou fora de sessão | **409** "Resete primeiro a sessão posterior" (lista as sessões) |
+| Queda no meio | **503** "Repita a operação para concluir"; a sessão fica `reiniciando` |
+
+Etapas (`api/_lib/resetSessao.ts`): marca a sessão `reiniciando` (nenhum registro novo entra) → reverte em lotes de
+até 400 escritas por transação, cada reversão com auditoria `resetar_sessao` (antes/depois, `resetDaSessao`,
+`justificativa`) → recalcula D1, D2, NF e status das propostas pelas regras de `src/domain` → marca `reiniciada`
+com `reiniciadaPor`, `reiniciadaEm`, `motivo`, `resets` e `historicoResets`. Presentes e declarações ficam; o foco do
+telão é limpo. A repetição é idempotente: pula o que já voltou ao estado anterior. A sessão reiniciada não recebe
+registros (para refazer, abra nova sessão) e a ata registra cada reset (data, hora, presidente e motivo).
+
+Na tela da sessão, **Resetar sessão** (botão destrutivo) fica numa seção própria no fim da página, só para o
+presidente com a permissão. O diálogo mostra a prévia por proposta (o que volta ao valor anterior e o que será
+apagado), os bloqueios em alerta de erro e só habilita com a justificativa e a palavra **RESETAR**.
 
 ### Endpoints da Etapa 3b (avaliação)
 
@@ -264,7 +289,7 @@ O administrador tem todas. Para os demais, cada permissão é ligada na tela Usu
 | Consulta | `consultar` | ver chamamentos, avaliações, sessões, telão e relatórios (somente leitura) |
 | Cadastros | `chamamentos`, `oscs`, `propostas` | criar e editar cada cadastro |
 | Avaliação | `admissibilidade`, `nivelD1`, `experienciasD2`, `diligencias` | registrar cada etapa da avaliação |
-| Sessão e resultado | `sessaoAbrirEncerrar`, `sessaoConduzir`, `homologar`, `reabrir`, `desempate` | sessão, telão e resultado |
+| Sessão e resultado | `sessaoAbrirEncerrar`, `sessaoConduzir`, `homologar`, `reabrir`, `desempate`, `resetarSessao` | sessão, telão e resultado; `resetarSessao` só vale para quem também é o **presidente** da Comissão |
 
 Quem tem qualquer permissão também lê os dados. Gestão de usuários, histórico de alterações e **exclusão de
 cadastros** (chamamento, OSC, proposta): só administrador.
@@ -525,6 +550,7 @@ FASE_AUDITORIA=depois npm run test:e2e:baseline   # medição depois + comparati
 npm run test:e2e:uso        # testes de uso por perfil (relator, membro, presidente, controle, telão), com tempos
 npm run test:e2e:acessibilidade   # teclado, foco visível, zoom 200% e erros anunciados em todas as rotas
 npm run test:e2e:exclusao   # exclusão de cadastros: menu da linha, bloqueios, confirmação e axe (docs/auditoria-design/exclusao/)
+npm run test:e2e:reset      # reset da sessão: prévia, confirmação, sessão reiniciada e ata (docs/auditoria-design/reset-sessao/)
 ```
 
 Resultados e decisões: [`docs/auditoria-design/README.md`](docs/auditoria-design/README.md) (antes × depois),

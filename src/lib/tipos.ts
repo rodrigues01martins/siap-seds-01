@@ -52,9 +52,22 @@ export interface DeclaracaoSessao {
   motivo?: string
 }
 
+/** Reset da sessão (presidente): quem, quando e por quê. */
+export interface ResetSessao {
+  por: { uid: string; email: string | null }
+  em: { toDate(): Date }
+  motivo: string
+}
+
 export interface Sessao {
   data: string
-  status: 'aberta' | 'encerrada'
+  /** reiniciando: reset em andamento (ou interrompido); reiniciada: registros desconsiderados (sem novos registros). */
+  status: 'aberta' | 'encerrada' | 'reiniciando' | 'reiniciada'
+  reiniciadaPor?: { uid: string; email: string | null }
+  reiniciadaEm?: { toDate(): Date }
+  motivo?: string
+  resets?: number
+  historicoResets?: ResetSessao[]
   pauta: string[]
   presentes: PresenteSessao[]
   declaracoes: DeclaracaoSessao[]

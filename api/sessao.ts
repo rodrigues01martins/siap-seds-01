@@ -3,18 +3,22 @@
 // ou encerrar (sessaoAbrirEncerrar). Presentes: quem tem papel na Comissão (usuarios/{uid}.comissao). Sessão encerrada não aceita alteração (409). Tudo auditado.
 // foco = { tipo: admissibilidade | subcriterio | d2 | resumo, propostaId, subcriterio? } (Etapa 5: telão).
 // A avaliação (C2) só é aceita com sessaoId de sessão aberta (api/avaliacao.ts).
+// PATCH "resetar" (permissão resetarSessao E papel de presidente na Comissão, justificativa) descarta o que foi
+// gravado na sessão; GET ?simular=true mostra a prévia (o que será revertido/apagado e os bloqueios). Ver
+// _lib/resetSessao.ts.
 
 import { FieldValue, type Transaction } from 'firebase-admin/firestore'
 import { planoDoSubcriterio } from '../src/domain/avaliacao.js'
 import { ehPapelComissao } from '../src/domain/comissao.js'
 import { podeFazer } from '../src/domain/permissoes.js'
-import { esquemaAbrirSessao, esquemaAlterarSessao, type Declaracao } from '../src/esquemas/sessao.js'
+import { esquemaAbrirSessao, esquemaAlterarSessao, esquemaPreviaReset, type Declaracao } from '../src/esquemas/sessao.js'
 import { obterAdmin } from './_lib/admin.js'
 import { ErroApi, MENSAGENS } from './_lib/erros.js'
 import { gravar, type Autor } from './_lib/gravar.js'
 import { criarRota, json } from './_lib/http.js'
 import { autenticar } from './_lib/porteiro.js'
-import { exigirSemProblemas, lerCorpo } from './_lib/validacao.js'
+import { executarReset, previaReset } from './_lib/resetSessao.js'
+import { exigirSemProblemas, lerConsulta, lerCorpo } from './_lib/validacao.js'
 
 interface Presente {
   uid: string
@@ -62,7 +66,29 @@ async function conferirDeclaracoes(
 
 const assinatura = (autor: Autor) => ({ uid: autor.uid, email: autor.email })
 
+/** Reset: além da permissão resetarSessao, só quem é o presidente da Comissão (usuarios/{uid}.comissao). */
+async function exigirPresidente(requisicao: Request): Promise<Autor> {
+  const autor = await autenticar(requisicao, 'resetarSessao')
+  const cadastro = await db().doc(`usuarios/${autor.uid}`).get()
+  if (cadastro.get('comissao') !== 'presidente') {
+    throw new ErroApi(403, 'Só o presidente da Comissão pode resetar a sessão.')
+  }
+  return autor
+}
+
+/** A ação vem no corpo; lida antes para escolher a exigência (401/403 antes do 400, como nas demais). */
+async function acaoDoCorpo(requisicao: Request): Promise<unknown> {
+  const corpo = (await requisicao.clone().json().catch(() => null)) as { acao?: unknown } | null
+  return corpo?.acao
+}
+
 export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
+  GET: async (requisicao) => {
+    await exigirPresidente(requisicao)
+    const { chamamentoId, sessaoId } = lerConsulta(requisicao, esquemaPreviaReset)
+    return json(200, await previaReset(chamamentoId, sessaoId))
+  },
+
   POST: async (requisicao) => {
     const autor = await autenticar(requisicao, 'sessaoAbrirEncerrar')
     const { chamamentoId, data, pauta, presentes, declaracoes } = await lerCorpo(requisicao, esquemaAbrirSessao)
@@ -106,8 +132,16 @@ export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   },
 
   PATCH: async (requisicao) => {
+    if ((await acaoDoCorpo(requisicao)) === 'resetar') {
+      const autor = await exigirPresidente(requisicao)
+      const alteracao = await lerCorpo(requisicao, esquemaAlterarSessao)
+      if (alteracao.acao !== 'resetar') throw new ErroApi(400, MENSAGENS.dadosInvalidos)
+      const resultado = await executarReset(autor, alteracao.chamamentoId, alteracao.sessaoId, alteracao.justificativa)
+      return json(200, { id: alteracao.sessaoId, chamamentoId: alteracao.chamamentoId, ...resultado })
+    }
     const autor = await autenticar(requisicao, 'sessaoConduzir')
     const alteracao = await lerCorpo(requisicao, esquemaAlterarSessao)
+    if (alteracao.acao === 'resetar') throw new ErroApi(400, MENSAGENS.dadosInvalidos)
     if (alteracao.acao === 'encerrar' && !podeFazer(autor.acesso, 'sessaoAbrirEncerrar')) {
       throw new ErroApi(403, MENSAGENS.semPermissao)
     }

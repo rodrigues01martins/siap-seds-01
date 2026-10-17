@@ -1,6 +1,6 @@
 import ExcelJS from 'exceljs'
 import { describe, expect, it } from 'vitest'
-import { descreverCaminho, diferencas, filtrarAuditoria, limitesDoPeriodo, propostaDoRegistro, type RegistroAuditoria } from './auditoria'
+import { descreverCaminho, diferencas, filtrarAuditoria, limitesDoPeriodo, propostaDoRegistro, type RegistroAuditoria, ACOES_AUDITORIA } from './auditoria'
 import type { Rodape } from './documento'
 import { auditoriaXlsx } from './xlsx'
 
@@ -50,6 +50,10 @@ describe('trilha de auditoria — filtros', () => {
     expect(ids({ de: '2026-11-10' })).toEqual(['r3'])
     expect(ids({ ate: '2026-11-09' })).toEqual(['r1', 'r2'])
     expect(ids({ proposta: 'p1', acao: 'editar', de: '2026-11-09', ate: '2026-11-09' })).toEqual(['r2'])
+  })
+
+  it('a ação "resetar_sessao" (reset da sessão) é uma das ações filtráveis', () => {
+    expect(ACOES_AUDITORIA).toContain('resetar_sessao')
   })
 
   it('limites do período em horário de Brasília (Goiás)', () => {

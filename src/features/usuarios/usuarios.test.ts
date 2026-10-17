@@ -39,9 +39,9 @@ describe('resumo de cada linha', () => {
   })
 
   it('contagem de permissões ativas; administrador = automático', () => {
-    expect(contagemPermissoes(LISTA[0]!)).toBe('2/13')
+    expect(contagemPermissoes(LISTA[0]!)).toBe('2/14')
     expect(contagemPermissoes(LISTA[1]!)).toBe('Automático')
-    expect(contagemPermissoes(u('x'))).toBe('0/13')
+    expect(contagemPermissoes(u('x'))).toBe('0/14')
   })
 })
 

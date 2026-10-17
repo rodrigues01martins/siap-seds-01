@@ -87,7 +87,13 @@ export async function carregarAta(ch: string, s: string): Promise<DadosAta | nul
 
   return {
     chamamento: { numero: chamamento.numero, titulo: chamamento.titulo },
-    sessao: { id: sessao.id, data: sessao.data, presentes: sessao.presentes, declaracoes: sessao.declaracoes },
+    sessao: {
+      id: sessao.id,
+      data: sessao.data,
+      presentes: sessao.presentes,
+      declaracoes: sessao.declaracoes,
+      resets: (sessao.historicoResets ?? []).map((r) => ({ em: r.em.toDate(), presidente: r.por.email ?? r.por.uid, motivo: r.motivo })),
+    },
     propostas: pauta.map((id) => {
       const p = porId.get(id)!
       return {

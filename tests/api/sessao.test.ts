@@ -67,9 +67,9 @@ const alterar = (sessaoId: string, dados: Record<string, unknown>) => ({ chamame
 
 describe('/api/sessao — acesso', () => {
   it('405 com Allow, 401 sem token', async () => {
-    const r = await chamar(rota, 'GET', undefined, presidente.token)
+    const r = await chamar(rota, 'PUT', undefined, presidente.token)
     expect(r.status).toBe(405)
-    expect(r.headers.get('Allow')).toBe('POST, PATCH')
+    expect(r.headers.get('Allow')).toBe('GET, POST, PATCH')
     expect((await chamar(rota, 'POST', abertura(), null)).status).toBe(401)
   })
 

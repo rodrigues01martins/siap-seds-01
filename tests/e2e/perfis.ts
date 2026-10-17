@@ -63,6 +63,10 @@ export const PROPOSTA_USO = 'uso-p1'
 export const CHAMAMENTO_EXCLUIR = 'e2e-excluir'
 export const CHAMAMENTO_EXCLUIR_PROPOSTA = 'e2e-excluir-prop'
 export const PROPOSTA_EXCLUIR = 'e2e-excluir-p1'
+/** Reset da sessão (resetSessao.spec.ts): chamamento com proposta admitida sem níveis e sessão aberta. */
+export const CHAMAMENTO_RESET = 'e2e-reset'
+export const PROPOSTA_RESET = 'e2e-reset-p1'
+export const SESSAO_RESET = 'e2e-reset-sessao'
 
 /** Primeira proposta avaliada do ensaio (a mais completa: apta). */
 export const propostaE2E = (propostas: { id: string; esperado: string }[]) => propostas.find((p) => p.esperado === 'apta')!.id

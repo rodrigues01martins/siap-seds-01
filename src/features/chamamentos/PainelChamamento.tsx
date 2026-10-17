@@ -10,7 +10,7 @@ import { DataTable } from '../../components/ui/DataTable'
 import { MenuAcoes } from '../../components/ui/MenuAcoes'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { ErrorState } from '../../components/ui/ErrorState'
-import { Badge, StatusBadge } from '../../components/ui/StatusBadge'
+import { StatusBadge } from '../../components/ui/StatusBadge'
 import { Skeleton } from '../../components/ui/Skeleton'
 import { dataBr } from '../../lib/datas'
 import { formatarCnpj } from '../../domain/cnpj'
@@ -20,6 +20,7 @@ import { useColecao, useDocumento, type ComId } from '../../lib/firestore'
 import type { Chamamento, Osc, Proposta, Sessao } from '../../lib/tipos'
 import { useUsuario } from '../auth/useUsuario'
 import { emExclusao, SeloEmExclusao, useExclusao } from '../exclusao/useExclusao'
+import { SeloSessao } from '../sessoes/SeloSessao'
 
 const numero = (valor: number | undefined) => (valor === undefined ? '—' : valor.toLocaleString('pt-BR', { maximumFractionDigits: 2 }))
 
@@ -162,7 +163,7 @@ export function PainelChamamento() {
           vazio={{ titulo: 'Nenhuma sessão registrada' }}
           colunas={[
             { id: 'data', titulo: 'Data', celula: (s) => dataBr(s.data), ordenar: (s) => s.data },
-            { id: 'situacao', titulo: 'Situação', celula: (s) => <Badge tom={s.status === 'aberta' ? 'success' : 'neutral'}>{s.status === 'aberta' ? 'Aberta' : 'Encerrada'}</Badge> },
+            { id: 'situacao', titulo: 'Situação', celula: (s) => <SeloSessao status={s.status} /> },
             { id: 'presentes', titulo: 'Presentes', celula: (s) => String(s.presentes.length), alinhar: 'direita' },
             { id: 'pauta', titulo: 'Propostas na pauta', celula: (s) => String(s.pauta.length), alinhar: 'direita' },
           ]}

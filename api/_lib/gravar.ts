@@ -12,7 +12,8 @@ export type Autor = Assinatura
 
 export interface Operacao {
   caminho: string
-  acao: 'criar' | 'editar' | 'excluir'
+  /** restaurar: grava o documento exatamente como `dados` (sem dados = apaga); usado pelo reset da sessão. */
+  acao: 'criar' | 'editar' | 'excluir' | 'restaurar'
   dados?: Record<string, unknown>
 }
 
@@ -46,6 +47,11 @@ function semIndefinidos(dados: Record<string, unknown> = {}): Record<string, unk
   return Object.fromEntries(Object.entries(dados).filter(([, valor]) => valor !== undefined))
 }
 
+/** FieldValue.delete() apaga o campo no documento; no "depois" da auditoria o campo simplesmente some. */
+function semCamposApagados(dados: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(dados).filter(([, v]) => !(v instanceof FieldValue && v.isEqual(FieldValue.delete()))))
+}
+
 /**
  * `preparar` roda dentro da transação: pode ler (validar referências) e devolve as operações.
  * Todas as leituras acontecem antes das escritas, como exige o Firestore.
@@ -58,6 +64,8 @@ export async function gravar(
     permitirPropostaHomologada?: boolean
     /** Sessão da Comissão em que a gravação acontece: vai para cada registro de auditoria (base do reset). */
     sessaoId?: string
+    /** Ação registrada na auditoria no lugar da ação da operação (ex.: resetar_sessao) e campos extras. */
+    auditoria?: { acao: string; extras?: Record<string, unknown> }
   } = {},
 ): Promise<void> {
   const { db } = obterAdmin()
@@ -82,14 +90,18 @@ export async function gravar(
       const dados = semIndefinidos(op.dados)
       let depois: Record<string, unknown> | null
 
-      if (op.acao === 'criar') {
+      if (op.acao === 'restaurar') {
+        depois = op.dados ?? null
+        if (op.dados) transacao.set(referencia, op.dados)
+        else if (atual.exists) transacao.delete(referencia)
+      } else if (op.acao === 'criar') {
         if (atual.exists) throw new ErroApi(409, MENSAGENS.jaExiste)
         depois = dados
         transacao.create(referencia, { ...dados, criadoEm: agora, atualizadoEm: agora })
       } else {
         if (!atual.exists) throw new ErroApi(404, MENSAGENS.naoEncontrado)
         if (op.acao === 'editar') {
-          depois = { ...antes, ...dados }
+          depois = semCamposApagados({ ...antes, ...dados })
           transacao.update(referencia, { ...dados, atualizadoEm: agora })
         } else {
           depois = null
@@ -99,13 +111,14 @@ export async function gravar(
 
       transacao.create(db.collection('auditoria').doc(), {
         caminho: op.caminho,
-        acao: op.acao,
+        acao: opcoes.auditoria?.acao ?? op.acao,
         antes,
         depois,
         uid: autor.uid,
         email: autor.email,
         perfil: autor.perfil,
         ...(opcoes.sessaoId ? { sessaoId: opcoes.sessaoId } : {}),
+        ...opcoes.auditoria?.extras,
         dataHora: agora,
       })
     })

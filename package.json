@@ -26,6 +26,7 @@
     "test:e2e:etapa4": "firebase emulators:exec --only auth,firestore --project demo-siap-seds \"playwright test tests/e2e/etapa4.spec.ts\"",
     "test:e2e:uso": "firebase emulators:exec --only auth,firestore --project demo-siap-seds \"playwright test tests/e2e/uso.spec.ts\"",
     "test:e2e:exclusao": "firebase emulators:exec --only auth,firestore --project demo-siap-seds \"playwright test tests/e2e/exclusao.spec.ts\"",
+    "test:e2e:reset": "firebase emulators:exec --only auth,firestore --project demo-siap-seds \"playwright test tests/e2e/resetSessao.spec.ts\"",
     "test:e2e:acessibilidade": "firebase emulators:exec --only auth,firestore --project demo-siap-seds \"playwright test tests/e2e/acessibilidade.spec.ts\"",
     "remover-campos-correcao": "tsx scripts/remover-campos-correcao.ts"
   },

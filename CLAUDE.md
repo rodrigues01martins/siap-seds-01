@@ -46,12 +46,29 @@ Eliminatórias: D1 < 67,2 → inapta; nível 0 em 1.1 ou 1.2 → desclassificada
   (documento + subcoleções), justificativa, uid e perfil; depois recursiveDelete; se falhar, fica "excluindo" e a
   repetição conclui (idempotente). Prévia: GET ?simular=true. Na tela: "Excluir" no menu de ações da linha
   (MenuAcoes), nunca ação primária; ConfirmDialog com a prévia, a justificativa e o identificador digitado.
+- Gravações da Comissão só em sessão aberta: nível da D1, admissibilidade, experiências da D2 e desempate exigem o
+  sessaoId de sessão aberta do chamamento (proposta na pauta, exceto no desempate); o sessaoId vai para o documento
+  e para cada registro de auditoria da operação (gravar({ sessaoId })). Diligências não dependem de sessão.
+- Reset da sessão (PATCH /api/sessao ação "resetar"; prévia GET ?simular=true): somente o presidente (permissão
+  resetarSessao + papel presidente), justificativa obrigatória (mín. 20). Desfaz tudo o que foi gravado com o
+  sessaoId (admissibilidade, níveis da D1, experiências e documentos da D2, desempates; diligências não): cada
+  documento volta ao "antes" do primeiro registro de auditoria da sessão para ele (antes nulo → apagado).
+  Bloqueios 409: proposta afetada homologada ("Reabra antes de resetar"); registro alterado depois em outra sessão
+  não resetada ou fora de sessão ("Resete primeiro a sessão posterior"). Execução (api/_lib/resetSessao.ts): marca
+  a sessão "reiniciando", reverte em lotes de até 400 escritas por transação (auditoria "resetar_sessao" com
+  antes/depois), recalcula D1, D2, NF e status pelas regras de src/domain (recalcular.ts) e marca "reiniciada"
+  (reiniciadaPor, reiniciadaEm, motivo, resets, historicoResets; presentes e declarações mantidos; foco limpo).
+  Interrompido, fica "reiniciando" e a repetição continua de onde parou. Sessão reiniciada não recebe registros
+  (para refazer, abre-se nova sessão). A ata registra cada reset (data, hora, presidente, motivo). Na tela da
+  sessão, "Resetar sessão" (destructive) fica numa seção própria, fora das ações do cabeçalho; ConfirmDialog com
+  a prévia, a justificativa e a palavra RESETAR.
 - O catálogo de componentes não faz parte do sistema; a documentação de componentes é mantida fora do
   repositório. Decisão de 15/10/2026. (Rota inexistente, como /ui, mostra a página "não encontrado".)
 
 ## Acesso (perfil único: Administrador)
 - Cadastro em usuarios/{uid}: nome, email, admin, permissoes, ativo e comissao (papel na Comissão:
-  presidente, relator ou membro; só identifica presentes na sessão e assinaturas da ata, não dá permissão).
+  presidente, relator ou membro; identifica presentes na sessão e assinaturas da ata e não dá permissão —
+  única exceção: o reset da sessão exige a permissão resetarSessao E o papel presidente).
 - Administrador: pode tudo e faz a gestão de usuários na tela Usuários (/usuarios, api/usuarios.ts): novo usuário
   (conta criada com senha aleatória + e-mail "redefinir senha" do Firebase, com que a pessoa cria a própria
   senha), permissões por área, tornar/remover administrador, papel, desativar. Ninguém tira o próprio admin
@@ -67,7 +84,7 @@ Fonte no código: src/domain/permissoes.ts (teste garante que bate com esta tabe
 | Consulta | consultar (somente leitura) |
 | Cadastros | chamamentos, oscs, propostas |
 | Avaliação | admissibilidade, nivelD1, experienciasD2, diligencias |
-| Sessão e resultado | sessaoAbrirEncerrar, sessaoConduzir, homologar, reabrir, desempate |
+| Sessão e resultado | sessaoAbrirEncerrar, sessaoConduzir, homologar, reabrir, desempate, resetarSessao (+ papel presidente) |
 | Exclusão de cadastros | — somente administrador (não é permissão liberável; exigência 'admin' do porteiro) |
 
 Empate de NF (RF-27): aplicam-se, em ordem, os critérios do Edital da matriz (matriz_2026.json: desempate e
@@ -105,6 +122,7 @@ npm run test:e2e:etapa3 (telas migradas: teclado, axe 1280/768 e screenshots →
 npm run test:e2e:etapa4 (telas operacionais: axe, screenshots antes/depois e fluxo completo pela /api nos emuladores)
 npm run test:e2e:uso (testes de uso por perfil, com tempos) | npm run test:e2e:acessibilidade (teclado, foco, zoom 200%, aria-live)
 npm run test:e2e:exclusao (exclusão de cadastros pela interface: bloqueios, confirmação, axe → docs/auditoria-design/exclusao/)
+npm run test:e2e:reset (reset da sessão pela interface: prévia, confirmação, sessão reiniciada, ata → docs/auditoria-design/reset-sessao/)
 Teste com usuários: docs/TESTE-USABILIDADE.md · Backlog de interface: docs/auditoria-design/pendencias.md
 npm run seed:matriz -- --projeto dev|prod | npm run tornar-admin -- --projeto dev|prod --email X (emergência)
 npm run backup -- --projeto dev|prod [--chamamento ID] | npm run restaurar -- --projeto dev --arquivo F | npm run ensaio -- --projeto dev

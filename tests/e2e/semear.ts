@@ -4,7 +4,7 @@ import { initializeApp } from 'firebase-admin/app'
 import { getAuth } from 'firebase-admin/auth'
 import { getFirestore } from 'firebase-admin/firestore'
 import { CHAMAMENTO_ENSAIO, montarEnsaio } from '../../scripts/lib/ensaio'
-import { CHAMAMENTO_EXCLUIR, CHAMAMENTO_EXCLUIR_PROPOSTA, CHAMAMENTO_FLUXO, CHAMAMENTOS_USO, PROPOSTA_EXCLUIR, PERFIS_E2E, PERFIS_USO, PROPOSTA_FLUXO, PROPOSTA_USO, SENHA_E2E, SESSAO_ABERTA, propostaE2E } from './perfis'
+import { CHAMAMENTO_EXCLUIR, CHAMAMENTO_EXCLUIR_PROPOSTA, CHAMAMENTO_RESET, PROPOSTA_RESET, SESSAO_RESET, CHAMAMENTO_FLUXO, CHAMAMENTOS_USO, PROPOSTA_EXCLUIR, PERFIS_E2E, PERFIS_USO, PROPOSTA_FLUXO, PROPOSTA_USO, SENHA_E2E, SESSAO_ABERTA, propostaE2E } from './perfis'
 
 export default async function semear(): Promise<void> {
   if (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_HOST) {
@@ -99,5 +99,19 @@ export default async function semear(): Promise<void> {
   for (const [caminho, dados] of Object.entries(ensaio.documentos)) {
     if (caminho.startsWith(`${origem}/`)) lote.set(db.doc(`${excluir}/${caminho.slice(origem.length + 1)}`), dados)
   }
+  // Reset da sessão (resetSessao.spec.ts): proposta admitida, sem níveis, numa sessão aberta só dela.
+  lote.set(db.doc(`chamamentos/${CHAMAMENTO_RESET}`), { ...chamamentoEnsaio, numero: 'E2E-RESET/2026', titulo: 'E2E — reset da sessão' })
+  const propostaReset: Record<string, unknown> = { ...ensaio.documentos[origem]!, protocolo: 'E2E-RESET-001', bloqueada: false }
+  delete propostaReset.totais
+  lote.set(db.doc(`chamamentos/${CHAMAMENTO_RESET}/propostas/${PROPOSTA_RESET}`), propostaReset)
+  lote.set(db.doc(`chamamentos/${CHAMAMENTO_RESET}/sessoes/${SESSAO_RESET}`), {
+    data: '2026-11-10',
+    status: 'aberta',
+    pauta: [PROPOSTA_RESET],
+    presentes: comissao.map((p) => ({ uid: p.uid, email: p.email, perfil: p.comissao })),
+    declaracoes: comissao.map((p) => ({ uid: p.uid, semImpedimento: true })),
+    foco: null,
+    abertaPor: { uid: 'e2e', email: null },
+  })
   await lote.commit()
 }

@@ -4,8 +4,9 @@
 
 import { normalizar, serializarCanonico } from './verificacao.js'
 
-export type AcaoAuditoria = 'criar' | 'editar' | 'excluir'
-export const ACOES_AUDITORIA: readonly AcaoAuditoria[] = ['criar', 'editar', 'excluir']
+/** resetar_sessao: reversão feita pelo reset da sessão (api/_lib/resetSessao.ts). */
+export type AcaoAuditoria = 'criar' | 'editar' | 'excluir' | 'resetar_sessao'
+export const ACOES_AUDITORIA: readonly AcaoAuditoria[] = ['criar', 'editar', 'excluir', 'resetar_sessao']
 
 export interface RegistroAuditoria {
   id: string

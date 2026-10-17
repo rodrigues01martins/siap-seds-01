@@ -14,10 +14,10 @@ describe('áreas e permissões (espelho da seção do CLAUDE.md)', () => {
       ['Consulta', ['consultar']],
       ['Cadastros', ['chamamentos', 'oscs', 'propostas']],
       ['Avaliação', ['admissibilidade', 'nivelD1', 'experienciasD2', 'diligencias']],
-      ['Sessão e resultado', ['sessaoAbrirEncerrar', 'sessaoConduzir', 'homologar', 'reabrir', 'desempate']],
+      ['Sessão e resultado', ['sessaoAbrirEncerrar', 'sessaoConduzir', 'homologar', 'reabrir', 'desempate', 'resetarSessao']],
     ])
-    expect(PERMISSOES).toHaveLength(13)
-    expect(new Set(PERMISSOES).size).toBe(13)
+    expect(PERMISSOES).toHaveLength(14)
+    expect(new Set(PERMISSOES).size).toBe(14)
   })
 })
 
