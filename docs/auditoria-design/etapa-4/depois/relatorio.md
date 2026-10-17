@@ -15,6 +15,6 @@ Screenshots nesta pasta (1280 e 768 px, página inteira).
 | administrador | classificacao | `/chamamentos/ensaio-2026/lotes/L1/classificacao` | 0 | 0 |
 | administrador | ata | `/chamamentos/ensaio-2026/sessoes/e2e-sessao-aberta/ata` | 0 | 0 |
 | administrador | projecao | `/projecao/ensaio-2026/e2e-sessao-aberta` | 0 | 0 |
-| avaliador | sessao | `/chamamentos/ensaio-2026/sessoes/e2e-sessao-aberta` | 0 | 0 |
-| avaliador | d1 | `/chamamentos/ensaio-2026/propostas/ensaio-l1-beta/d1` | 0 | 0 |
+| presidente | sessao | `/chamamentos/ensaio-2026/sessoes/e2e-sessao-aberta` | 0 | 0 |
+| presidente | d1 | `/chamamentos/ensaio-2026/propostas/ensaio-l1-beta/d1` | 0 | 0 |
 
