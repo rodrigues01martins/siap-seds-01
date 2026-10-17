@@ -2,12 +2,12 @@
 //
 // Uso: FIREBASE_SERVICE_ACCOUNT='{...}' npm run seed:matriz -- --projeto dev [--forcar] [--confirmar]
 
-import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { parseArgs } from 'node:util'
 import { FieldValue, getFirestore } from 'firebase-admin/firestore'
 import { validarMatriz } from '../src/domain/matriz'
 import type { Matriz } from '../src/domain/matriz/tipos'
+import { assinaturaMatriz } from '../api/_lib/matriz'
 import { executar, iniciarAdmin } from './lib/admin'
 import { autoriaDeScript } from './lib/autoria'
 
@@ -25,7 +25,8 @@ executar(async () => {
 
   const conteudo = readFileSync(new URL(`../${ARQUIVO}`, import.meta.url), 'utf8')
   const matriz = validarMatriz(JSON.parse(conteudo) as Matriz)
-  const sha256 = createHash('sha256').update(conteudo).digest('hex')
+  // Mesma assinatura da /api (Administração → Limpar base → Recarregar matriz).
+  const sha256 = assinaturaMatriz(matriz)
 
   const db = getFirestore(app)
   const ref = db.doc(`matrizes/${matriz.versao}`)

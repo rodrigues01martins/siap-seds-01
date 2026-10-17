@@ -20,7 +20,7 @@ export function apiNoVite(): Plugin {
     configureServer(servidor) {
       servidor.middlewares.use(async (req, res, proximo) => {
         const url = new URL(req.url ?? '/', 'http://localhost')
-        const rota = /^\/api\/([a-z]+)$/.exec(url.pathname)?.[1]
+        const rota = /^\/api\/([a-z]+(?:\/[a-z-]+)?)$/.exec(url.pathname)?.[1]
         if (!rota) return proximo()
         try {
           const modulo = (await servidor.ssrLoadModule(`/api/${rota}.ts`)) as Rota

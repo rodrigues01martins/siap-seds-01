@@ -85,6 +85,13 @@ Eliminatórias: D1 < 67,2 → inapta; nível 0 em 1.1 ou 1.2 → desclassificada
   PUT /api/avaliacao mescla nível (null desmarca), justificativa e páginas; a admissibilidade grava motivo e páginas
   em branco; os mínimos são conferidos ao concluir. Salvar não move o telão: o interruptor "Projetar" (cabeçalho da
   avaliação) leva o foco ao subcritério tocado e à aba (admissão, D1, D2 = d2, Resultado = resumo).
+- Limpeza da base (Simplificação 4/4, 17/10/2026): api/admin/limpar-base.ts, só o admin (tela Administração →
+  Limpar base, /admin/limpar-base). GET ?simular=true: prévia por coleção, ambiente DEV/PRODUÇÃO (pelo projectId,
+  api/_lib/ambiente.ts) e situação da matriz. POST { acao: 'limpar', confirmacao: 'APAGAR TUDO', projectId,
+  removerUsuarios? }: recursiveDelete de toda coleção da raiz menos matrizes/ e usuarios/ (com removerUsuarios, Auth e
+  usuarios/ ficam só com o admin que executa) e, no fim, a matriz atual em matrizes/2026. POST { acao:
+  'recarregar-matriz' } regrava a matriz (api/_lib/matriz.ts, mesma assinatura do seed:matriz). Única exclusão com
+  digitação. Funções em subpastas de api/ contam no limite de 12 (limiteFuncoes.test.ts).
 - O catálogo de componentes não faz parte do sistema; a documentação de componentes é mantida fora do
   repositório. Decisão de 15/10/2026. (Rota inexistente, como /ui, mostra a página "não encontrado".)
 
@@ -132,7 +139,7 @@ a ordem com justificativa (api/desempate.ts; 409 para grupo que o Edital já res
 - Commits no padrão: feat:, fix:, test:, chore:, docs:
 - Primeiro admin de cada projeto: e-mail em api/_lib/adminsIniciais.ts; vira admin sozinho no primeiro login
   (PUT /api/usuarios), só enquanto o projeto não tiver admin. Demais usuários pela tela Usuários.
-- Plano Hobby da Vercel: no máximo 12 arquivos de função em api/ (api/_lib/limiteFuncoes.test.ts). Endpoint novo
+- Plano Hobby da Vercel: no máximo 12 arquivos de função em api/, inclusive subpastas (api/_lib/limiteFuncoes.test.ts). Endpoint novo
   entra como método ou ação de um arquivo existente; utilitários ficam em api/_lib.
 
 ## Comandos
@@ -146,4 +153,4 @@ npm run test:e2e:exclusao (exclusão livre pela interface: lixeira, prévia, cas
 Teste com usuários: docs/TESTE-USABILIDADE.md · Backlog de interface: docs/auditoria-design/pendencias.md
 npm run seed:matriz -- --projeto dev|prod | npm run tornar-admin -- --projeto dev|prod --email X (emergência)
 npm run backup -- --projeto dev|prod [--chamamento ID] | npm run restaurar -- --projeto dev --arquivo F | npm run ensaio -- --projeto dev
-Dia da sessão: docs/ROTEIRO-SESSAO.md · Produção: docs/CHECKLIST-PRODUCAO.md
+Primeira sessão real: docs/PRIMEIRA-SESSAO.md · Dia da sessão: docs/ROTEIRO-SESSAO.md · Produção: docs/CHECKLIST-PRODUCAO.md

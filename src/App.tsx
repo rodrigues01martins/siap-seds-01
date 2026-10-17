@@ -20,6 +20,7 @@ import { TelaClassificacao } from './features/resultado/TelaClassificacao'
 import { ConduzirSessao } from './features/sessoes/ConduzirSessao'
 import { NovaSessao } from './features/sessoes/NovaSessao'
 import { TelaUsuarios } from './features/usuarios/TelaUsuarios'
+import { TelaLimparBase } from './features/admin/TelaLimparBase'
 
 
 /** Tela que exige o perfil admin (gestão de usuários); sem `exige`, basta ter perfil (admin ou presidente). */
@@ -61,6 +62,7 @@ export default function App() {
             <Route path="chamamentos/:ch/lotes/:lote/classificacao" element={so(null, <TelaClassificacao />)} />
             <Route path="oscs" element={so(null, <TelaOscs />)} />
             <Route path="usuarios" element={so('admin', <TelaUsuarios />)} />
+            <Route path="admin/limpar-base" element={so('admin', <TelaLimparBase />)} />
             {/* Qualquer outro endereço (ex.: o antigo /ui): página "não encontrado", dentro do app. */}
             <Route path="*" element={<NaoEncontrado />} />
           </Route>

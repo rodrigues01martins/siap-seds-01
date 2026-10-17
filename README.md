@@ -24,7 +24,7 @@ Matriz de Avaliação (Anexo IV). Regras de arquitetura e convenções: veja [`C
 | `npm run ensaio -- --projeto dev [--recriar\|--remover]` | Dados fictícios para ensaiar a sessão (seção 7) |
 | `npm run remover-campos-correcao -- --projeto dev [--simular]` | Apaga índice de correção e data-base dos chamamentos antigos (seção 7) |
 
-Dia da sessão: [`docs/ROTEIRO-SESSAO.md`](docs/ROTEIRO-SESSAO.md). Antes de usar em produção:
+Primeira sessão real: [`docs/PRIMEIRA-SESSAO.md`](docs/PRIMEIRA-SESSAO.md). Dia da sessão: [`docs/ROTEIRO-SESSAO.md`](docs/ROTEIRO-SESSAO.md). Antes de usar em produção:
 [`docs/CHECKLIST-PRODUCAO.md`](docs/CHECKLIST-PRODUCAO.md).
 
 ## Fluxo de trabalho: `dev` → `main`
@@ -189,6 +189,21 @@ passa por uma função `/api`, que:
   Comissão **já atualizados conforme o Edital** (Anexo IV, 3.5.1, IV); a memória de cálculo e o espelho dizem isso.
   Enviar `indiceCorrecao` ou `dataBaseCorrecao` dá **400** ("Campo não permitido."). Para apagar esses campos de
   chamamentos antigos: `npm run remover-campos-correcao` (seção 7).
+
+### Limpeza da base — começar do zero (só o admin)
+
+`/api/admin/limpar-base` (tela **Administração → Limpar base**, `/admin/limpar-base`):
+
+| Método | Corpo / consulta | O que faz |
+|---|---|---|
+| `GET` | `?simular=true` | prévia: documentos por coleção (subcoleções dos chamamentos somadas pelo nome), outros usuários, `projectId`, **ambiente** (`DEV` ou `PRODUÇÃO`) e se `matrizes/2026` está atual |
+| `POST` | `{ acao: 'limpar', confirmacao: 'APAGAR TUDO', projectId, removerUsuarios? }` | apaga recursivamente todas as coleções da raiz (chamamentos com sessões, propostas e subcoleções; oscs; as obsoletas: auditoria, diligencias, permissoes…), **menos `matrizes/` e `usuarios/`**; com `removerUsuarios`, tira do Authentication e de `usuarios/` todos, menos o admin que executa; no fim, deixa a matriz atual. `projectId` diferente do servidor → **409** |
+| `POST` | `{ acao: 'recarregar-matriz' }` | regrava `matrizes/2026` com `src/domain/matriz/matriz_2026.json` (assinatura SHA-256 em `origem.sha256`, a mesma do `seed:matriz`) |
+
+- É a **única exclusão com digitação** (APAGAR TUDO), por apagar o sistema inteiro. A tela mostra o ambiente em
+  destaque (PRODUÇÃO em vermelho). Faça backup antes (`npm run backup -- --projeto prod`).
+- Interrompida (tempo da função: `maxDuration` de 60 s em `vercel.json`), basta repetir: o que já foi apagado não
+  volta. Primeira sessão real: [`docs/PRIMEIRA-SESSAO.md`](docs/PRIMEIRA-SESSAO.md).
 
 ### Exclusão livre (admin ou presidente)
 
@@ -527,6 +542,7 @@ Fonte de verdade: [`docs/DESIGN-SYSTEM-SEDS.md`](docs/DESIGN-SYSTEM-SEDS.md). Co
 | `/projecao/:ch/:s` | (layout próprio) | telão: alto contraste, sem menu nem ações |
 | `/oscs` | ListPage | OSCs (painel lateral para cadastrar e editar) |
 | `/usuarios` | ListPage | usuários e perfis (admin ou presidente) |
+| `/admin/limpar-base` | DetailPage | limpar a base (só o admin): ambiente em destaque, prévia, remover usuários, APAGAR TUDO, recarregar matriz |
 | qualquer outro endereço (ex.: `/ui`) | DetailPage | página "não encontrado", com o endereço pedido e o link para o início |
 
 O catálogo de componentes (`/ui`) foi removido (Manutenção 2): a documentação de componentes fica fora do

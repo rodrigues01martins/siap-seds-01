@@ -3,6 +3,7 @@
 // Admin e presidente veem tudo; "Usuários" só o admin (src/domain/permissoes). Separado do React para teste.
 
 import {
+  DatabaseZap,
   Building2,
   ClipboardList,
   FilePlus2,
@@ -88,6 +89,7 @@ export function gruposDeNavegacao(acesso: Acesso | null, { chamamento, sessaoAbe
       rotulo: 'Administração',
       itens: [
         { rotulo: 'Usuários', caminho: '/usuarios', icone: Users, exige: 'admin' },
+        { rotulo: 'Limpar base', caminho: '/admin/limpar-base', icone: DatabaseZap, exige: 'admin' },
       ],
     },
   ]

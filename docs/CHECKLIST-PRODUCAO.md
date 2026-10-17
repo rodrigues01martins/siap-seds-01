@@ -39,7 +39,8 @@ Os passos detalhados estão no [README](../README.md) (seções 1 a 4).
 ## 4. Matriz
 
 - [ ] O app usa a matriz do código (`src/domain/matriz/matriz_2026.json`); nada a fazer no console.
-- [ ] Opcional: registrar em `matrizes/2026` pelo terminal (`npm run seed:matriz -- --projeto prod --confirmar`).
+- [ ] `matrizes/2026` atual: **Administração → Limpar base → Recarregar matriz** (o selo fica "Atual"), ou pelo
+      terminal (`npm run seed:matriz -- --projeto prod --confirmar`).
 
 ## 5. Primeiro administrador e usuários reais
 

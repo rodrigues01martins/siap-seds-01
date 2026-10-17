@@ -74,6 +74,8 @@ export function rotasE2E(proposta: string): RotaE2E[] {
     { slug: 'classificacao', caminho: `${ch}/lotes/L1/classificacao`, exige: null },
     { slug: 'oscs', caminho: '/oscs', exige: null },
     { slug: 'usuarios', caminho: '/usuarios', exige: 'admin' },
+    // Só a prévia (GET): a tela nunca apaga sem APAGAR TUDO digitado.
+    { slug: 'limpar-base', caminho: '/admin/limpar-base', exige: 'admin' },
     { slug: 'projecao', caminho: `/projecao/${CHAMAMENTO_ENSAIO}/${SESSAO_ABERTA}`, exige: null },
   ]
 }

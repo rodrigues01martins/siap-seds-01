@@ -17,7 +17,7 @@ describe('navegação por domínio (§12: agrupar por domínio; itens conforme o
     expect(mapa(ADMIN)).toEqual([
       ['Início', ['Chamamentos → /']],
       ['Cadastros', ['Novo chamamento → /chamamentos/novo', 'OSCs → /oscs']],
-      ['Administração', ['Usuários → /usuarios']],
+      ['Administração', ['Usuários → /usuarios', 'Limpar base → /admin/limpar-base']],
     ])
   })
 
