@@ -70,7 +70,8 @@ describe('/api/avaliacao — validação (400)', () => {
     ['subcritério inexistente', { codigo: '7.1' }, 'codigo', 'Subcritério inexistente na matriz.'],
     ['nível fora da escala', { nivel: 5 }, 'nivel', 'O nível deve ser um inteiro de 0 a 4.'],
     ['página acima do corte do PA3 (8)', { paginas: [9] }, 'paginas', 'Página 9 acima do limite de 8 páginas do PA3.'],
-    ['justificativa curta', { justificativa: 'curta' }, 'justificativa', 'A justificativa deve ter ao menos 20 caracteres.'],
+    ['nível em texto', { nivel: '3' }, 'nivel', 'O nível deve ser um inteiro de 0 a 4.'],
+    ['página não inteira', { paginas: [0] }, 'paginas', 'As páginas devem ser números inteiros a partir de 1.'],
     ['decisão (removida)', { decisao: 'maioria' }, 'decisao', 'Campo não permitido.'],
     ['voto divergente (removido)', { votoDivergente: 'Membro X votou 2.' }, 'votoDivergente', 'Campo não permitido.'],
   ])('%s', async (_caso, ajuste, campo, mensagem) => {
@@ -85,10 +86,9 @@ describe('/api/avaliacao — validação (400)', () => {
     expect(Object.keys(r.corpo?.campos ?? {})).toEqual(['nivel'])
   })
 
-  it('mínimo da justificativa vem do chamamento (configurável)', async () => {
-    await semearProposta({ justificativaMinima: 80 })
-    const r = await chamar(rota, 'PUT', registro(), presidente.token)
-    expect(r).toMatchObject({ status: 400, corpo: { campos: { justificativa: 'A justificativa deve ter ao menos 80 caracteres.' } } })
+  it('só o subcritério, sem nível, justificativa nem páginas → 400', async () => {
+    const r = await chamar(rota, 'PUT', { chamamentoId: CH, propostaId: PROP, sessaoId: SESSAO, codigo: '3.1' }, presidente.token)
+    expect(r).toMatchObject({ status: 400, corpo: { erro: 'Informe o nível, a justificativa ou as páginas.' } })
   })
 
   it('proposta inexistente → 404', async () => {
@@ -155,6 +155,47 @@ describe('/api/avaliacao — gravação e recálculo (C4)', () => {
   })
 })
 
+describe('/api/avaliacao — salvamento automático: campos parciais mesclados (Simplificação 3/4)', () => {
+  const caminho = `${CAMINHO_PROPOSTA}/avaliacoes/3.1`
+  const parcial = (campos: Record<string, unknown>) => ({ chamamentoId: CH, propostaId: PROP, sessaoId: SESSAO, codigo: '3.1', ...campos })
+
+  it('só o nível (clique no botão 0–4): grava na hora, com justificativa vazia e sem páginas', async () => {
+    const r = await chamar(rota, 'PUT', parcial({ nivel: 3 }), presidente.token)
+    expect(r).toMatchObject({ status: 200, corpo: { codigo: '3.1', totais: { d1: 3, status: 'pendente' } } })
+    expect(await ler(caminho)).toMatchObject({ nivel: 3, justificativa: '', paginas: [], sessaoId: SESSAO })
+  })
+
+  it('só a justificativa, ainda curta (pendência, conferida ao concluir): grava sem nível; D1 não conta o subcritério', async () => {
+    const r = await chamar(rota, 'PUT', parcial({ justificativa: 'Fluxos descritos' }), presidente.token)
+    expect(r).toMatchObject({ status: 200, corpo: { totais: { d1: 0, pendentes: expect.arrayContaining(['3.1']) } } })
+    expect(await ler(caminho)).toMatchObject({ nivel: null, justificativa: 'Fluxos descritos', paginas: [] })
+  })
+
+  it('mescla com o que já está gravado: nível, depois justificativa, depois páginas', async () => {
+    await chamar(rota, 'PUT', parcial({ nivel: 2 }), presidente.token)
+    await chamar(rota, 'PUT', parcial({ justificativa: 'Metodologia descrita com fluxos e responsáveis.' }), admin.token)
+    await chamar(rota, 'PUT', parcial({ paginas: [5, 2, 5] }), presidente.token)
+    expect(await ler(caminho)).toMatchObject({
+      nivel: 2,
+      justificativa: 'Metodologia descrita com fluxos e responsáveis.',
+      paginas: [2, 5],
+      atualizadoPor: autoria(presidente),
+    })
+  })
+
+  it('nível null desmarca o nível (volta a pendente) e mantém a justificativa', async () => {
+    await chamar(rota, 'PUT', registro(), presidente.token)
+    const r = await chamar(rota, 'PUT', parcial({ nivel: null }), presidente.token)
+    expect(r.corpo?.totais).toMatchObject({ d1: 0 })
+    expect(await ler(caminho)).toMatchObject({ nivel: null, justificativa: registro().justificativa })
+  })
+
+  it('mínimo da justificativa (do chamamento) não bloqueia a gravação', async () => {
+    await semearProposta({ justificativaMinima: 80 })
+    expect((await chamar(rota, 'PUT', registro(), presidente.token)).status).toBe(200)
+  })
+})
+
 describe('/api/avaliacao — exige sessão aberta (Etapa 4a)', () => {
   const mensagem = 'Avaliação só pode ser registrada em sessão aberta da Comissão.'
 
@@ -172,12 +213,12 @@ describe('/api/avaliacao — exige sessão aberta (Etapa 4a)', () => {
   })
 })
 
-describe('/api/avaliacao — foco da sessão (Etapa 4b)', () => {
-  it('ao salvar, o subcritério vira o foco da sessão, na mesma gravação', async () => {
-    const r = await chamar(rota, 'PUT', registro({ codigo: '2.1' }), admin.token)
-    expect(r.status).toBe(200)
+describe('/api/avaliacao — pauta e foco da sessão', () => {
+  it('salvar não mexe no foco do telão (quem projeta é o interruptor "Projetar" da tela)', async () => {
     const caminhoSessao = `chamamentos/${CH}/sessoes/${SESSAO}`
-    expect((await ler(caminhoSessao))?.foco).toEqual({ tipo: 'subcriterio', propostaId: PROP, subcriterio: '2.1' })
+    await obterAdmin().db.doc(caminhoSessao).update({ foco: { tipo: 'd2', propostaId: PROP } })
+    expect((await chamar(rota, 'PUT', registro({ codigo: '2.1' }), admin.token)).status).toBe(200)
+    expect((await ler(caminhoSessao))?.foco).toEqual({ tipo: 'd2', propostaId: PROP })
   })
 
   it('proposta fora da pauta da sessão → 409, sem gravar', async () => {

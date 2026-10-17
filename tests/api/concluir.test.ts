@@ -1,6 +1,7 @@
 // "Homologar" virou "Concluir" (Simplificação 2/4): ação reversível (Concluir / Desfazer conclusão), sem
-// justificativa e sem trava. Só conclui com a admissibilidade registrada e, se admitida, os 28 níveis e as
-// 28 justificativas da D1. Qualquer alteração na avaliação da proposta desfaz a conclusão.
+// justificativa e sem trava. Só conclui com a admissibilidade completa (motivo, se não admitida; páginas de todos
+// os PAs, se admitida) e, se admitida, os 28 níveis e as 28 justificativas da D1 com o mínimo de caracteres do
+// chamamento (o salvamento automático grava rascunhos; a conclusão confere — Simplificação 3/4). Qualquer alteração na avaliação da proposta desfaz a conclusão.
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { obterAdmin } from '../../api/_lib/admin'
 import * as admissibilidade from '../../api/admissibilidade'
@@ -108,7 +109,32 @@ describe('/api/concluir — condições para concluir (409)', () => {
     await completarD1()
     await obterAdmin().db.doc(`${CAMINHO_PROPOSTA}/avaliacoes/2.1`).update({ justificativa: '   ' })
     const r = await concluir()
-    expect(r).toMatchObject({ status: 409, corpo: { erro: 'Não é possível concluir: faltam 1 de 28 justificativas da D1.' } })
+    expect(r).toMatchObject({ status: 409, corpo: { erro: 'Não é possível concluir: faltam 1 de 28 justificativas da D1 (mínimo de 20 caracteres).' } })
+  })
+})
+
+describe('/api/concluir — rascunhos do salvamento automático não concluem (Simplificação 3/4)', () => {
+  it('justificativa abaixo do mínimo do chamamento conta como faltando', async () => {
+    await semearProposta({ justificativaMinima: 60 })
+    await registrarAdmissibilidade()
+    await completarD1()
+    const r = await concluir()
+    expect(r).toMatchObject({ status: 409, corpo: { erro: 'Não é possível concluir: faltam 28 de 28 justificativas da D1 (mínimo de 60 caracteres).' } })
+  })
+
+  it('não admitida sem motivo (ou com motivo curto)', async () => {
+    const corpo = { ...ALVO, sessaoId: SESSAO, admitida: false, motivo: 'curto', planos: PLANOS }
+    expect((await chamar(admissibilidade, 'PUT', corpo, presidente.token)).status).toBe(200)
+    const r = await concluir()
+    expect(r).toMatchObject({ status: 409, corpo: { erro: 'Não é possível concluir: informe o motivo da não admissão (ao menos 10 caracteres).' } })
+  })
+
+  it('admitida com páginas de PA em branco', async () => {
+    const planos = PLANOS.map((p, i) => (i === 3 ? { ...p, paginaFinal: null } : p))
+    expect((await chamar(admissibilidade, 'PUT', { ...ALVO, sessaoId: SESSAO, admitida: true, planos }, presidente.token)).status).toBe(200)
+    await completarD1()
+    const r = await concluir()
+    expect(r).toMatchObject({ status: 409, corpo: { erro: 'Não é possível concluir: informe as páginas de PA4 na admissibilidade.' } })
   })
 })
 

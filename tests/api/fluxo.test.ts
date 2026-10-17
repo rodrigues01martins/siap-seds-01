@@ -172,7 +172,8 @@ describe('fluxo completo: cadastro → sessão → admissibilidade → D2 → D1
       pendentes: [],
     })
     expect(semCarimbos(await ler(`${caminho}/resultadoD2/atual`))).toEqual(JSON.parse(JSON.stringify(d2)))
-    expect((await ler(`chamamentos/${ch}/sessoes/${s}`))?.foco).toEqual({ tipo: 'subcriterio', propostaId: p, subcriterio: CODIGOS.at(-1) })
+    // Salvar não move o telão (Simplificação 3/4: quem projeta é o interruptor "Projetar" da tela).
+    expect((await ler(`chamamentos/${ch}/sessoes/${s}`))?.foco).toBeNull()
 
     // 6. Conclusão (exige a admissibilidade) e "Desfazer conclusão", sem justificativa
     const sinal = await chamar(concluir, 'POST', { ...alvo, acao: 'concluir' }, presidente.token)

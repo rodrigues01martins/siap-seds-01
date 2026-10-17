@@ -1,5 +1,6 @@
-// Admissibilidade simplificada (Simplificação 2/4): admitida (sim/não), motivo (obrigatório se "não") e
-// páginas inicial/final por PA com página de corte. Sem checklist 28.1 nem de formatação (28.5).
+// Admissibilidade simplificada (Simplificação 2/4): admitida (sim/não), motivo e páginas inicial/final por PA
+// com página de corte. Sem checklist 28.1 nem de formatação (28.5). Salvamento automático (Simplificação 3/4):
+// motivo e páginas podem ficar em branco ao gravar; a conclusão da proposta é que os exige (concluir.test.ts).
 import { Timestamp } from 'firebase-admin/firestore'
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { obterAdmin } from '../../api/_lib/admin'
@@ -73,8 +74,6 @@ describe('/api/admissibilidade — acesso', () => {
 describe('/api/admissibilidade — validação (400) e 404', () => {
   it.each([
     ['sem admitida', { admitida: undefined }, 'admitida', 'Informe se a proposta foi admitida (sim ou não).'],
-    ['não admitida sem motivo', { admitida: false }, 'motivo', 'Informe o motivo da não admissão (ao menos 10 caracteres).'],
-    ['não admitida com motivo curto', { admitida: false, motivo: '  curto  ' }, 'motivo', 'Informe o motivo da não admissão (ao menos 10 caracteres).'],
     ['faltando PA', { planos: planos().slice(1) }, 'planos', 'Informe os 6 Planos de Ação (PA1 a PA6), cada um uma vez.'],
     ['checklist 28.1 (removido)', { requisitos: { '28.1.I': true } }, 'requisitos', 'Campo não permitido.'],
     ['formatação 28.5 (removida)', { irregularidadesFormais: ['28.5.II'] }, 'irregularidadesFormais', 'Campo não permitido.'],
@@ -85,10 +84,10 @@ describe('/api/admissibilidade — validação (400) e 404', () => {
     expect((await ler(CAMINHO_PROPOSTA))?.admissibilidade).toBeUndefined()
   })
 
-  it('admitida exige as páginas de cada PA; final antes da inicial → campo do PA', async () => {
-    const semPagina = planos()
-    semPagina[1] = { codigo: 'PA2', paginaInicial: null, paginaFinal: null }
-    expect(await chamar(rota, 'PUT', corpo({ planos: semPagina }), presidente.token)).toMatchObject({
+  it('página inválida ou final antes da inicial → campo do PA', async () => {
+    const zerada = planos()
+    zerada[1] = { codigo: 'PA2', paginaInicial: 0, paginaFinal: null }
+    expect(await chamar(rota, 'PUT', corpo({ planos: zerada }), presidente.token)).toMatchObject({
       status: 400,
       corpo: { campos: { 'planos.1.paginaInicial': 'Informe a página inicial (inteiro a partir de 1).' } },
     })
@@ -133,6 +132,20 @@ describe('/api/admissibilidade — gravação', () => {
       motivo: 'Caderno entregue fora do prazo.',
       situacao: 'nao_admitida',
     })
+  })
+
+  it('salvamento automático: admitida com páginas ainda em branco e não admitida sem motivo são gravadas', async () => {
+    const parcial = planos()
+    parcial[1] = { codigo: 'PA2', paginaInicial: 15, paginaFinal: null }
+    parcial[4] = { codigo: 'PA5', paginaInicial: null, paginaFinal: null }
+    expect((await chamar(rota, 'PUT', corpo({ planos: parcial }), presidente.token)).status).toBe(200)
+    const adm = (await ler(CAMINHO_PROPOSTA))?.admissibilidade as { planos: unknown[] }
+    expect(adm.planos[1]).toMatchObject({ codigo: 'PA2', paginaInicial: 15, paginaFinal: null, paginas: null })
+
+    expect((await chamar(rota, 'PUT', corpo({ admitida: false, motivo: 'curto' }), presidente.token)).status).toBe(200)
+    expect((await ler(CAMINHO_PROPOSTA))?.admissibilidade).toMatchObject({ admitida: false, motivo: 'curto', situacao: 'nao_admitida' })
+    expect((await chamar(rota, 'PUT', corpo({ admitida: false }), presidente.token)).status).toBe(200)
+    expect((await ler(CAMINHO_PROPOSTA))?.admissibilidade).not.toHaveProperty('motivo')
   })
 
   it('proposta com bloqueada=true (homologação antiga) é aceita: não há mais trava', async () => {
