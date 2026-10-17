@@ -18,8 +18,8 @@ const PROPOSTA = propostaE2E(montarEnsaio('2026-11-10').propostas)
 
 /** Telas migradas na Etapa 3 e quem as mede. */
 const TELAS: { slug: string; caminho: string; perfis: string[] }[] = [
-  { slug: 'inicio', caminho: '/', perfis: ['administrador', 'avaliador'] },
-  { slug: 'painel-chamamento', caminho: CH, perfis: ['administrador', 'avaliador'] },
+  { slug: 'inicio', caminho: '/', perfis: ['administrador', 'presidente'] },
+  { slug: 'painel-chamamento', caminho: CH, perfis: ['administrador', 'presidente'] },
   { slug: 'chamamento-novo', caminho: '/chamamentos/novo', perfis: ['administrador'] },
   { slug: 'chamamento-editar', caminho: `${CH}/editar`, perfis: ['administrador'] },
   { slug: 'proposta-nova', caminho: `${CH}/propostas/nova`, perfis: ['administrador'] },
@@ -27,7 +27,7 @@ const TELAS: { slug: string; caminho: string; perfis: string[] }[] = [
   { slug: 'oscs', caminho: '/oscs', perfis: ['administrador'] },
   { slug: 'usuarios', caminho: '/usuarios', perfis: ['administrador'] },
   { slug: 'auditoria', caminho: '/auditoria', perfis: ['administrador'] },
-  { slug: 'sem-permissao', caminho: '/oscs', perfis: ['avaliador'] },
+  { slug: 'sem-permissao', caminho: '/usuarios', perfis: ['presidente'] },
 ]
 
 interface Resultado {
@@ -165,7 +165,7 @@ test('login: só com teclado, sem violações do axe', async ({ page }) => {
   await expect(page.getByRole('banner')).toContainText(perfil.nome, { timeout: 30_000 })
 })
 
-for (const id of ['administrador', 'avaliador']) {
+for (const id of ['administrador', 'presidente']) {
   test(`${id}: telas migradas (screenshots, axe e teclado)`, async ({ page }) => {
     test.setTimeout(10 * 60_000)
     await entrar(page, id)

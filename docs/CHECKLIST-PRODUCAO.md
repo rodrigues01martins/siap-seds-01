@@ -48,16 +48,16 @@ Os passos detalhados estão no [README](../README.md) (seções 1 a 4).
 - [ ] *Authentication → Templates → Password reset*: texto do e-mail de convite/senha (ex.: "SIAP SEDS — crie
       sua senha").
 - [ ] Demais pessoas: tela **Usuários → Novo usuário** (a pessoa recebe o e-mail para criar a senha).
-- [ ] Papel na Comissão de cada membro (presidente, relator, membro) conforme a portaria de designação.
-- [ ] Permissões por pessoa: só o necessário (ex.: quem cadastra não precisa avaliar; controle interno só
-      **Consulta**). Mais de um administrador é recomendado (se um ficar sem acesso, o outro resolve).
+- [ ] Perfil de cada pessoa: **admin** (faz tudo e gerencia usuários) ou **presidente** (faz tudo, menos usuários).
+      Cadastro antigo (sem perfil) não entra até receber um. Mais de um administrador é recomendado (se um ficar
+      sem acesso, o outro resolve). Os presentes da sessão são só nomes, digitados na abertura.
 - [ ] Quem sai da Comissão: **Gerenciar → Desativar** (bloqueia o login e encerra as sessões abertas).
 
 ## 6. Usuário do telão
 
 - [ ] **Usuários → Novo usuário** só para o projetor (ex.: `telao.sessao@seds.go.gov.br`), com senha forte
       guardada pela Comissão.
-- [ ] Só a permissão **Consulta** (lê tudo e não grava nada).
+- [ ] Perfil **presidente** (não há perfil só de leitura); a projeção não tem controles de escrita.
 - [ ] Testar no computador da sala: login → tela da sessão → **Abrir projeção (telão)** → **Tela cheia**.
 
 ## 7. Backup antes e depois de cada sessão 🔁

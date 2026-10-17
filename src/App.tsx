@@ -26,7 +26,7 @@ import { NovaSessao } from './features/sessoes/NovaSessao'
 import { TelaUsuarios } from './features/usuarios/TelaUsuarios'
 
 
-/** Tela que exige uma permissão (ou o administrador); sem `exige`, basta ter acesso ao app. */
+/** Tela que exige o perfil admin (gestão de usuários); sem `exige`, basta ter perfil (admin ou presidente). */
 const so = (exige: Exigencia | null, tela: ReactNode) => <RotaProtegida exige={exige ?? undefined}>{tela}</RotaProtegida>
 
 export default function App() {
@@ -46,12 +46,12 @@ export default function App() {
             }
           >
             <Route index element={<Inicio />} />
-            <Route path="chamamentos/novo" element={so('chamamentos', <FormChamamento />)} />
+            <Route path="chamamentos/novo" element={so(null, <FormChamamento />)} />
             <Route path="chamamentos/:ch" element={so(null, <PainelChamamento />)} />
-            <Route path="chamamentos/:ch/editar" element={so('chamamentos', <FormChamamento />)} />
-            <Route path="chamamentos/:ch/propostas/nova" element={so('propostas', <FormProposta />)} />
-            <Route path="chamamentos/:ch/propostas/:p/editar" element={so('propostas', <FormProposta />)} />
-            <Route path="chamamentos/:ch/sessoes/nova" element={so('sessaoAbrirEncerrar', <NovaSessao />)} />
+            <Route path="chamamentos/:ch/editar" element={so(null, <FormChamamento />)} />
+            <Route path="chamamentos/:ch/propostas/nova" element={so(null, <FormProposta />)} />
+            <Route path="chamamentos/:ch/propostas/:p/editar" element={so(null, <FormProposta />)} />
+            <Route path="chamamentos/:ch/sessoes/nova" element={so(null, <NovaSessao />)} />
             <Route path="chamamentos/:ch/sessoes/:s" element={so(null, <ConduzirSessao />)} />
             <Route path="chamamentos/:ch/sessoes/:s/ata" element={so(null, <TelaAta />)} />
             <Route path="chamamentos/:ch/propostas/:p/admissibilidade" element={so(null, <TelaAdmissibilidade />)} />
@@ -59,12 +59,12 @@ export default function App() {
             <Route path="chamamentos/:ch/propostas/:p/d2" element={so(null, <TelaD2 />)} />
             <Route path="chamamentos/:ch/propostas/:p/d2/memoria" element={so(null, <TelaMemoriaD2 />)} />
             <Route path="chamamentos/:ch/propostas/:p/diligencias" element={so(null, <TelaDiligencias />)} />
-            <Route path="chamamentos/:ch/propostas/:p/diligencias/nova" element={so('diligencias', <TelaNovaDiligencia />)} />
+            <Route path="chamamentos/:ch/propostas/:p/diligencias/nova" element={so(null, <TelaNovaDiligencia />)} />
             <Route path="chamamentos/:ch/propostas/:p/diligencias/:d" element={so(null, <TelaDiligencia />)} />
             <Route path="chamamentos/:ch/lotes/:lote/classificacao" element={so(null, <TelaClassificacao />)} />
-            <Route path="oscs" element={so('oscs', <TelaOscs />)} />
+            <Route path="oscs" element={so(null, <TelaOscs />)} />
             <Route path="usuarios" element={so('admin', <TelaUsuarios />)} />
-            <Route path="auditoria" element={so('admin', <TelaAuditoria />)} />
+            <Route path="auditoria" element={so(null, <TelaAuditoria />)} />
             {/* Qualquer outro endereço (ex.: o antigo /ui): página "não encontrado", dentro do app. */}
             <Route path="*" element={<NaoEncontrado />} />
           </Route>

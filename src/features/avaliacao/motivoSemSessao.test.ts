@@ -7,16 +7,16 @@ const dados = (sessaoAberta: DadosProposta['sessaoAberta']): DadosProposta => ({
   osc: null,
   sessaoAberta,
 })
-const sessao = (pauta: string[]) => ({ id: 's1', data: '2026-11-10', status: 'aberta' as const, pauta, presentes: [], declaracoes: [], foco: null })
+const sessao = (lotes: string[]) => ({ id: 's1', data: '2026-11-10', status: 'aberta' as const, lotes, presentes: [], foco: null })
 
-describe('motivoSemSessao: a Comissão só registra em sessão aberta, com a proposta na pauta', () => {
+describe('motivoSemSessao: a Comissão só registra em sessão aberta, com o lote da proposta na pauta', () => {
   it('sem sessão aberta', () => {
     expect(motivoSemSessao(dados(null), 'a admissibilidade')).toBe('Nenhuma sessão aberta: o presidente precisa abrir a sessão para registrar a admissibilidade.')
   })
-  it('proposta fora da pauta', () => {
-    expect(motivoSemSessao(dados(sessao(['p2'])), 'experiências')).toBe('Proposta fora da pauta da sessão aberta.')
+  it('proposta de lote fora da pauta', () => {
+    expect(motivoSemSessao(dados(sessao(['L2'])), 'experiências')).toBe('Proposta fora da pauta da sessão aberta.')
   })
-  it('na pauta da sessão aberta: pode registrar', () => {
-    expect(motivoSemSessao(dados(sessao(['p1'])), 'níveis')).toBeNull()
+  it('lote da proposta na pauta da sessão aberta: pode registrar', () => {
+    expect(motivoSemSessao(dados(sessao(['L1'])), 'níveis')).toBeNull()
   })
 })

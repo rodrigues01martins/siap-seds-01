@@ -20,11 +20,9 @@ import { useToast } from '../../components/ui/Toast'
 import type { Desconsideracao } from '../../domain/d2'
 import { formatarNumero } from '../../domain/formatacao'
 import { MATRIZ_2026 } from '../../domain/matriz'
-import { podeFazer } from '../../domain/permissoes'
 import type { CamposExperiencia } from '../../esquemas/experiencia'
 import { chamarApi } from '../../lib/api'
 import { useColecao } from '../../lib/firestore'
-import { useUsuario } from '../auth/useUsuario'
 import { AvisoSomenteLeitura, cabecalhoDaProposta, ContextoProposta, motivoSemSessao, useDadosProposta } from '../avaliacao/CabecalhoProposta'
 import { FormExperiencia } from './FormExperiencia'
 import { GraficoLinhaDoTempo } from './GraficoLinhaDoTempo'
@@ -32,7 +30,6 @@ import { TabelaExperiencias, type ExperienciaGravada } from './TabelaExperiencia
 
 export function TelaD2() {
   const { ch = '', p = '' } = useParams()
-  const { usuario } = useUsuario()
   const { mostrar } = useToast()
   const leitura = useDadosProposta(ch, p)
   const experiencias = useColecao<Omit<ExperienciaGravada, 'id'>>(`chamamentos/${ch}/propostas/${p}/experiencias`)
@@ -52,9 +49,7 @@ export function TelaD2() {
     ? 'Proposta homologada.'
     : admissao === 'nao_admitida' || admissao === 'desclassificada'
       ? 'Proposta não admitida (Anexo III, item 28): não segue para avaliação.'
-      : !podeFazer(usuario?.acesso ?? null, 'experienciasD2')
-        ? 'Você consulta as experiências, mas não as edita (permissão "Experiências da D2").'
-        : motivoSemSessao(leitura.dados, 'experiências')
+      : motivoSemSessao(leitura.dados, 'experiências')
   const alvo = { chamamentoId: ch, propostaId: p, sessaoId: leitura.dados.sessaoAberta?.id }
   const nomes = Object.fromEntries(lista.map((e) => [e.id, e.descricao]))
   const d2 = proposta.totais?.d2

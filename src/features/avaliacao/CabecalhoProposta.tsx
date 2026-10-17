@@ -49,7 +49,7 @@ export function useDadosProposta(ch: string, p: string): Leitura<DadosProposta |
  */
 export function motivoSemSessao(dados: DadosProposta, oQue: string): string | null {
   if (!dados.sessaoAberta) return `Nenhuma sessão aberta: o presidente precisa abrir a sessão para registrar ${oQue}.`
-  if (!dados.sessaoAberta.pauta.includes(dados.proposta.id)) return 'Proposta fora da pauta da sessão aberta.'
+  if (!(dados.sessaoAberta.lotes ?? []).includes(dados.proposta.loteCodigo)) return 'Proposta fora da pauta da sessão aberta.'
   return null
 }
 

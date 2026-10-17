@@ -1,9 +1,9 @@
-// POST /api/chamamentos (criar) e PATCH /api/chamamentos (editar). Perfil: admin.
+// POST /api/chamamentos (criar) e PATCH /api/chamamentos (editar). Perfis: admin e presidente.
 // dataLimitePropostas é a referência da D2 (Anexo IV, 3.3.1, IV): não muda depois que alguma
 // proposta já tem totais calculados. justificativaMinima configura o mínimo da justificativa (C2).
 // processoSei: Etapa 4a. Sem índice de correção nem data-base (Manutenção 1): os valores da D2 já chegam
 // atualizados conforme o Edital; o esquema estrito recusa esses campos.
-// DELETE (excluir, somente admin, com justificativa) e GET ?simular=true (prévia): ver _lib/exclusao.ts.
+// DELETE (excluir, com justificativa) e GET ?simular=true (prévia): ver _lib/exclusao.ts.
 // Chamamento com propostas ou sessões não pode ser excluído (409); os lotes vão junto (estão no documento).
 
 import {
@@ -22,13 +22,13 @@ import { lerConsulta, lerCorpo } from './_lib/validacao.js'
 
 export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   GET: async (requisicao) => {
-    await autenticar(requisicao, 'admin')
+    await autenticar(requisicao)
     const { id } = lerConsulta(requisicao, esquemaPreviaChamamento)
     return json(200, await previaExclusao(alvoChamamento(id)))
   },
 
   POST: async (requisicao) => {
-    const autor = await autenticar(requisicao, 'chamamentos')
+    const autor = await autenticar(requisicao)
     const dados = await lerCorpo(requisicao, esquemaCriarChamamento)
     const id = obterAdmin().db.collection('chamamentos').doc().id
     await gravar(autor, () => [{ caminho: `chamamentos/${id}`, acao: 'criar', dados }])
@@ -36,7 +36,7 @@ export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   },
 
   PATCH: async (requisicao) => {
-    const autor = await autenticar(requisicao, 'chamamentos')
+    const autor = await autenticar(requisicao)
     const { id, ...alteracoes } = await lerCorpo(requisicao, esquemaEditarChamamento)
     await gravar(autor, async (transacao) => {
       const { db } = obterAdmin()
@@ -58,7 +58,7 @@ export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   },
 
   DELETE: async (requisicao) => {
-    const autor = await autenticar(requisicao, 'admin')
+    const autor = await autenticar(requisicao)
     const { id, justificativa } = await lerCorpo(requisicao, esquemaExcluirChamamento)
     return json(200, await excluirComSeguranca(autor, alvoChamamento(id), justificativa))
   },

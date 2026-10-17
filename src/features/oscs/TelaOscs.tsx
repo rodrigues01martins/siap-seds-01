@@ -1,6 +1,6 @@
 // /oscs (ListPage): OSCs com busca e ordenação; "Nova OSC" e "Editar" abrem um painel lateral com o formulário
 // (CNPJ mascarado e validado, numérico ou alfanumérico). POST/PATCH /api/oscs.
-// Admin: "Excluir" no menu de ações da linha (DialogoExclusao; bloqueada se houver proposta vinculada).
+// "Excluir" no menu de ações da linha (DialogoExclusao; bloqueada se houver proposta vinculada).
 
 import { Building2, SquarePen } from 'lucide-react'
 import { useState } from 'react'
@@ -16,7 +16,6 @@ import { esquemaCriarOsc } from '../../esquemas/cadastros'
 import { chamarApi } from '../../lib/api'
 import { useColecao, type ComId } from '../../lib/firestore'
 import type { Osc } from '../../lib/tipos'
-import { useUsuario } from '../auth/useUsuario'
 import { emExclusao, SeloEmExclusao, useExclusao } from '../exclusao/useExclusao'
 
 type Edicao = { tipo: 'nova' } | { tipo: 'editar'; osc: ComId<Osc> } | null
@@ -26,8 +25,6 @@ export function TelaOscs() {
   const [edicao, setEdicao] = useState<Edicao>(null)
   const { mostrar } = useToast()
   const editando = edicao?.tipo === 'editar' ? edicao.osc : null
-  const { usuario } = useUsuario()
-  const admin = usuario?.acesso?.admin === true
   const exclusao = useExclusao()
 
   return (
@@ -71,12 +68,10 @@ export function TelaOscs() {
             <Button variante="tertiary" tamanho="sm" icone={SquarePen} aria-label={`Editar ${o.razaoSocial}`} onClick={() => setEdicao({ tipo: 'editar', osc: o })}>
               Editar
             </Button>
-            {admin && (
-              <MenuAcoes
-                rotulo={`Mais ações — ${o.razaoSocial}`}
-                itens={[exclusao.itemExcluir({ tipo: 'osc', ids: { cnpj: o.cnpj }, identificador: formatarCnpj(o.cnpj), nome: `OSC ${o.razaoSocial}` })]}
-              />
-            )}
+            <MenuAcoes
+              rotulo={`Mais ações — ${o.razaoSocial}`}
+              itens={[exclusao.itemExcluir({ tipo: 'osc', ids: { cnpj: o.cnpj }, identificador: formatarCnpj(o.cnpj), nome: `OSC ${o.razaoSocial}` })]}
+            />
           </span>
         )}
       />

@@ -1,5 +1,5 @@
 // /chamamentos/:ch/lotes/:lote/classificacao (ListPage) — classificação do lote, com homologação (C5),
-// reabertura (RF-18) e registro do desempate (RF-27) por quem tem a permissão. Demais perfis só leem.
+// reabertura (RF-18) e registro do desempate (RF-27). Admin e presidente fazem tudo.
 // Quadro-resumo do lote em PDF e XLSX, gerado no navegador com a mesma tabela.
 // O desempate é decisão da Comissão: só em sessão aberta (o sessaoId vai na gravação).
 
@@ -43,7 +43,7 @@ export function TelaClassificacao() {
   const decisoes = desempates.dados.filter((d) => d.loteCodigo === lote)
   const nome = (id: string) => linhas.find((l) => l.id === id)?.nomeOsc ?? id
   const sessaoAberta = abertas.dados[0] ?? null
-  const temPermissaoDesempate = podeFazer(acesso, 'desempate')
+  const podeGravar = podeFazer(acesso)
 
   return (
     <ListPage
@@ -64,7 +64,7 @@ export function TelaClassificacao() {
         ),
       }}
     >
-      {temPermissaoDesempate && !sessaoAberta && (
+      {podeGravar && !sessaoAberta && (
         <Alert tom="info" titulo="Desempate só em sessão aberta">
           O registro do desempate é decisão da Comissão: o presidente precisa abrir a sessão.
         </Alert>
@@ -73,9 +73,9 @@ export function TelaClassificacao() {
         lote={dadosLote}
         propostas={linhas}
         decisoes={decisoes}
-        podeHomologar={podeFazer(acesso, 'homologar')}
-        podeDesempatar={temPermissaoDesempate && sessaoAberta !== null}
-        podeReabrir={podeFazer(acesso, 'reabrir')}
+        podeHomologar={podeGravar}
+        podeDesempatar={podeGravar && sessaoAberta !== null}
+        podeReabrir={podeGravar}
         onHomologar={async (id) => {
           await chamarApi('/api/homologar', { metodo: 'POST', corpo: alvo(id) })
           mostrar({ tom: 'success', titulo: 'Proposta homologada', mensagem: nome(id) })

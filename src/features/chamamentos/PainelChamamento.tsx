@@ -1,5 +1,5 @@
 // /chamamentos/:ch (DetailPage): dados do chamamento, propostas por lote com status e sessões.
-// Admin: "Excluir" proposta no menu de ações da linha (DialogoExclusao; homologada fica bloqueada).
+// "Excluir" proposta no menu de ações da linha (DialogoExclusao; homologada fica bloqueada).
 
 import { FilePlus2, Presentation, SquarePen, Trophy } from 'lucide-react'
 import { useParams } from 'react-router'
@@ -43,9 +43,8 @@ export function PainelChamamento() {
 
   const c = chamamento.dados
   const nomeOsc = new Map(oscs.dados.map((o) => [o.cnpj, o.razaoSocial]))
-  const podeEditar = podeFazer(acesso, 'chamamentos')
-  const podeProposta = podeFazer(acesso, 'propostas')
-  const admin = acesso?.admin === true
+  // Admin e presidente fazem tudo (a rota já exige um dos perfis).
+  const podeGravar = podeFazer(acesso)
   const sessaoAberta = sessoes.dados.find((s) => s.status === 'aberta')
   const caminho = `/chamamentos/${ch}`
 
@@ -55,12 +54,12 @@ export function PainelChamamento() {
         trilha: [...trilhaBase, { rotulo: `Chamamento ${c.numero}` }],
         titulo: `Chamamento ${c.numero}`,
         descricao: c.titulo,
-        acoesSecundarias: podeEditar ? (
+        acoesSecundarias: podeGravar ? (
           <ButtonLink para={`${caminho}/editar`} variante="secondary" icone={SquarePen}>
             Editar chamamento
           </ButtonLink>
         ) : undefined,
-        acaoPrimaria: podeProposta ? (
+        acaoPrimaria: podeGravar ? (
           <ButtonLink para={`${caminho}/propostas/nova`} icone={FilePlus2}>
             Nova proposta
           </ButtonLink>
@@ -121,12 +120,12 @@ export function PainelChamamento() {
                       {rotulo}
                     </ButtonLink>
                   ))}
-                  {podeProposta && !p.bloqueada && (
+                  {podeGravar && !p.bloqueada && (
                     <ButtonLink para={`${base}/editar`} variante="tertiary" tamanho="sm" aria-label={`Editar proposta — ${nome}`}>
                       Editar
                     </ButtonLink>
                   )}
-                  {admin && (
+                  {podeGravar && (
                     <MenuAcoes
                       rotulo={`Mais ações — proposta ${p.protocolo ?? p.id}`}
                       itens={[
@@ -149,7 +148,7 @@ export function PainelChamamento() {
       <Card
         titulo="Sessões da Comissão"
         acoes={
-          podeFazer(acesso, 'sessaoAbrirEncerrar') && !sessaoAberta ? (
+          podeGravar && !sessaoAberta ? (
             <ButtonLink para={`${caminho}/sessoes/nova`} variante="secondary" tamanho="sm" icone={Presentation}>
               Abrir sessão
             </ButtonLink>
@@ -165,7 +164,7 @@ export function PainelChamamento() {
             { id: 'data', titulo: 'Data', celula: (s) => dataBr(s.data), ordenar: (s) => s.data },
             { id: 'situacao', titulo: 'Situação', celula: (s) => <SeloSessao status={s.status} /> },
             { id: 'presentes', titulo: 'Presentes', celula: (s) => String(s.presentes.length), alinhar: 'direita' },
-            { id: 'pauta', titulo: 'Propostas na pauta', celula: (s) => String(s.pauta.length), alinhar: 'direita' },
+            { id: 'lotes', titulo: 'Lotes em pauta', celula: (s) => (s.lotes ?? []).join(', ') || '—' },
           ]}
           acoes={(s) => (
             <ButtonLink para={`${caminho}/sessoes/${s.id}`} variante="tertiary" tamanho="sm" aria-label={`Abrir sessão de ${dataBr(s.data)}`}>

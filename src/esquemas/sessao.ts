@@ -1,30 +1,32 @@
-// Sessão da Comissão: abrir (presidente) e alterar — presentes, declarações, foco (presidente e
-// relator) e encerrar (presidente). Usados pela /api e pela tela de sessão.
+// Sessão da Comissão: data, chamamento, lote(s) em pauta, status (aberta | encerrada) e presentes por nome
+// ({ nome, papel: presidente | membro }, exatamente um presidente). Abrir e alterar (presentes, foco,
+// encerrar, resetar): admin e presidente. Usados pela /api e pelas telas de sessão.
 
+import { PAPEIS_SESSAO } from '../domain/comissao.js'
 import { dataIso, idDocumento, semRepeticao, z } from './base.js'
 
-export const esquemaDeclaracao = z
-  .strictObject({
-    uid: idDocumento,
-    /** true = declara não haver impedimento para atuar na sessão. */
-    semImpedimento: z.boolean({ error: 'Marque a declaração.' }),
-    motivo: z.string().trim().max(500, 'Use no máximo 500 caracteres.').optional(),
-  })
-  .refine((d) => d.semImpedimento || (d.motivo?.length ?? 0) >= 5, {
-    path: ['motivo'],
-    message: 'Informe o motivo do impedimento.',
-  })
+/** Nome comparado sem diferença de maiúsculas, acentos e espaços extras (nomes repetidos). */
+export const chaveDoNome = (nome: string) =>
+  nome.normalize('NFD').replace(/\p{M}/gu, '').trim().replace(/\s+/g, ' ').toLowerCase()
 
-const pauta = z
-  .array(idDocumento)
-  .min(1, 'Informe ao menos uma proposta na pauta.')
-  .refine(semRepeticao(), 'Há propostas repetidas na pauta.')
+/** Quem está presente: só o nome e o papel (sem login, sem declaração de impedimento). */
+export const esquemaPresente = z.strictObject({
+  nome: z.string({ error: 'Informe o nome.' }).trim().min(1, 'Informe o nome.').max(120, 'Use no máximo 120 caracteres.'),
+  papel: z.enum(PAPEIS_SESSAO, { error: 'Papel inválido: use presidente ou membro.' }),
+})
+export type Presente = z.output<typeof esquemaPresente>
 
-const presentes = z.array(idDocumento).refine(semRepeticao(), 'Há membros repetidos.')
+/** Exatamente um presidente e nomes não repetidos. */
+export const presentes = z
+  .array(esquemaPresente, { error: 'Informe os presentes.' })
+  .refine((lista) => lista.filter((p) => p.papel === 'presidente').length === 1, 'Informe exatamente um presidente.')
+  .refine(semRepeticao((p: Presente) => chaveDoNome(p.nome)), 'Há nomes repetidos.')
 
-const declaracoes = z
-  .array(esquemaDeclaracao)
-  .refine(semRepeticao((d: { uid: string }) => d.uid), 'Há mais de uma declaração para o mesmo membro.')
+/** Lote(s) em pauta: as propostas desses lotes são as analisadas na sessão. */
+const lotes = z
+  .array(z.string({ error: 'Informe o lote.' }).trim().min(1, 'Informe o lote.'), { error: 'Informe ao menos um lote.' })
+  .min(1, 'Informe ao menos um lote.')
+  .refine(semRepeticao(), 'Há lotes repetidos.')
 
 /** O que o telão mostra (Etapa 5). */
 export const TIPOS_FOCO = ['admissibilidade', 'subcriterio', 'd2', 'resumo'] as const
@@ -46,13 +48,7 @@ export const esquemaFoco = z
   })
 export type Foco = z.output<typeof esquemaFoco>
 
-export const esquemaAbrirSessao = z.strictObject({
-  chamamentoId: idDocumento,
-  data: dataIso,
-  pauta,
-  presentes: presentes.default([]),
-  declaracoes: declaracoes.default([]),
-})
+export const esquemaAbrirSessao = z.strictObject({ chamamentoId: idDocumento, data: dataIso, lotes, presentes })
 
 const alvo = { chamamentoId: idDocumento, sessaoId: idDocumento }
 
@@ -76,12 +72,10 @@ export const esquemaAlterarSessao = z.discriminatedUnion(
   [
     z.strictObject({ acao: z.literal('encerrar'), ...alvo }),
     z.strictObject({ acao: z.literal('presentes'), ...alvo, presentes }),
-    z.strictObject({ acao: z.literal('declaracoes'), ...alvo, declaracoes }),
     z.strictObject({ acao: z.literal('foco'), ...alvo, foco: esquemaFoco.nullable() }),
     z.strictObject({ acao: z.literal('resetar'), ...alvo, justificativa: justificativaReset }),
   ],
-  { error: 'Ação inválida. Use encerrar, presentes, declaracoes, foco ou resetar.' },
+  { error: 'Ação inválida. Use encerrar, presentes, foco ou resetar.' },
 )
 
 export type AlteracaoSessao = z.output<typeof esquemaAlterarSessao>
-export type Declaracao = z.output<typeof esquemaDeclaracao>

@@ -2,12 +2,12 @@
 // (alcance de todo elemento interativo e anel de foco visível).
 import AxeBuilder from '@axe-core/playwright'
 import { expect, type Browser, type Page } from '@playwright/test'
-import { PERFIS_E2E, PERFIS_USO, SENHA_E2E } from './perfis'
+import { PERFIS_E2E, SENHA_E2E } from './perfis'
 
 export const TAGS_AXE = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']
 
 export async function entrar(pagina: Page, id: string) {
-  const perfil = [...PERFIS_E2E, ...PERFIS_USO].find((p) => p.id === id)!
+  const perfil = PERFIS_E2E.find((p) => p.id === id)!
   await pagina.goto('/login')
   await pagina.getByLabel('E-mail').fill(perfil.email)
   await pagina.getByLabel('Senha').fill(SENHA_E2E)

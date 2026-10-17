@@ -1,8 +1,8 @@
 // Formato dos documentos lidos do Firestore pelas telas (gravados pela /api).
 
 import type { StatusD1 } from '../domain/d1'
-import type { PapelComissao } from '../domain/comissao'
-import type { Permissao } from '../domain/permissoes'
+import type { PapelSessao } from '../domain/comissao'
+import type { Perfil } from '../domain/permissoes'
 
 export interface Lote {
   codigo: string
@@ -39,17 +39,10 @@ export interface Proposta {
   status?: 'excluindo'
 }
 
+/** Quem está presente na sessão: só o nome e o papel (sem login). */
 export interface PresenteSessao {
-  uid: string
-  email: string | null
-  /** Papel na Comissão no momento da sessão. */
-  perfil: PapelComissao
-}
-
-export interface DeclaracaoSessao {
-  uid: string
-  semImpedimento: boolean
-  motivo?: string
+  nome: string
+  papel: PapelSessao
 }
 
 /** Reset da sessão (presidente): quem, quando e por quê. */
@@ -68,9 +61,9 @@ export interface Sessao {
   motivo?: string
   resets?: number
   historicoResets?: ResetSessao[]
-  pauta: string[]
+  /** Lote(s) em pauta: as propostas desses lotes são as analisadas na sessão. */
+  lotes: string[]
   presentes: PresenteSessao[]
-  declaracoes: DeclaracaoSessao[]
   /** O que o telão mostra; dados anteriores à Etapa 5 não têm `tipo` (= subcritério). */
   foco: { tipo?: 'admissibilidade' | 'subcriterio' | 'd2' | 'resumo'; propostaId: string; subcriterio?: string } | null
   abertaPor?: { uid: string; email: string | null }
@@ -89,8 +82,9 @@ export interface Avaliacao {
 export interface UsuarioCadastro {
   email: string
   nome?: string
+  /** admin ou presidente; ausente ou outro valor = cadastro do modelo anterior, sem acesso. */
+  perfil?: Perfil | string | null
+  /** Só no cadastro do modelo anterior (o administrador antigo continua admin). */
   admin?: boolean
   ativo?: boolean
-  permissoes?: Permissao[]
-  comissao?: PapelComissao | null
 }

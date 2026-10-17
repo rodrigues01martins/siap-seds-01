@@ -1,4 +1,4 @@
-// POST /api/reabrir — reabre proposta homologada (RF-18). Perfil: presidente.
+// POST /api/reabrir — reabre proposta homologada (RF-18). Perfis: admin e presidente.
 // Motivo obrigatório; bloqueada volta a false, registra reabertoPor, reabertoEm e o motivo e limpa a
 // homologação anterior (o histórico fica na auditoria). Única escrita permitida em proposta homologada.
 
@@ -13,7 +13,7 @@ import { lerCorpo } from './_lib/validacao.js'
 
 export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   POST: async (requisicao) => {
-    const autor = await autenticar(requisicao, 'reabrir')
+    const autor = await autenticar(requisicao)
     const { chamamentoId, propostaId, motivo } = await lerCorpo(requisicao, esquemaReabrir)
     const caminho = `chamamentos/${chamamentoId}/propostas/${propostaId}`
 

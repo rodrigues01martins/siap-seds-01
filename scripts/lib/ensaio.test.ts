@@ -99,10 +99,13 @@ describe('ensaio — dados fictícios do dev', () => {
     }
   })
 
-  it('sessão encerrada do ensaio com a pauta das propostas avaliadas', () => {
-    const sessao = docs[`${base}/sessoes/${ensaio.sessaoId}`] as { status: string; data: string; pauta: string[] }
+  it('sessão encerrada do ensaio: lotes das propostas avaliadas e presentes por nome (um presidente)', () => {
+    const sessao = docs[`${base}/sessoes/${ensaio.sessaoId}`] as { status: string; data: string; lotes: string[]; presentes: { nome: string; papel: string }[] }
     expect(sessao).toMatchObject({ status: 'encerrada', data: '2026-11-10' })
-    const avaliadas = propostas().filter((p) => p.totais).map((p) => p.id)
-    expect([...sessao.pauta].sort()).toEqual(avaliadas.sort())
+    expect(sessao).not.toHaveProperty('pauta')
+    expect(sessao).not.toHaveProperty('declaracoes')
+    const lotes = [...new Set(propostas().filter((p) => p.totais).map((p) => p.loteCodigo as string))].sort()
+    expect(sessao.lotes).toEqual(lotes)
+    expect(sessao.presentes.filter((p) => p.papel === 'presidente')).toHaveLength(1)
   })
 })

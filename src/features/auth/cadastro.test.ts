@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { acompanharCadastro, type EstadoCadastro, type FontesCadastro } from './cadastro'
 
-const ADMIN = { email: 'a@goias.gov.br', nome: 'Ana', admin: true, ativo: true, permissoes: [] }
+const ADMIN = { email: 'a@goias.gov.br', nome: 'Ana', perfil: 'admin', ativo: true }
 
 function montar(fontes: Partial<FontesCadastro> = {}) {
   let entregar: (dados: Record<string, unknown> | undefined) => void = () => {}
@@ -28,7 +28,7 @@ describe('acompanharCadastro (usuarios/{uid} ao entrar no app)', () => {
   it('cadastro com acesso: pronto, sem chamar o servidor', () => {
     const t = montar()
     t.entregar(ADMIN)
-    expect(t.ultimo()).toEqual({ carregando: false, acesso: { admin: true, ativo: true, permissoes: [] }, nome: 'Ana', erro: null })
+    expect(t.ultimo()).toEqual({ carregando: false, acesso: { perfil: 'admin', ativo: true }, nome: 'Ana', erro: null })
     expect(t.fontes.pedirPrimeiroAcesso).not.toHaveBeenCalled()
   })
 
@@ -37,7 +37,7 @@ describe('acompanharCadastro (usuarios/{uid} ao entrar no app)', () => {
     t.entregar(undefined)
     await vi.advanceTimersByTimeAsync(0)
     expect(t.fontes.pedirPrimeiroAcesso).toHaveBeenCalledTimes(1)
-    expect(t.ultimo()).toMatchObject({ carregando: false, acesso: { admin: true }, erro: null })
+    expect(t.ultimo()).toMatchObject({ carregando: false, acesso: { perfil: 'admin' }, erro: null })
   })
 
   it('servidor recusa (403): sai do carregando e mostra o motivo', async () => {
@@ -61,7 +61,7 @@ describe('acompanharCadastro (usuarios/{uid} ao entrar no app)', () => {
     await vi.advanceTimersByTimeAsync(20_000)
     expect(t.ultimo()).toMatchObject({ carregando: false, acesso: null, erro: expect.stringMatching(/Firestore/) })
     t.entregar(ADMIN) // chegou atrasado: entra normalmente
-    expect(t.ultimo()).toMatchObject({ carregando: false, acesso: { admin: true }, erro: null })
+    expect(t.ultimo()).toMatchObject({ carregando: false, acesso: { perfil: 'admin' }, erro: null })
   })
 
   it('erro de leitura do cadastro: sai do carregando com o motivo', () => {
@@ -72,11 +72,11 @@ describe('acompanharCadastro (usuarios/{uid} ao entrar no app)', () => {
 
   it('pede o primeiro acesso uma vez só; depois, liberação pelo administrador entra na hora', async () => {
     const t = montar({ pedirPrimeiroAcesso: vi.fn().mockRejectedValue(new Error('sem acesso')) })
-    t.entregar({ email: 'x@y.z', permissoes: [] })
+    t.entregar({ email: 'x@y.z', permissoes: ['consultar'], comissao: 'relator' })
     await vi.advanceTimersByTimeAsync(0)
-    t.entregar({ email: 'x@y.z', permissoes: [] })
+    t.entregar({ email: 'x@y.z', permissoes: ['consultar'], comissao: 'relator' })
     expect(t.fontes.pedirPrimeiroAcesso).toHaveBeenCalledTimes(1)
-    t.entregar({ email: 'x@y.z', permissoes: ['consultar'] })
-    expect(t.ultimo()).toMatchObject({ carregando: false, acesso: { permissoes: ['consultar'] }, erro: null })
+    t.entregar({ email: 'x@y.z', perfil: 'presidente' })
+    expect(t.ultimo()).toMatchObject({ carregando: false, acesso: { perfil: 'presidente' }, erro: null })
   })
 })

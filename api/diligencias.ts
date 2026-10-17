@@ -1,4 +1,4 @@
-// /api/diligencias — diligências da proposta (RF-28). Perfis: presidente e relator.
+// /api/diligencias — diligências da proposta (RF-28). Perfis: admin e presidente.
 // POST cria (objeto, prazo); PATCH com "acao": responder (registra a resposta) ou encerrar (conclusão).
 // Em chamamentos/{ch}/propostas/{p}/diligencias/{id}; encerrada não muda (409); proposta homologada
 // não aceita (trava de gravar.ts). Diligência em aberto impede a homologação (api/homologar.ts).
@@ -17,7 +17,7 @@ const assinatura = (autor: Autor) => ({ uid: autor.uid, email: autor.email })
 
 export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   POST: async (requisicao) => {
-    const autor = await autenticar(requisicao, 'diligencias')
+    const autor = await autenticar(requisicao)
     const { chamamentoId, propostaId, objeto, prazo } = await lerCorpo(requisicao, esquemaCriarDiligencia)
     const { db } = obterAdmin()
     const caminhoProposta = `chamamentos/${chamamentoId}/propostas/${propostaId}`
@@ -37,7 +37,7 @@ export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   },
 
   PATCH: async (requisicao) => {
-    const autor = await autenticar(requisicao, 'diligencias')
+    const autor = await autenticar(requisicao)
     const alteracao = await lerCorpo(requisicao, esquemaAlterarDiligencia)
     const caminho = `chamamentos/${alteracao.chamamentoId}/propostas/${alteracao.propostaId}/diligencias/${alteracao.id}`
 

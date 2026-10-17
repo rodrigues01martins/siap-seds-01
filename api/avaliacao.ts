@@ -1,5 +1,5 @@
 // PUT /api/avaliacao (C2): registra o nível de um subcritério da D1 decidido pela Comissão.
-// Perfis: presidente, relator, membro. Documento em .../propostas/{p}/avaliacoes/{codigo}:
+// Perfis: admin e presidente. Documento em .../propostas/{p}/avaliacoes/{codigo}:
 // o primeiro registro cria, os seguintes editam (auditoria guarda antes e depois).
 // Os totais da proposta são recalculados na mesma transação (C4).
 // sessaoId precisa ser de sessão aberta do chamamento, com a proposta na pauta (Etapas 4a e 4b), e vai
@@ -18,7 +18,7 @@ import type { TotaisProposta } from '../src/domain/proposta.js'
 
 export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   PUT: async (requisicao) => {
-    const autor = await autenticar(requisicao, 'nivelD1')
+    const autor = await autenticar(requisicao)
     const { chamamentoId, propostaId, ...registro } = await lerCorpo(requisicao, esquemaRegistroAvaliacao)
     const { db } = obterAdmin()
     let totais: TotaisProposta | undefined

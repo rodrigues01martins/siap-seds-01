@@ -1,4 +1,4 @@
-// Exclusão de cadastros (chamamento, OSC, proposta). Somente admin, com justificativa.
+// Exclusão de cadastros (chamamento, OSC, proposta). Admin e presidente, com justificativa.
 // O Firestore não apaga subcoleções sozinho e a transação aceita no máximo 500 escritas, então a ordem é:
 //   a) transação: confere os bloqueios, marca o documento com status "excluindo" (o gravar passa a recusar
 //      qualquer escrita nele ou abaixo dele com 409) e grava em auditoria a ação "excluir" com a fotografia

@@ -15,13 +15,9 @@ a não ser que a pessoa esteja travada há mais de 2 minutos (aí conta como "pe
    presidente, relator(a) e membros da Comissão. Ninguém da equipe que construiu o sistema.
 2. **Ambiente:** projeto **dev**, com os dados fictícios do ensaio, recriados antes de cada participante:
    `npm run ensaio -- --projeto dev --recriar`. Não use produção.
-3. **Contas:** um usuário por papel, criado na tela **Usuários**, com as permissões do papel:
-
-   | Papel | Permissões |
-   |---|---|
-   | Presidente | Consulta; Sessão (abrir/encerrar, conduzir); Homologar; Reabrir; Desempate |
-   | Relator(a) | Consulta; Admissibilidade; Níveis da D1; Experiências da D2; Diligências; Conduzir sessão |
-   | Telão | só Consulta (computador ligado ao projetor) |
+3. **Contas:** criadas na tela **Usuários** com o perfil **presidente** (o app tem só dois perfis, admin e
+   presidente, e os dois fazem tudo; só o admin gerencia usuários). Uma conta para quem conduz, outra para quem
+   registra e outra para o telão (computador ligado ao projetor). Na sessão, os presentes são só nomes.
 
 4. **Material:** este roteiro impresso, a planilha aberta, um cronômetro e o telão (ou uma segunda janela).
 5. **Consentimento:** explique o objetivo, que **o sistema está sendo testado, não a pessoa**, que ela pode parar
@@ -53,12 +49,11 @@ a não ser que a pessoa esteja travada há mais de 2 minutos (aí conta como "pe
 ### T1 — Abrir a sessão da Comissão (presidente; tempo-alvo: 3 min)
 
 - **Instrução ao participante:** "Hoje é a sessão de avaliação. Abra a sessão do chamamento de ensaio com a data de
-  hoje. Todos estão presentes, mas um dos membros declarou impedimento por parentesco com dirigente de uma OSC.
-  Deixe na pauta só as propostas do Lote L1."
-- **Critério de sucesso:** sessão aberta com a data certa; todos presentes; o membro impedido com o motivo
-  registrado; pauta só com as propostas do Lote L1.
-- **Observe:** se a pessoa entende as 3 etapas do assistente, se encontra onde declarar o impedimento e se confere
-  o resumo antes de abrir.
+  hoje e só o Lote L1 em pauta. Estão presentes: Ana Lima (presidente), Bruno Reis e Carla Dias (membros)."
+- **Critério de sucesso:** sessão aberta com a data certa; só o Lote L1 em pauta; os três presentes com os papéis
+  certos (exatamente um presidente).
+- **Observe:** se a pessoa encontra "Adicionar pessoa", se escolhe o papel sem ajuda e se entende as mensagens
+  de presidente único e de nome repetido.
 
 ### T2 — Registrar a admissibilidade de uma proposta (relator; tempo-alvo: 4 min)
 

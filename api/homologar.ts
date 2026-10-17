@@ -1,4 +1,4 @@
-// POST /api/homologar (C5): o presidente homologa a proposta. Perfil: presidente.
+// POST /api/homologar (C5): homologa a proposta. Perfis: admin e presidente.
 // Só homologa proposta cujo status (totais gravados pelo servidor) não é "pendente" e sem diligência
 // em aberto (RF-28).
 // Grava bloqueada = true, homologadaPor e homologadaEm, auditado; depois disso a trava de
@@ -21,7 +21,7 @@ const TOTAL_SUBCRITERIOS = MATRIZ_2026.dimensao1.planos.reduce((soma, p) => soma
 
 export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   POST: async (requisicao) => {
-    const autor = await autenticar(requisicao, 'homologar')
+    const autor = await autenticar(requisicao)
     const { chamamentoId, propostaId } = await lerCorpo(requisicao, esquema)
     const caminho = `chamamentos/${chamamentoId}/propostas/${propostaId}`
 

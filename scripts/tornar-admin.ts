@@ -1,4 +1,4 @@
-// Emergência: torna administrador (ou reativa) uma conta pelo e-mail, direto no projeto, sem o app.
+// Emergência: dá o perfil admin (ou reativa) a uma conta pelo e-mail, direto no projeto, sem o app.
 // Uso normal não precisa: o primeiro administrador entra sozinho (api/_lib/adminsIniciais.ts) e os demais
 // são definidos na tela Usuários. Serve se todos os administradores perderem o acesso.
 // A conta precisa existir no Firebase Authentication. Grava usuarios/{uid} e registra em auditoria.
@@ -41,10 +41,12 @@ executar(async () => {
     {
       email,
       nome: (anterior?.nome as string | undefined) ?? usuario.displayName ?? email,
-      admin: true,
+      perfil: 'admin',
       ativo: true,
-      permissoes: (anterior?.permissoes as string[] | undefined) ?? [],
-      comissao: (anterior?.comissao as string | null | undefined) ?? null,
+      // Campos do modelo anterior (permissões por área e papel na Comissão) saem do cadastro.
+      admin: FieldValue.delete(),
+      permissoes: FieldValue.delete(),
+      comissao: FieldValue.delete(),
       atualizadoEm: FieldValue.serverTimestamp(),
       ...(anterior ? {} : { criadoEm: FieldValue.serverTimestamp() }),
     },
@@ -55,7 +57,7 @@ executar(async () => {
     registroDeScript({
       acao: 'usuario.admin',
       caminho,
-      detalhes: { email, antes: anterior ? { admin: anterior.admin ?? false, ativo: anterior.ativo ?? true } : null },
+      detalhes: { email, antes: anterior ? { perfil: anterior.perfil ?? null, admin: anterior.admin ?? false, ativo: anterior.ativo ?? true } : null },
       origem: 'scripts/tornar-admin.ts',
       executor,
     }),

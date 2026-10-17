@@ -9,7 +9,7 @@ import { AuthPage } from './AuthPage'
 import { DashboardPage, DetailPage, FormPage, ListPage, WizardPage } from './paginas'
 
 const simulado = vi.hoisted(() => ({
-  acesso: { admin: true, ativo: true, permissoes: [] as string[] },
+  acesso: { perfil: 'admin', ativo: true } as { perfil: 'admin' | 'presidente' | null; ativo: boolean },
   sair: vi.fn(),
   documentos: {} as Record<string, unknown>,
 }))
@@ -45,7 +45,7 @@ function montarShell(caminho = '/') {
 
 beforeEach(() => {
   localStorage.clear()
-  simulado.acesso = { admin: true, ativo: true, permissoes: [] }
+  simulado.acesso = { perfil: 'admin', ativo: true }
   simulado.documentos = { 'chamamentos/ch1': { numero: '001/2026', titulo: 'Chamamento', lotes: [{ codigo: 'L1', descricao: 'A' }] } }
 })
 
@@ -90,13 +90,14 @@ describe('AppShell', () => {
     expect(within(nav).getByRole('link', { name: 'Chamamentos' })).not.toHaveAttribute('aria-current')
   })
 
-  it('itens conforme o acesso: só consulta não vê Cadastros nem Administração', () => {
-    simulado.acesso = { admin: false, ativo: true, permissoes: ['consultar'] }
+  it('itens conforme o perfil: o presidente vê tudo, menos Usuários', () => {
+    simulado.acesso = { perfil: 'presidente', ativo: true }
     montarShell()
     const nav = screen.getAllByRole('navigation', { name: 'Menu principal' })[0]!
-    expect(within(nav).queryByRole('list', { name: 'Cadastros' })).toBeNull()
-    expect(within(nav).queryByRole('list', { name: 'Administração' })).toBeNull()
-    expect(screen.getByRole('banner')).toHaveTextContent('Usuário')
+    expect(within(nav).getByRole('list', { name: 'Cadastros' })).toBeInTheDocument()
+    expect(within(nav).queryByRole('link', { name: 'Usuários' })).toBeNull()
+    expect(within(nav).getByRole('link', { name: 'Histórico de alterações' })).toBeInTheDocument()
+    expect(screen.getByRole('banner')).toHaveTextContent('Presidente')
   })
 
   it('sidebar recolhível (240 → 72 px): mantém os nomes acessíveis e lembra a escolha', async () => {

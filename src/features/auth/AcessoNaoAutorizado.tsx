@@ -1,5 +1,6 @@
-// Conta sem acesso ao app (sem cadastro, sem nenhuma permissão ou desativada): tela própria (AuthPage).
-// Sem a permissão de uma tela, mas com acesso ao app: aviso dentro do AppShell (sem outro header/main).
+// Conta sem acesso ao app (sem cadastro, cadastro antigo sem perfil ou desativada): tela própria (AuthPage).
+// Cadastro do modelo anterior (relator, membro, controle): "Seu acesso precisa ser atualizado pelo administrador".
+// Presidente numa tela só do admin (Usuários): aviso dentro do AppShell (sem outro header/main).
 // Não há botão de "verificar": quando o administrador libera, a tela muda sozinha.
 
 import { House, LogOut, RotateCw } from 'lucide-react'
@@ -8,7 +9,7 @@ import { Alert } from '../../components/ui/Alert'
 import { Button } from '../../components/ui/Button'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { ButtonLink } from '../../components/ui/ButtonLink'
-import { podeLer } from '../../domain/permissoes'
+import { ACESSO_DESATUALIZADO, podeLer, precisaAtualizarAcesso } from '../../domain/permissoes'
 import { useUsuario } from './useUsuario'
 
 export function AcessoNaoAutorizado() {
@@ -20,7 +21,9 @@ export function AcessoNaoAutorizado() {
     ? 'Você não tem permissão para esta tela. Se precisar dela, peça ao administrador.'
     : acesso?.ativo === false
       ? 'Esta conta está desativada. Fale com o administrador.'
-      : 'Sua conta ainda não tem acesso liberado. Peça ao administrador que libere na tela Usuários; esta página atualiza sozinha.'
+      : precisaAtualizarAcesso(acesso)
+        ? `${ACESSO_DESATUALIZADO} Esta página atualiza sozinha quando ele der o perfil.`
+        : 'Sua conta ainda não tem acesso liberado. Peça ao administrador que libere na tela Usuários; esta página atualiza sozinha.'
 
   if (temApp) {
     return (

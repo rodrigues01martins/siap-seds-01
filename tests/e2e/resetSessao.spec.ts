@@ -93,10 +93,10 @@ test('reset da sessão: prévia, confirmação, sessão reiniciada e ata', async
   await foto(pagina, '7-painel-sessao-reiniciada')
 })
 
-test('quem não é o presidente não vê o reset', async ({ browser, baseURL }) => {
-  const sessao = await comoPerfil(browser, 'avaliador', baseURL)
+test('o perfil presidente também vê o reset (admin e presidente fazem tudo)', async ({ browser, baseURL }) => {
+  const sessao = await comoPerfil(browser, 'presidente', baseURL)
   await sessao.goto(SESSAO)
   await esperarTela(sessao)
   await expect(sessao.getByRole('heading', { level: 1 })).toContainText('Sessão de')
-  await expect(sessao.getByRole('button', { name: 'Resetar sessão' })).toHaveCount(0)
+  await expect(sessao.getByRole('region', { name: 'Reset da sessão' }).getByRole('button', { name: 'Resetar sessão' })).toBeVisible()
 })

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-// Tela da sessão: "Resetar sessão" só para o presidente da Comissão com a permissão, fora das ações do
-// cabeçalho; sessão reiniciada mostra o selo "Reiniciada" e quem resetou, quando e por quê.
+// Tela da sessão: presentes por nome e papel (edição com o mesmo bloco da abertura); "Resetar sessão" (admin e
+// presidente) fora das ações do cabeçalho; sessão reiniciada mostra o selo "Reiniciada" e quem, quando e por quê.
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router'
@@ -9,7 +9,7 @@ import { ToastProvider } from '../../components/ui/Toast'
 import { ConduzirSessao } from './ConduzirSessao'
 
 const simulado = vi.hoisted(() => ({
-  acesso: { admin: false, ativo: true, permissoes: [] as string[] },
+  acesso: { perfil: 'presidente', ativo: true } as { perfil: 'admin' | 'presidente'; ativo: boolean },
   documentos: {} as Record<string, Record<string, unknown>>,
   chamarApi: vi.fn(),
 }))
@@ -23,8 +23,17 @@ vi.mock('../../lib/firestore', () => ({
 }))
 vi.mock('../../lib/api', async (original) => ({ ...(await original<object>()), chamarApi: simulado.chamarApi }))
 
-const SESSAO = { id: 's1', data: '2026-11-10', status: 'aberta', pauta: [], presentes: [], declaracoes: [], foco: null }
-const PRESIDENTE = ['consultar', 'sessaoAbrirEncerrar', 'sessaoConduzir', 'resetarSessao']
+const SESSAO = {
+  id: 's1',
+  data: '2026-11-10',
+  status: 'aberta',
+  lotes: ['L1'],
+  presentes: [
+    { nome: 'Ana Lima', papel: 'presidente' },
+    { nome: 'Bruno Reis', papel: 'membro' },
+  ],
+  foco: null,
+}
 
 function montar() {
   return render(
@@ -39,11 +48,10 @@ function montar() {
 }
 
 beforeEach(() => {
-  simulado.acesso = { admin: false, ativo: true, permissoes: PRESIDENTE }
+  simulado.acesso = { perfil: 'presidente', ativo: true }
   simulado.documentos = {
-    'chamamentos/ch1': { id: 'ch1', numero: '001/2026', titulo: 'C', lotes: [] },
+    'chamamentos/ch1': { id: 'ch1', numero: '001/2026', titulo: 'C', lotes: [{ codigo: 'L1', descricao: 'Lote 1' }] },
     'chamamentos/ch1/sessoes/s1': SESSAO,
-    'usuarios/u1': { comissao: 'presidente' },
   }
   simulado.chamarApi.mockReset().mockImplementation(async (_c: string, { metodo }: { metodo: string }) =>
     metodo === 'GET'
@@ -53,7 +61,7 @@ beforeEach(() => {
 })
 
 describe('tela da sessão — reset', () => {
-  it('presidente com a permissão: "Resetar sessão" (destrutivo) numa seção própria, fora do cabeçalho', async () => {
+  it('presidente: "Resetar sessão" (destrutivo) numa seção própria, fora do cabeçalho', async () => {
     montar()
     const secao = screen.getByRole('region', { name: 'Reset da sessão' })
     const botao = within(secao).getByRole('button', { name: 'Resetar sessão' })
@@ -70,14 +78,10 @@ describe('tela da sessão — reset', () => {
     expect(await screen.findByText('Sessão reiniciada')).toBeInTheDocument()
   })
 
-  it.each([
-    ['sem a permissão (relator)', ['consultar', 'sessaoConduzir'], 'relator'],
-    ['com a permissão, mas sem o papel de presidente', PRESIDENTE, 'membro'],
-  ])('%s: não vê o reset', (_caso, permissoes, papel) => {
-    simulado.acesso = { admin: false, ativo: true, permissoes }
-    simulado.documentos['usuarios/u1'] = { comissao: papel }
+  it('admin também vê o reset (os dois perfis fazem tudo)', () => {
+    simulado.acesso = { perfil: 'admin', ativo: true }
     montar()
-    expect(screen.queryByRole('button', { name: 'Resetar sessão' })).not.toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: 'Reset da sessão' })).getByRole('button', { name: 'Resetar sessão' })).toBeInTheDocument()
   })
 
   it('sessão reiniciada: selo "Reiniciada", quem resetou, quando e o motivo; sem condução', () => {
@@ -96,5 +100,36 @@ describe('tela da sessão — reset', () => {
     expect(aviso).toHaveTextContent('10/11/2026 14:32')
     expect(aviso).toHaveTextContent('Conflito de interesse declarado após a sessão.')
     expect(screen.queryByRole('button', { name: 'Definir foco' })).not.toBeInTheDocument()
+  })
+})
+
+describe('tela da sessão — presentes (só nome e papel)', () => {
+  it('lista nome e papel, sem declarações; "Alterar presentes" usa o mesmo bloco da abertura (PATCH presentes)', async () => {
+    montar()
+    const tabela = screen.getByRole('table', { name: 'Presentes' })
+    expect(within(tabela).getByText('Ana Lima').closest('tr')).toHaveTextContent('Presidente')
+    expect(within(tabela).getByText('Bruno Reis').closest('tr')).toHaveTextContent('Membro')
+    expect(screen.queryByText(/impedimento/i)).not.toBeInTheDocument()
+    expect(screen.getByText('Lotes em pauta').nextSibling).toHaveTextContent('L1')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Alterar presentes' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Remover pessoa 2 (Bruno Reis)' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Adicionar pessoa' }))
+    await userEvent.type(screen.getByRole('textbox', { name: /^Nome da pessoa 2/ }), 'Carla Dias')
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar presentes' }))
+    await waitFor(() =>
+      expect(simulado.chamarApi).toHaveBeenCalledWith('/api/sessao', {
+        metodo: 'PATCH',
+        corpo: {
+          chamamentoId: 'ch1',
+          sessaoId: 's1',
+          acao: 'presentes',
+          presentes: [
+            { nome: 'Ana Lima', papel: 'presidente' },
+            { nome: 'Carla Dias', papel: 'membro' },
+          ],
+        },
+      }),
+    )
   })
 })

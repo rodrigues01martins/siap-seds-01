@@ -59,7 +59,7 @@ interface DesempateGravado {
   justificativa: string
 }
 
-/** Dados da ata: sessão, pauta, decisões por maioria registradas nela, desempates e diligências da pauta. */
+/** Dados da ata: sessão (lotes e presentes), propostas dos lotes em pauta, decisões por maioria registradas nela, desempates e diligências. */
 export async function carregarAta(ch: string, s: string): Promise<DadosAta | null> {
   const [chamamento, sessao, propostas, oscs, desempates] = await Promise.all([
     lerDocumento<Chamamento>(`chamamentos/${ch}`),
@@ -75,7 +75,9 @@ export async function carregarAta(ch: string, s: string): Promise<DadosAta | nul
     const p = porId.get(id)
     return p ? (nomeOsc.get(p.oscCnpj) ?? p.oscCnpj) : id
   }
-  const pauta = sessao.pauta.filter((id) => porId.has(id))
+  // Pauta: as propostas dos lotes da sessão.
+  const lotes = sessao.lotes ?? []
+  const pauta = propostas.filter((p) => lotes.includes(p.loteCodigo)).map((p) => p.id)
 
   const porProposta = await Promise.all(
     pauta.map(async (id) => ({
@@ -90,9 +92,9 @@ export async function carregarAta(ch: string, s: string): Promise<DadosAta | nul
     sessao: {
       id: sessao.id,
       data: sessao.data,
-      presentes: sessao.presentes,
-      declaracoes: sessao.declaracoes,
-      resets: (sessao.historicoResets ?? []).map((r) => ({ em: r.em.toDate(), presidente: r.por.email ?? r.por.uid, motivo: r.motivo })),
+      lotes,
+      presentes: sessao.presentes ?? [],
+      resets: (sessao.historicoResets ?? []).map((r) => ({ em: r.em.toDate(), por: r.por.email ?? r.por.uid, motivo: r.motivo })),
     },
     propostas: pauta.map((id) => {
       const p = porId.get(id)!

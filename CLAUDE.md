@@ -15,7 +15,7 @@ Eliminatórias: D1 < 67,2 → inapta; nível 0 em 1.1 ou 1.2 → desclassificada
 ## Regras de arquitetura (não violar)
 1. src/domain é código puro: não importa Firebase, React nem nada de rede.
 2. O cliente NUNCA escreve no Firestore. Toda escrita passa por /api, que:
-   verifica o ID token, confere o acesso no cadastro usuarios/{uid} (admin, permissoes, ativo),
+   verifica o ID token, confere o acesso no cadastro usuarios/{uid} (perfil, ativo),
    valida os dados, grava e registra em /auditoria na mesma transação.
 3. A matriz vem de src/domain/matriz/matriz_2026.json; nada de pesos ou faixas fixos no código.
 4. Proposta com campo bloqueada=true não aceita escrita (homologada).
@@ -38,7 +38,7 @@ Eliminatórias: D1 < 67,2 → inapta; nível 0 em 1.1 ou 1.2 → desclassificada
 - Relatórios (espelho, quadro-resumo, ata) e a exportação da auditoria são gerados no navegador (pdfmake,
   exceljs), sem gravar nada. Rodapé com código de verificação = SHA-256 dos dados usados; "MINUTA" se houver
   proposta não homologada no documento.
-- Exclusão de cadastros (chamamento, OSC, proposta): somente admin, justificativa obrigatória (mín. 20 caracteres).
+- Exclusão de cadastros (chamamento, OSC, proposta): livre para os dois perfis, justificativa obrigatória (mín. 20 caracteres).
   Proposta homologada → 409 ("Reabra a proposta antes de excluir"); apaga a proposta e TODAS as subcoleções.
   OSC com proposta vinculada → 409 (quantas e quais). Chamamento com propostas ou sessões → 409; apaga o chamamento
   e seus lotes. Ordem (api/_lib/exclusao.ts): transação confere bloqueios, marca status "excluindo" (o gravar recusa
@@ -47,49 +47,54 @@ Eliminatórias: D1 < 67,2 → inapta; nível 0 em 1.1 ou 1.2 → desclassificada
   repetição conclui (idempotente). Prévia: GET ?simular=true. Na tela: "Excluir" no menu de ações da linha
   (MenuAcoes), nunca ação primária; ConfirmDialog com a prévia, a justificativa e o identificador digitado.
 - Gravações da Comissão só em sessão aberta: nível da D1, admissibilidade, experiências da D2 e desempate exigem o
-  sessaoId de sessão aberta do chamamento (proposta na pauta, exceto no desempate); o sessaoId vai para o documento
+  sessaoId de sessão aberta do chamamento (proposta de um lote em pauta, exceto no desempate); o sessaoId vai para o documento
   e para cada registro de auditoria da operação (gravar({ sessaoId })). Diligências não dependem de sessão.
-- Reset da sessão (PATCH /api/sessao ação "resetar"; prévia GET ?simular=true): somente o presidente (permissão
-  resetarSessao + papel presidente), justificativa obrigatória (mín. 20). Desfaz tudo o que foi gravado com o
+- Reset da sessão (PATCH /api/sessao ação "resetar"; prévia GET ?simular=true): admin ou presidente (perfis de
+  login), justificativa obrigatória (mín. 20). Desfaz tudo o que foi gravado com o
   sessaoId (admissibilidade, níveis da D1, experiências e documentos da D2, desempates; diligências não): cada
   documento volta ao "antes" do primeiro registro de auditoria da sessão para ele (antes nulo → apagado).
   Bloqueios 409: proposta afetada homologada ("Reabra antes de resetar"); registro alterado depois em outra sessão
   não resetada ou fora de sessão ("Resete primeiro a sessão posterior"). Execução (api/_lib/resetSessao.ts): marca
   a sessão "reiniciando", reverte em lotes de até 400 escritas por transação (auditoria "resetar_sessao" com
   antes/depois), recalcula D1, D2, NF e status pelas regras de src/domain (recalcular.ts) e marca "reiniciada"
-  (reiniciadaPor, reiniciadaEm, motivo, resets, historicoResets; presentes e declarações mantidos; foco limpo).
+  (reiniciadaPor, reiniciadaEm, motivo, resets, historicoResets; presentes mantidos; foco limpo).
   Interrompido, fica "reiniciando" e a repetição continua de onde parou. Sessão reiniciada não recebe registros
-  (para refazer, abre-se nova sessão). A ata registra cada reset (data, hora, presidente, motivo). Na tela da
+  (para refazer, abre-se nova sessão). A ata registra cada reset (data, hora, quem resetou, motivo). Na tela da
   sessão, "Resetar sessão" (destructive) fica numa seção própria, fora das ações do cabeçalho; ConfirmDialog com
   a prévia, a justificativa e a palavra RESETAR.
+- Sessão: data, chamamento, lote(s) em pauta (lotes), status (aberta | encerrada) e presentes como lista de
+  { nome, papel: 'presidente' | 'membro' }, sem login e sem declaração de impedimento; exatamente 1 presidente e
+  nomes não repetidos (comparados sem acento, caixa e espaços extras). Abertura numa página só (data, lotes,
+  presentes com "Adicionar pessoa" e remoção com um clique). A ata lista os presentes com os papéis.
+- O app foi simplificado: dois perfis com login (admin e presidente); presentes da sessão são apenas nomes;
+  exclusão livre; sem auditoria detalhada. A revisão completa está na seção 0 do documento de requisitos.
+  Decisão de 17/10/2026.
 - O catálogo de componentes não faz parte do sistema; a documentação de componentes é mantida fora do
   repositório. Decisão de 15/10/2026. (Rota inexistente, como /ui, mostra a página "não encontrado".)
 
-## Acesso (perfil único: Administrador)
-- Cadastro em usuarios/{uid}: nome, email, admin, permissoes, ativo e comissao (papel na Comissão:
-  presidente, relator ou membro; identifica presentes na sessão e assinaturas da ata e não dá permissão —
-  única exceção: o reset da sessão exige a permissão resetarSessao E o papel presidente).
-- Administrador: pode tudo e faz a gestão de usuários na tela Usuários (/usuarios, api/usuarios.ts): novo usuário
-  (conta criada com senha aleatória + e-mail "redefinir senha" do Firebase, com que a pessoa cria a própria
-  senha), permissões por área, tornar/remover administrador, papel, desativar. Ninguém tira o próprio admin
-  nem se desativa. O histórico (/auditoria) é só do administrador.
-- Demais usuários: só o que foi liberado. Entra no app quem está ativo e é admin ou tem ao menos uma permissão.
-  Mudança de permissão vale na hora (o app ouve usuarios/{uid}; a /api e as regras leem o cadastro).
+## Acesso (dois perfis: admin e presidente)
+- Cadastro em usuarios/{uid}: nome, email, perfil ('admin' | 'presidente') e ativo.
+- Os dois perfis fazem tudo (cadastros, avaliação, sessão, resultado, exclusão, reset e histórico); só o admin
+  gerencia usuários e perfis na tela Usuários (/usuarios, api/usuarios.ts): novo usuário com perfil (conta criada
+  com senha aleatória + e-mail "redefinir senha" do Firebase), mudar perfil, desativar. Ninguém tira o próprio
+  admin nem se desativa.
+- Cadastro antigo (permissoes/comissao, sem perfil) fica sem acesso até o admin dar um perfil; o login mostra
+  "Seu acesso precisa ser atualizado pelo administrador". Exceção para não trancar o projeto: admin=true sem
+  perfil ainda vale como admin.
+- Entra no app quem está ativo e tem perfil. Mudança de perfil vale na hora (o app ouve usuarios/{uid}; a /api e
+  as regras leem o cadastro). Leitura no Firestore: admin e presidente; escrita só pela /api.
 - Sem custom claims e sem variável na Vercel para acesso.
 
-## Áreas e permissões
+## Perfis e permissões
 Fonte no código: src/domain/permissoes.ts (teste garante que bate com esta tabela).
-| Área | Permissões (id) |
+| Perfil | Pode |
 |---|---|
-| Consulta | consultar (somente leitura) |
-| Cadastros | chamamentos, oscs, propostas |
-| Avaliação | admissibilidade, nivelD1, experienciasD2, diligencias |
-| Sessão e resultado | sessaoAbrirEncerrar, sessaoConduzir, homologar, reabrir, desempate, resetarSessao (+ papel presidente) |
-| Exclusão de cadastros | — somente administrador (não é permissão liberável; exigência 'admin' do porteiro) |
+| admin | tudo + gestão de usuários e perfis (exigência 'admin' do porteiro) |
+| presidente | tudo, menos gestão de usuários e perfis (exigência 'usuario' do porteiro) |
 
 Empate de NF (RF-27): aplicam-se, em ordem, os critérios do Edital da matriz (matriz_2026.json: desempate e
-fonteDesempate; src/domain/classificacao.ts). Só se persistir o empate a Comissão decide e quem tem a permissão
-desempate registra a ordem com justificativa (api/desempate.ts, auditado; 409 para grupo que o Edital já resolveu).
+fonteDesempate; src/domain/classificacao.ts). Só se persistir o empate a Comissão decide e um dos perfis registra
+a ordem com justificativa (api/desempate.ts, auditado; 409 para grupo que o Edital já resolveu).
 
 ## Fluxo de trabalho (obrigatório)
 - Existem só duas branches: dev e main. Nunca crie outras branches nem Pull Requests.

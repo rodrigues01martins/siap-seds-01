@@ -13,14 +13,11 @@ function dados(ajustes: Partial<DadosAta> = {}): DadosAta {
     sessao: {
       id: 's1',
       data: '2026-11-10',
+      lotes: ['L1'],
       presentes: [
-        { uid: 'u1', email: 'presidente@seds.go.gov.br', perfil: 'presidente' },
-        { uid: 'u2', email: 'relator@seds.go.gov.br', perfil: 'relator' },
-        { uid: 'u3', email: 'membro@seds.go.gov.br', perfil: 'membro' },
-      ],
-      declaracoes: [
-        { uid: 'u1', semImpedimento: true },
-        { uid: 'u3', semImpedimento: false, motivo: 'Parentesco com dirigente da OSC Beta.' },
+        { nome: 'Ana Lima', papel: 'presidente' },
+        { nome: 'Bruno Reis', papel: 'membro' },
+        { nome: 'Carla Dias', papel: 'membro' },
       ],
     },
     propostas: [
@@ -41,18 +38,19 @@ function dados(ajustes: Partial<DadosAta> = {}): DadosAta {
 describe('minuta de ata — texto gerado', () => {
   const texto = textoInicialAta(dados())
 
-  it('data, chamamento e presentes', () => {
+  it('data, chamamento, lote(s) em pauta e presentes com os papéis (só nomes)', () => {
     expect(texto).toContain('10/11/2026')
     expect(texto).toContain('Chamamento Público nº 001/2026')
-    expect(texto).toContain('presidente@seds.go.gov.br (Presidente)')
-    expect(texto).toContain('relator@seds.go.gov.br (Relator)')
-    expect(texto).toContain('membro@seds.go.gov.br (Membro)')
+    expect(texto).toContain('Lote(s) em pauta: L1')
+    expect(texto).toContain('- Ana Lima (Presidente)')
+    expect(texto).toContain('- Bruno Reis (Membro)')
+    expect(texto).toContain('- Carla Dias (Membro)')
   })
 
-  it('declarações de impedimento, inclusive a ausente', () => {
-    expect(texto).toContain('presidente@seds.go.gov.br: declarou não haver impedimento.')
-    expect(texto).toContain('membro@seds.go.gov.br: declarou impedimento — Parentesco com dirigente da OSC Beta.')
-    expect(texto).toContain('relator@seds.go.gov.br: sem declaração registrada.')
+  it('sem declarações de impedimento; assinaturas pelos nomes dos presentes', () => {
+    expect(texto).not.toMatch(/impedimento/i)
+    expect(texto).toMatch(/_+\nAna Lima \(Presidente\)/)
+    expect(texto).toMatch(/_+\nCarla Dias \(Membro\)/)
   })
 
   it('propostas analisadas, decisões por maioria com voto divergente, desempates e diligências', () => {
@@ -64,19 +62,19 @@ describe('minuta de ata — texto gerado', () => {
     expect(texto).toContain('Conclusão: Atendida, sem conteúdo técnico novo.')
   })
 
-  it('sessão reiniciada: a ata registra cada reset (data, hora de Goiás, presidente e motivo)', () => {
+  it('sessão reiniciada: a ata registra cada reset (data, hora de Goiás, quem resetou e motivo)', () => {
     const base = dados()
     const reiniciada = textoInicialAta(
       dados({
         sessao: {
           ...base.sessao,
-          resets: [{ em: new Date('2026-11-10T17:32:00Z'), presidente: 'presidente@seds.go.gov.br', motivo: 'Conflito de interesse declarado após a sessão.' }],
+          resets: [{ em: new Date('2026-11-10T17:32:00Z'), por: 'presidente@seds.go.gov.br', motivo: 'Conflito de interesse declarado após a sessão.' }],
         },
       }),
     )
     expect(reiniciada).toContain('REINÍCIO DA SESSÃO (RESET)')
     expect(reiniciada).toContain(
-      'Em 10/11/2026, às 14:32, o presidente presidente@seds.go.gov.br resetou a sessão: os registros feitos nela foram desconsiderados e voltaram ao estado anterior. Motivo: Conflito de interesse declarado após a sessão.',
+      'Em 10/11/2026, às 14:32, a sessão foi resetada por presidente@seds.go.gov.br: os registros feitos nela foram desconsiderados e voltaram ao estado anterior. Motivo: Conflito de interesse declarado após a sessão.',
     )
     expect(textoInicialAta(base)).not.toContain('REINÍCIO DA SESSÃO')
   })

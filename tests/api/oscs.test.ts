@@ -5,12 +5,12 @@ import { auditoriaDe, chamar, criarUsuario, ler, limparAuth, limparFirestore, ty
 const VALIDA = { cnpj: '11.222.333/0001-81', razaoSocial: 'Instituto Esperança', nomeFantasia: 'Esperança' }
 
 let admin: Usuario
-let presidente: Usuario
+let antigo: Usuario
 
 beforeAll(async () => {
   await limparAuth()
   admin = await criarUsuario('admin')
-  presidente = await criarUsuario('presidente')
+  antigo = await criarUsuario('antigo')
 })
 beforeEach(limparFirestore)
 
@@ -20,7 +20,7 @@ describe('/api/oscs — acesso', () => {
     expect(r.status).toBe(405)
     expect(r.headers.get('Allow')).toBe('GET, POST, PATCH, DELETE')
     expect((await chamar(rota, 'POST', VALIDA, null)).status).toBe(401)
-    expect((await chamar(rota, 'POST', VALIDA, presidente.token)).status).toBe(403)
+    expect((await chamar(rota, 'POST', VALIDA, antigo.token)).status).toBe(403)
   })
 })
 

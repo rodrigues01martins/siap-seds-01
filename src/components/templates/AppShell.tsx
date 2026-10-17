@@ -13,6 +13,7 @@ import { Drawer } from '../ui/Drawer'
 import { Icone } from '../ui/Icone'
 import { Badge } from '../ui/StatusBadge'
 import { cx } from '../ui/cx'
+import { ROTULO_PERFIL } from '../../domain/permissoes'
 import { gruposDeNavegacao } from './navegacao'
 import { NavegacaoLateral } from './NavegacaoLateral'
 import { RodapeInstitucional } from './RodapeInstitucional'
@@ -85,7 +86,7 @@ export function AppShell() {
         <div className="ml-auto flex items-center gap-3">
           <div className="hidden text-right sm:block">
             <p className="max-w-56 truncate text-body-sm text-text-primary">{usuario?.nome ?? usuario?.email}</p>
-            <Badge tom={usuario?.acesso?.admin ? 'info' : 'neutral'}>{usuario?.acesso?.admin ? 'Administrador' : 'Usuário'}</Badge>
+            <Badge tom={usuario?.acesso?.perfil === 'admin' ? 'info' : 'neutral'}>{usuario?.acesso?.perfil ? ROTULO_PERFIL[usuario.acesso.perfil] : 'Sem perfil'}</Badge>
           </div>
           <Button variante="secondary" tamanho="sm" icone={LogOut} onClick={() => void sair()}>
             Sair

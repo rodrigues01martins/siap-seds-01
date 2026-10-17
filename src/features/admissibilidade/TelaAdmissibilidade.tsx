@@ -8,10 +8,8 @@ import { EmptyState } from '../../components/ui/EmptyState'
 import { ErrorState } from '../../components/ui/ErrorState'
 import { Skeleton } from '../../components/ui/Skeleton'
 import type { Admissibilidade } from '../../domain/admissibilidade'
-import { podeFazer } from '../../domain/permissoes'
 import { chamarApi } from '../../lib/api'
 import { dataBr } from '../../lib/datas'
-import { useUsuario } from '../auth/useUsuario'
 import { cabecalhoDaProposta, ContextoProposta, motivoSemSessao, useDadosProposta } from '../avaliacao/CabecalhoProposta'
 import { FormAdmissibilidade } from './FormAdmissibilidade'
 
@@ -21,7 +19,6 @@ type Gravada = Admissibilidade & { registradaPor?: { email: string | null }; reg
 
 export function TelaAdmissibilidade() {
   const { ch = '', p = '' } = useParams()
-  const { usuario } = useUsuario()
   const leitura = useDadosProposta(ch, p)
   if (leitura.carregando) return <Skeleton linhas={6} rotulo="Carregando admissibilidade" />
   if (leitura.erro) return <ErrorState mensagem={leitura.erro} />
@@ -31,9 +28,7 @@ export function TelaAdmissibilidade() {
   const gravada = (proposta as { admissibilidade?: Gravada }).admissibilidade ?? null
   const motivo = proposta.bloqueada
     ? 'Proposta homologada.'
-    : !podeFazer(usuario?.acesso ?? null, 'admissibilidade')
-      ? 'Você consulta a admissibilidade; o registro exige a permissão "Admissibilidade".'
-      : motivoSemSessao(leitura.dados, 'a admissibilidade')
+    : motivoSemSessao(leitura.dados, 'a admissibilidade')
   const autoria = gravada?.registradaPor
     ? ` Registrada por ${gravada.registradaPor.email ?? 'usuário'}${gravada.registradaEm ? ` em ${dataBr(gravada.registradaEm.toDate().toISOString().slice(0, 10))}` : ''}.`
     : ''

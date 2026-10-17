@@ -19,12 +19,10 @@ import { StatusBadge } from '../../components/ui/StatusBadge'
 import { calcularD1, type TotalPA } from '../../domain/d1'
 import { formatarNumero } from '../../domain/formatacao'
 import { MATRIZ_2026 } from '../../domain/matriz'
-import { podeFazer } from '../../domain/permissoes'
 import { statusDaProposta } from '../../domain/statusProposta'
 import { chamarApi } from '../../lib/api'
 import { useColecao } from '../../lib/firestore'
 import type { Avaliacao } from '../../lib/tipos'
-import { useUsuario } from '../auth/useUsuario'
 import { cabecalhoDaProposta, ContextoProposta, useDadosProposta, motivoSemSessao, type DadosProposta } from './CabecalhoProposta'
 import { ControleProjecao, type PedidoProjecao } from './ControleProjecao'
 import { PainelSubcriterio } from './PainelSubcriterio'
@@ -34,13 +32,12 @@ const CODIGOS = PLANOS.flatMap((p) => p.subcriterios.map((s) => s.codigo))
 const ID_FORMULARIO = 'form-subcriterio-d1'
 
 /** Por que a tela está só para leitura (null = pode registrar). */
-export function motivoSomenteLeituraD1(dados: DadosProposta, podeRegistrar: boolean): string | null {
+export function motivoSomenteLeituraD1(dados: DadosProposta): string | null {
   if (dados.proposta.bloqueada) return 'Proposta homologada: somente leitura.'
   const admissao = dados.proposta.admissibilidade?.situacao
   if (admissao === 'nao_admitida' || admissao === 'desclassificada') {
     return 'Proposta não admitida (Anexo III, item 28): não segue para avaliação.'
   }
-  if (!podeRegistrar) return 'Você consulta a avaliação, mas não registra níveis (permissão "Níveis da D1").'
   return motivoSemSessao(dados, 'níveis')
 }
 
@@ -74,7 +71,6 @@ function ProgressoPA({ total }: { total: TotalPA }) {
 
 export function TelaD1() {
   const { ch = '', p = '' } = useParams()
-  const { usuario } = useUsuario()
   const leitura = useDadosProposta(ch, p)
   const avaliacoes = useColecao<Avaliacao>(`chamamentos/${ch}/propostas/${p}/avaliacoes`)
   const [escolhido, setEscolhido] = useState<string | null>(null)
@@ -91,9 +87,9 @@ export function TelaD1() {
   const registros = new Map(avaliacoes.dados.map((a) => [a.id, a]))
   const previa = calcularD1(Object.fromEntries(avaliacoes.dados.map((a) => [a.id, a.nivel])))
   const atual = escolhido ?? previa.pendentes[0] ?? CODIGOS[0]!
-  const motivo = motivoSomenteLeituraD1(dados, podeFazer(usuario?.acesso ?? null, 'nivelD1'))
+  const motivo = motivoSomenteLeituraD1(dados)
   const sessao = dados.sessaoAberta
-  const podeProjetar = sessao !== null && sessao.pauta.includes(p) && podeFazer(usuario?.acesso ?? null, 'sessaoConduzir')
+  const podeProjetar = sessao !== null && motivoSemSessao(dados, 'níveis') === null
   async function projetar(pedido: PedidoProjecao) {
     setErroProjecao(null)
     try {

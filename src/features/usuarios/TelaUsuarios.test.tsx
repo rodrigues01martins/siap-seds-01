@@ -24,9 +24,10 @@ beforeEach(() => {
   simulado.chamarApi.mockReset().mockResolvedValue({})
   simulado.enviarEmailDeSenha.mockReset().mockResolvedValue(undefined)
   simulado.usuarios = [
-    { id: 'eu', email: 'eu@goias.gov.br', nome: 'Juliano Rodrigues', admin: true, ativo: true, permissoes: [] },
-    { id: 'c1', email: 'cejanne@goias.gov.br', nome: 'Cejanne Ribeiro', admin: false, ativo: true, permissoes: ['consultar', 'nivelD1'], comissao: 'membro' },
-    { id: 'a1', email: 'astamp@goias.gov.br', nome: 'Assessoria', admin: false, ativo: true, permissoes: [] },
+    { id: 'eu', email: 'eu@goias.gov.br', nome: 'Juliano Rodrigues', perfil: 'admin', ativo: true },
+    { id: 'c1', email: 'cejanne@goias.gov.br', nome: 'Cejanne Ribeiro', perfil: 'presidente', ativo: true },
+    // Cadastro do modelo anterior (relator): sem perfil.
+    { id: 'a1', email: 'astamp@goias.gov.br', nome: 'Assessoria', admin: false, ativo: true, permissoes: ['consultar'], comissao: 'relator' },
   ]
 })
 
@@ -38,17 +39,18 @@ const montar = () =>
     </MemoryRouter>,
   )
 
-describe('tela Usuários', () => {
-  it('lista com números, selos e áreas liberadas', () => {
+describe('tela Usuários (só o admin): perfis admin e presidente', () => {
+  it('lista com números e o perfil de cada um; cadastro antigo aparece como "Precisa de perfil"', () => {
     montar()
     expect(screen.getByText('Total de usuários').nextSibling).toHaveTextContent('3')
     expect(screen.getByText('Administradores').nextSibling).toHaveTextContent('1')
-    expect(screen.getByText('Sem nenhum acesso liberado').nextSibling).toHaveTextContent('1')
+    expect(screen.getByText('Presidentes').nextSibling).toHaveTextContent('1')
+    expect(screen.getByText('Acesso a atualizar').nextSibling).toHaveTextContent('1')
     expect(within(linhaDe('Juliano Rodrigues')).getByText('Você')).toBeInTheDocument()
-    expect(within(linhaDe('Juliano Rodrigues')).getByText('Todas as áreas')).toBeInTheDocument()
-    expect(within(linhaDe('Cejanne Ribeiro')).getByText('Avaliação')).toBeInTheDocument()
-    expect(within(linhaDe('Cejanne Ribeiro')).getByText('2/14')).toBeInTheDocument()
-    expect(within(linhaDe('Assessoria')).getByText('Nenhuma área')).toBeInTheDocument()
+    expect(within(linhaDe('Juliano Rodrigues')).getByText('Administrador')).toBeInTheDocument()
+    expect(within(linhaDe('Cejanne Ribeiro')).getByText('Presidente')).toBeInTheDocument()
+    expect(within(linhaDe('Assessoria')).getByText('Precisa de perfil')).toBeInTheDocument()
+    expect(screen.queryByText(/Áreas liberadas|Permissões/)).not.toBeInTheDocument()
   })
 
   it('busca por nome ou e-mail', async () => {
@@ -58,65 +60,46 @@ describe('tela Usuários', () => {
     expect(screen.queryByText('Cejanne Ribeiro')).not.toBeInTheDocument()
   })
 
-  it('Gerenciar: ligar uma permissão grava na hora (PATCH com a lista nova)', async () => {
-    montar()
-    await userEvent.click(within(linhaDe('Cejanne Ribeiro')).getByRole('button', { name: /^Gerenciar/ }))
-    const painel = screen.getByRole('dialog', { name: 'Cejanne Ribeiro' })
-    expect(within(painel).getByRole('switch', { name: 'Níveis da D1 (subcritérios)' })).toBeChecked()
-    await userEvent.click(within(painel).getByRole('switch', { name: 'Homologar proposta' }))
-    expect(simulado.chamarApi).toHaveBeenCalledWith('/api/usuarios', {
-      metodo: 'PATCH',
-      corpo: { uid: 'c1', permissoes: ['consultar', 'nivelD1', 'homologar'] },
-    })
-  })
-
-  it('Gerenciar: cliques seguidos somam as permissões, mesmo antes de a lista atualizar', async () => {
+  it('Gerenciar: escolher o perfil grava na hora (PATCH); cadastro antigo recebe perfil', async () => {
     montar()
     await userEvent.click(within(linhaDe('Assessoria')).getByRole('button', { name: /^Gerenciar/ }))
     const painel = screen.getByRole('dialog', { name: 'Assessoria' })
-    await userEvent.click(within(painel).getByRole('switch', { name: /^Ver chamamentos/ }))
-    await userEvent.click(within(painel).getByRole('switch', { name: 'OSCs' }))
-    await userEvent.click(within(painel).getByRole('switch', { name: 'Propostas' }))
-    expect(simulado.chamarApi).toHaveBeenLastCalledWith('/api/usuarios', {
-      metodo: 'PATCH',
-      corpo: { uid: 'a1', permissoes: ['consultar', 'oscs', 'propostas'] },
-    })
-    expect(within(painel).getByRole('switch', { name: 'OSCs' })).toBeChecked()
+    expect(within(painel).getByText(/Seu acesso precisa ser atualizado|escolha um perfil/i)).toBeInTheDocument()
+    await userEvent.click(within(painel).getByRole('radio', { name: /^Presidente/ }))
+    expect(simulado.chamarApi).toHaveBeenLastCalledWith('/api/usuarios', { metodo: 'PATCH', corpo: { uid: 'a1', perfil: 'presidente' } })
   })
 
-  it('Gerenciar: tornar administrador, papel na Comissão e e-mail de senha', async () => {
+  it('Gerenciar: trocar presidente para admin e enviar e-mail de senha', async () => {
     montar()
     await userEvent.click(within(linhaDe('Cejanne Ribeiro')).getByRole('button', { name: /^Gerenciar/ }))
     const painel = screen.getByRole('dialog', { name: 'Cejanne Ribeiro' })
-    await userEvent.click(within(painel).getByRole('button', { name: 'Tornar administrador' }))
-    expect(simulado.chamarApi).toHaveBeenLastCalledWith('/api/usuarios', { metodo: 'PATCH', corpo: { uid: 'c1', admin: true } })
-    await userEvent.selectOptions(within(painel).getByRole('combobox', { name: 'Papel na Comissão' }), 'presidente')
-    expect(simulado.chamarApi).toHaveBeenLastCalledWith('/api/usuarios', { metodo: 'PATCH', corpo: { uid: 'c1', comissao: 'presidente' } })
+    expect(within(painel).getByRole('radio', { name: /^Presidente/ })).toBeChecked()
+    await userEvent.click(within(painel).getByRole('radio', { name: /^Administrador/ }))
+    expect(simulado.chamarApi).toHaveBeenLastCalledWith('/api/usuarios', { metodo: 'PATCH', corpo: { uid: 'c1', perfil: 'admin' } })
     await userEvent.click(within(painel).getByRole('button', { name: 'Enviar e-mail para redefinir senha' }))
     expect(simulado.enviarEmailDeSenha).toHaveBeenCalledWith('cejanne@goias.gov.br')
     expect(await within(painel).findByRole('status')).toHaveTextContent('enviado para cejanne@goias.gov.br')
   })
 
-  it('o próprio administrador não se remove nem se desativa (botões bloqueados)', async () => {
+  it('o próprio administrador não muda o próprio perfil nem se desativa (bloqueados)', async () => {
     montar()
     await userEvent.click(within(linhaDe('Juliano Rodrigues')).getByRole('button', { name: /^Gerenciar/ }))
     const painel = screen.getByRole('dialog', { name: 'Juliano Rodrigues' })
-    expect(within(painel).getByRole('button', { name: 'Remover administrador' })).toBeDisabled()
+    expect(within(painel).getByRole('radio', { name: /^Presidente/ })).toBeDisabled()
     expect(within(painel).getByRole('button', { name: 'Desativar' })).toBeDisabled()
-    expect(within(painel).getByRole('switch', { name: 'Homologar proposta' })).toBeDisabled()
   })
 
-  it('Novo usuário: cadastra (POST) e envia o e-mail para criar a senha', async () => {
+  it('Novo usuário: nome, e-mail e perfil (POST) e envia o e-mail para criar a senha', async () => {
     montar()
     await userEvent.click(screen.getByRole('button', { name: 'Novo usuário' }))
     const painel = screen.getByRole('dialog', { name: 'Novo usuário' })
     await userEvent.type(within(painel).getByRole('textbox', { name: 'Nome' }), 'Maria Souza')
     await userEvent.type(within(painel).getByRole('textbox', { name: 'E-mail' }), 'Maria@Goias.gov.br')
-    await userEvent.click(within(painel).getByRole('switch', { name: 'Níveis da D1 (subcritérios)' }))
+    expect(within(painel).getByRole('radio', { name: /^Presidente/ })).toBeChecked()
     await userEvent.click(within(painel).getByRole('button', { name: 'Cadastrar e enviar e-mail' }))
     expect(simulado.chamarApi).toHaveBeenCalledWith('/api/usuarios', {
       metodo: 'POST',
-      corpo: { nome: 'Maria Souza', email: 'maria@goias.gov.br', admin: false, comissao: null, permissoes: ['consultar', 'nivelD1'] },
+      corpo: { nome: 'Maria Souza', email: 'maria@goias.gov.br', perfil: 'presidente' },
     })
     await waitFor(() => expect(simulado.enviarEmailDeSenha).toHaveBeenCalledWith('maria@goias.gov.br'))
     expect(await screen.findByText(/Enviamos para maria@goias.gov.br o e-mail para criar a senha/)).toBeInTheDocument()

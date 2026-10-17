@@ -1,4 +1,4 @@
-// PUT /api/admissibilidade — admissibilidade do Caderno (Anexo III, item 28). Perfis: presidente, relator.
+// PUT /api/admissibilidade — admissibilidade do Caderno (Anexo III, item 28). Perfis: admin e presidente.
 // Grava propostas/{p}.admissibilidade com a apuração de src/domain (páginas e página de corte por PA,
 // requisitos, situação admitida | nao_admitida | desclassificada e motivos), autoria e data; auditado.
 // Proposta homologada não aceita (409). Não admitida ou desclassificada não segue para C2/C3 (recalcular.ts).
@@ -17,7 +17,7 @@ import { exigirSemProblemas, lerCorpo } from './_lib/validacao.js'
 
 export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   PUT: async (requisicao) => {
-    const autor = await autenticar(requisicao, 'admissibilidade')
+    const autor = await autenticar(requisicao)
     const { chamamentoId, propostaId, sessaoId, ...entrada } = await lerCorpo(requisicao, esquemaAdmissibilidade)
     const caminho = `chamamentos/${chamamentoId}/propostas/${propostaId}`
     let apurada: ReturnType<typeof calcularAdmissibilidade> | undefined

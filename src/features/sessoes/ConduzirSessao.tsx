@@ -1,8 +1,7 @@
-// /chamamentos/:ch/sessoes/:s (DetailPage) — sessão: foco da projeção { tipo, propostaId, subcriterio? }
-// (quem conduz), presentes e declarações, pauta e encerrar (presidente, com confirmação destrutiva).
-// Reset da sessão (permissão resetarSessao + papel de presidente): seção própria no fim da página, fora das
-// ações do cabeçalho, com DialogoResetSessao. Sessão reiniciada mostra quem resetou, quando e por quê.
-// Os demais perfis só leem.
+// /chamamentos/:ch/sessoes/:s (DetailPage) — sessão: foco da projeção { tipo, propostaId, subcriterio? }, presentes
+// (nome e papel, editáveis com o mesmo bloco da abertura), pauta (propostas dos lotes da sessão) e encerrar (com
+// confirmação destrutiva). Reset da sessão: seção própria no fim da página, fora das ações do cabeçalho, com
+// DialogoResetSessao. Sessão reiniciada mostra quem resetou, quando e por quê. Admin e presidente fazem tudo.
 
 import { FileText, MonitorUp, Power, RotateCcw, SquarePen } from 'lucide-react'
 import { useState } from 'react'
@@ -35,9 +34,8 @@ import type { Chamamento, Osc, Proposta, Sessao } from '../../lib/tipos'
 import { useUsuario } from '../auth/useUsuario'
 import { ROTULO_TIPO_FOCO, descreverFoco } from '../projecao/foco'
 import { DialogoResetSessao } from './DialogoResetSessao'
-import { campoDosMembros, corpoDosMembros, LinhasMembros } from './FormAberturaSessao'
+import { CamposPresentes, PRESENTES_INICIAIS } from './FormAberturaSessao'
 import { SeloSessao } from './SeloSessao'
-import { useComissao } from './useComissao'
 
 const SUBCRITERIOS = MATRIZ_2026.dimensao1.planos.flatMap((pa) =>
   pa.subcriterios.map((s) => ({ valor: s.codigo, rotulo: `${pa.codigo} · ${s.codigo} — ${s.titulo}` })),
@@ -59,8 +57,6 @@ export function ConduzirSessao() {
   const sessao = useDocumento<Sessao>(`chamamentos/${ch}/sessoes/${s}`)
   const propostas = useColecao<Proposta>(`chamamentos/${ch}/propostas`)
   const oscs = useColecao<Osc>('oscs')
-  // Papel na Comissão de quem está logado: o reset exige ser o presidente (além da permissão).
-  const cadastro = useDocumento<{ comissao?: string }>(usuario ? `usuarios/${usuario.uid}` : null)
   const { mostrar } = useToast()
   const [resetando, setResetando] = useState(false)
   const [erro, setErro] = useState<unknown>(null)
@@ -76,10 +72,18 @@ export function ConduzirSessao() {
 
   const dados = sessao.dados
   const aberta = dados.status === 'aberta'
-  const conduz = aberta && podeFazer(acesso, 'sessaoConduzir')
-  const encerra = aberta && podeFazer(acesso, 'sessaoAbrirEncerrar')
-  const podeResetar = podeFazer(acesso, 'resetarSessao') && cadastro.dados?.comissao === 'presidente'
+  // Admin e presidente fazem tudo (a rota já exige um dos perfis).
+  const podeGravar = podeFazer(acesso)
+  const conduz = aberta && podeGravar
+  const encerra = aberta && podeGravar
+  const podeResetar = podeGravar
   const nomeOsc = new Map(oscs.dados.map((o) => [o.cnpj, o.razaoSocial]))
+  // Pauta: as propostas dos lotes da sessão.
+  const lotesPauta = dados.lotes ?? []
+  const pauta = propostas.dados
+    .filter((p) => lotesPauta.includes(p.loteCodigo))
+    .sort((a, b) => a.loteCodigo.localeCompare(b.loteCodigo) || (nomeOsc.get(a.oscCnpj) ?? '').localeCompare(nomeOsc.get(b.oscCnpj) ?? ''))
+    .map((p) => p.id)
   const rotuloProposta = (id: string) => {
     const p = propostas.dados.find((x) => x.id === id)
     return p ? `${nomeOsc.get(p.oscCnpj) ?? p.oscCnpj} — Lote ${p.loteCodigo}` : id
@@ -95,7 +99,6 @@ export function ConduzirSessao() {
     }
   }
 
-  const declaracao = (uid: string) => dados.declaracoes.find((d) => d.uid === uid)
   const caminho = `/chamamentos/${ch}`
   const titulo = `Sessão de ${dataBr(dados.data)}`
 
@@ -105,7 +108,7 @@ export function ConduzirSessao() {
         trilha: [{ rotulo: 'Chamamentos', para: '/' }, { rotulo: `Chamamento ${chamamento.dados?.numero ?? ch}`, para: caminho }, { rotulo: titulo }],
         titulo,
         descricao: {
-          aberta: 'Sessão aberta: a Comissão registra avaliações e o relator conduz a projeção.',
+          aberta: 'Sessão aberta: a Comissão registra avaliações e conduz a projeção.',
           encerrada: 'Sessão encerrada: somente consulta.',
           reiniciando: 'Reset em andamento ou interrompido: nenhum registro novo entra nesta sessão.',
           reiniciada: 'Sessão reiniciada: os registros feitos nela foram desconsiderados. Somente consulta.',
@@ -134,7 +137,8 @@ export function ConduzirSessao() {
         { termo: 'Situação', valor: <SeloSessao status={dados.status} /> },
         { termo: 'Data', valor: dataBr(dados.data) },
         { termo: 'Presentes', valor: dados.presentes.length },
-        { termo: 'Propostas na pauta', valor: dados.pauta.length },
+        { termo: 'Lotes em pauta', valor: lotesPauta.join(', ') || '—' },
+        { termo: 'Propostas na pauta', valor: pauta.length },
       ]}
     >
       <AlertaErroApi erro={erro} />
@@ -147,7 +151,7 @@ export function ConduzirSessao() {
       )}
       {dados.status === 'reiniciando' && (
         <Alert tom="warning" titulo="Reset não concluído" papel="status">
-          O reset desta sessão começou e não terminou. O presidente pode repeti-lo para concluir.
+          O reset desta sessão começou e não terminou. Repita o reset para concluir.
         </Alert>
       )}
 
@@ -179,7 +183,7 @@ export function ConduzirSessao() {
           >
             <div className="grid gap-4 md:grid-cols-2">
               <CampoLista nome="tipo" rotulo="O que projetar" opcoes={TIPOS_FOCO.map((t) => ({ valor: t, rotulo: ROTULO_TIPO_FOCO[t] }))} />
-              <CampoLista nome="propostaId" rotulo="Proposta" opcoes={dados.pauta.map((id) => ({ valor: id, rotulo: rotuloProposta(id) }))} />
+              <CampoLista nome="propostaId" rotulo="Proposta" opcoes={pauta.map((id) => ({ valor: id, rotulo: rotuloProposta(id) }))} />
             </div>
             <CampoSubcriterio />
           </FormularioApi>
@@ -187,50 +191,35 @@ export function ConduzirSessao() {
       </Card>
 
       <Card
-        titulo="Presentes e declarações de impedimento"
+        titulo="Presentes"
         acoes={
           conduz && !editandoPresentes ? (
             <Button variante="secondary" tamanho="sm" icone={SquarePen} onClick={() => setEditandoPresentes(true)}>
-              Alterar presentes e declarações
+              Alterar presentes
             </Button>
           ) : undefined
         }
       >
         {editandoPresentes ? (
-          <EditorMembros sessao={dados} alterar={alterar} aoConcluir={() => setEditandoPresentes(false)} />
+          <EditorPresentes sessao={dados} alterar={alterar} aoConcluir={() => setEditandoPresentes(false)} />
         ) : (
-          <DataTable<Presente>
+          <DataTable<Presente & { indice: number }>
             rotulo="Presentes"
-            linhas={dados.presentes}
-            chave={(p) => p.uid}
+            linhas={dados.presentes.map((p, indice) => ({ ...p, indice }))}
+            chave={(p) => String(p.indice)}
             vazio={{ titulo: 'Nenhum presente registrado' }}
             colunas={[
-              { id: 'membro', titulo: 'Membro', celula: (p) => p.email ?? p.uid },
-              { id: 'papel', titulo: 'Papel', celula: (p) => ROTULO_PAPEL[p.perfil] ?? p.perfil },
-              {
-                id: 'declaracao',
-                titulo: 'Declaração',
-                celula: (p) => {
-                  const d = declaracao(p.uid)
-                  if (!d) return <Badge tom="warning">Sem declaração</Badge>
-                  return d.semImpedimento ? (
-                    <Badge tom="success">Sem impedimento</Badge>
-                  ) : (
-                    <span className="flex flex-wrap items-center gap-2">
-                      <Badge tom="error">Impedido</Badge>
-                      <span className="text-body-sm text-text-secondary">{d.motivo}</span>
-                    </span>
-                  )
-                },
-              },
+              { id: 'nome', titulo: 'Nome', celula: (p) => p.nome },
+              { id: 'papel', titulo: 'Papel', celula: (p) => <Badge tom={p.papel === 'presidente' ? 'info' : 'neutral'}>{ROTULO_PAPEL[p.papel] ?? p.papel}</Badge> },
             ]}
           />
         )}
       </Card>
 
-      <Card titulo="Pauta" descricao="Propostas avaliadas nesta sessão, na ordem da pauta.">
+      <Card titulo="Pauta" descricao={`Propostas do(s) lote(s) ${lotesPauta.join(', ') || '—'}, analisadas nesta sessão.`}>
+        {pauta.length === 0 && <p className="text-body-sm text-text-secondary">Nenhuma proposta nos lotes da pauta.</p>}
         <ol className="divide-y divide-border-default">
-          {dados.pauta.map((id, i) => (
+          {pauta.map((id, i) => (
             <li key={id} className="flex flex-wrap items-center justify-between gap-3 py-3">
               <span className="text-body-md text-text-primary">
                 <span className="mr-2 text-label-md text-text-secondary">{i + 1}.</span>
@@ -286,10 +275,10 @@ export function ConduzirSessao() {
   )
 }
 
-const esquemaMembros = esquemaAbrirSessao.pick({ presentes: true, declaracoes: true })
+const esquemaPresentes = esquemaAbrirSessao.pick({ presentes: true })
 
-/** Mesma lista de membros da abertura, aplicada como presentes + declarações. */
-function EditorMembros({
+/** Mesma lista de presentes da abertura (nome e papel), aplicada à sessão. */
+function EditorPresentes({
   sessao,
   alterar,
   aoConcluir,
@@ -298,36 +287,23 @@ function EditorMembros({
   alterar: (corpo: Record<string, unknown>) => Promise<unknown>
   aoConcluir: () => void
 }) {
-  const comissao = useComissao()
-  if (comissao.carregando) return <Skeleton linhas={3} rotulo="Carregando Comissão" />
-  if (comissao.erro) return <ErrorState mensagem={comissao.erro} />
-
-  const presentes = new Set(sessao.presentes.map((p) => p.uid))
-  const linhas = comissao.dados.map((m) => {
-    const d = sessao.declaracoes.find((x) => x.uid === m.uid)
-    return { uid: m.uid, presente: presentes.has(m.uid), semImpedimento: d ? d.semImpedimento : true, motivo: d?.motivo ?? '' }
-  })
-
   return (
     <FormularioApi
-      rotulo="Presentes e declarações"
-      esquema={esquemaMembros}
-      valoresIniciais={{ membros: linhas }}
-      transformar={(valores) => corpoDosMembros(valores.membros ?? [])}
-      campoDoFormulario={(campo, corpo) => campoDosMembros(campo, corpo, linhas)}
-      rotuloEnviar="Salvar presentes e declarações"
+      rotulo="Presentes"
+      esquema={esquemaPresentes}
+      valoresIniciais={{ presentes: sessao.presentes.length > 0 ? sessao.presentes : PRESENTES_INICIAIS }}
+      rotuloEnviar="Salvar presentes"
       acoesSecundarias={
         <Button variante="secondary" onClick={aoConcluir}>
           Cancelar
         </Button>
       }
-      onEnviar={async ({ presentes: uids, declaracoes }: z.output<typeof esquemaMembros>) => {
-        await alterar({ acao: 'presentes', presentes: uids })
-        await alterar({ acao: 'declaracoes', declaracoes })
+      onEnviar={async ({ presentes }: z.output<typeof esquemaPresentes>) => {
+        await alterar({ acao: 'presentes', presentes })
         aoConcluir()
       }}
     >
-      <LinhasMembros membros={comissao.dados} />
+      <CamposPresentes />
     </FormularioApi>
   )
 }

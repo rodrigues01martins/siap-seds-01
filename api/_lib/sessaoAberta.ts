@@ -7,7 +7,7 @@ import { ErroApi, MENSAGENS } from './erros.js'
 
 /**
  * Lê a sessão na transação (encerrar a sessão conflita com a gravação): 409 se não existe ou não está
- * aberta e, quando há proposta, se ela está fora da pauta. Devolve o caminho da sessão.
+ * aberta e, quando há proposta, se o lote dela não está na pauta (lotes da sessão). Devolve o caminho da sessão.
  */
 export async function exigirSessaoAberta(
   transacao: Transaction,
@@ -18,8 +18,11 @@ export async function exigirSessaoAberta(
   const caminho = `chamamentos/${chamamentoId}/sessoes/${sessaoId}`
   const sessao = await transacao.get(obterAdmin().db.doc(caminho))
   if (sessao.get('status') !== 'aberta') throw new ErroApi(409, MENSAGENS.semSessaoAberta)
-  if (propostaId !== undefined && !((sessao.get('pauta') ?? []) as string[]).includes(propostaId)) {
-    throw new ErroApi(409, 'Proposta fora da pauta da sessão.')
+  if (propostaId !== undefined) {
+    const proposta = await transacao.get(obterAdmin().db.doc(`chamamentos/${chamamentoId}/propostas/${propostaId}`))
+    if (!((sessao.get('lotes') ?? []) as string[]).includes(proposta.get('loteCodigo') as string)) {
+      throw new ErroApi(409, 'Proposta fora da pauta da sessão.')
+    }
   }
   return caminho
 }

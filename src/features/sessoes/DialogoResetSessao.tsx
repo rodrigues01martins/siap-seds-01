@@ -1,4 +1,4 @@
-// Confirmação destrutiva do reset da sessão (presidente da Comissão). Ao abrir, busca a prévia na /api
+// Confirmação destrutiva do reset da sessão (admin ou presidente). Ao abrir, busca a prévia na /api
 // (GET /api/sessao?simular=true): por proposta, o que volta ao valor anterior e o que será apagado, e os
 // desempates; bloqueio → Alert de erro com o motivo e os registros, botão desabilitado. Sem bloqueio,
 // "Resetar sessão" só habilita com a justificativa (mín. 20 caracteres) e a palavra RESETAR digitada.
@@ -122,7 +122,7 @@ function Conteudo({ chamamentoId, sessaoId, rotuloSessao, nomeProposta, onFechar
     <ConfirmDialog
       aberto
       titulo={`Resetar a ${rotuloSessao}?`}
-      mensagem="Tudo o que a Comissão registrou nesta sessão (admissibilidade, níveis da D1, experiências da D2 e desempates) volta ao estado anterior à sessão. Diligências não são afetadas. A sessão fica reiniciada, sem novos registros; presentes e declarações são mantidos e o reset entra na ata."
+      mensagem="Tudo o que a Comissão registrou nesta sessão (admissibilidade, níveis da D1, experiências da D2 e desempates) volta ao estado anterior à sessão. Diligências não são afetadas. A sessão fica reiniciada, sem novos registros; os presentes são mantidos e o reset entra na ata."
       rotuloConfirmar="Resetar sessão"
       onConfirmar={() => void resetar()}
       onCancelar={onFechar}

@@ -1,10 +1,11 @@
-// Testes de uso automatizados, um por perfil, como a Comissão trabalha na sessão — tudo pela interface,
-// gravando pela /api nos emuladores (vite.e2e.config.ts). Cada fluxo é cronometrado por etapa e o resultado
-// vai para docs/auditoria-design/depois/testes-de-uso.md.
-// - relator: abre a sessão, registra a admissibilidade, avalia os 28 subcritérios e cadastra 3 experiências;
-// - membro: registra níveis; não vê ações da D2 nem de homologação;
-// - presidente: projeta, homologa, reabre com justificativa, gera a ata e o espelho;
-// - controle: só leitura (e a trilha de auditoria, que hoje é só do administrador — ver pendencias.md);
+// Testes de uso automatizados, como a Comissão trabalha na sessão — tudo pela interface, gravando pela /api
+// nos emuladores (vite.e2e.config.ts). Dois perfis com login: admin e presidente (os dois fazem tudo; só o
+// admin gerencia usuários). Cada fluxo é cronometrado por etapa e o resultado vai para
+// docs/auditoria-design/depois/testes-de-uso.md.
+// - presidente (avaliação): abre a sessão (uma página), registra a admissibilidade, avalia os 28 subcritérios e
+//   cadastra 3 experiências;
+// - presidente (resultado): projeta, homologa, reabre com justificativa, gera a ata e o espelho;
+// - cadastro antigo: vê "Seu acesso precisa ser atualizado pelo administrador"; o admin dá o perfil e libera na hora;
 // - telão: a projeção acompanha o foco sem recarregar a página.
 // Uso: npm run test:e2e:uso
 import { expect, test, type Page } from '@playwright/test'
@@ -12,7 +13,7 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { MATRIZ_2026 } from '../../src/domain/matriz'
 import { comoPerfil, esperarTela, violacoesAxe } from './apoio'
-import { CHAMAMENTOS_USO, PROPOSTA_USO } from './perfis'
+import { CHAMAMENTOS_USO, PROPOSTA_USO, SENHA_E2E } from './perfis'
 
 const PASTA = join('docs', 'auditoria-design', 'depois')
 const SESSAO = 'uso-sessao'
@@ -46,15 +47,6 @@ function cronometro(perfil: string, tarefa: string) {
   }
 }
 
-/** Botões que gravam algo: nenhum pode aparecer para quem só lê. */
-const ESCRITA = /^(Nova experiência|Editar|Excluir|Desconsiderar|Homologar|Reabrir|Salvar|Registrar|Encerrar sessão|Definir foco|Abrir sessão$|Nova proposta|Editar chamamento|Nova diligência|Alterar presentes)/
-
-async function botoesDeEscrita(pagina: Page): Promise<string[]> {
-  const nomes = await pagina.getByRole('button').evaluateAll((botoes) => botoes.map((b) => (b.getAttribute('aria-label') ?? b.textContent ?? '').trim()))
-  const links = await pagina.getByRole('link').evaluateAll((ls) => ls.map((l) => (l.getAttribute('aria-label') ?? l.textContent ?? '').trim()))
-  return [...nomes, ...links].filter((n) => ESCRITA.test(n))
-}
-
 async function avaliarSubcriterio(pagina: Page, faltam: number) {
   const resumo = pagina.getByRole('region', { name: 'Resumo da D1' })
   await pagina.getByRole('radio', { name: 'Nível 3', exact: true }).check()
@@ -85,22 +77,24 @@ async function novaExperiencia(pagina: Page, n: number) {
 
 test.beforeAll(() => mkdirSync(PASTA, { recursive: true }))
 
-test('relator: abre a sessão, registra a admissibilidade, avalia os 28 subcritérios e cadastra 3 experiências', async ({ browser, baseURL }) => {
+test('presidente: abre a sessão, registra a admissibilidade, avalia os 28 subcritérios e cadastra 3 experiências', async ({ browser, baseURL }) => {
   test.setTimeout(8 * 60_000)
-  const pagina = await comoPerfil(browser, 'relator', baseURL)
-  const t = cronometro('relator', 'sessão → admissibilidade → 28 subcritérios → 3 experiências')
+  const pagina = await comoPerfil(browser, 'presidente', baseURL)
+  const t = cronometro('presidente', 'sessão → admissibilidade → 28 subcritérios → 3 experiências')
 
-  await t.etapa('abrir a sessão (assistente em 3 etapas)', async () => {
-    await pagina.goto(`${ch('relator')}/sessoes/nova`)
+  await t.etapa('abrir a sessão (uma página: data, lote e presentes)', async () => {
+    await pagina.goto(`${ch('avaliacao')}/sessoes/nova`)
     await pagina.getByLabel(/^Data da sessão/).fill('2026-11-10')
-    await pagina.getByRole('button', { name: 'Avançar' }).click()
-    await pagina.getByRole('button', { name: 'Avançar' }).click()
+    await pagina.getByRole('checkbox', { name: /^Lote L1/ }).check()
+    await pagina.getByRole('textbox', { name: /^Nome da pessoa 1/ }).fill('Presidência E2E')
+    await pagina.getByRole('button', { name: 'Adicionar pessoa' }).click()
+    await pagina.getByRole('textbox', { name: /^Nome da pessoa 2/ }).fill('Membro E2E A')
     await pagina.getByRole('button', { name: 'Abrir sessão' }).click()
     await expect(pagina.getByRole('heading', { level: 1, name: 'Sessão de 10/11/2026' })).toBeVisible()
   })
 
   await t.etapa('registrar a admissibilidade', async () => {
-    await pagina.goto(`${proposta('relator')}/admissibilidade`)
+    await pagina.goto(`${proposta('avaliacao')}/admissibilidade`)
     for (const r of MATRIZ_2026.admissibilidade.requisitosEssenciais) {
       if (r.codigo !== MATRIZ_2026.admissibilidade.requisitoPlanos) await pagina.getByRole('checkbox', { name: `${r.codigo} — ${r.descricao}` }).check()
     }
@@ -116,50 +110,18 @@ test('relator: abre a sessão, registra a admissibilidade, avalia os 28 subcrit�
   })
 
   await t.etapa('avaliar os 28 subcritérios da D1', async () => {
-    await pagina.goto(`${proposta('relator')}/d1`)
+    await pagina.goto(`${proposta('avaliacao')}/d1`)
     await expect(pagina.getByRole('region', { name: 'Resumo da D1' })).toContainText('Faltam 28')
     for (let faltam = 28; faltam > 0; faltam--) await avaliarSubcriterio(pagina, faltam)
     await expect(pagina.getByRole('region', { name: 'Resumo da D1' })).toContainText('D1 parcial: 84')
   })
 
   await t.etapa('cadastrar 3 experiências da D2', async () => {
-    await pagina.goto(`${proposta('relator')}/d2`)
+    await pagina.goto(`${proposta('avaliacao')}/d2`)
     for (const n of [1, 2, 3]) await novaExperiencia(pagina, n)
     const tabela = pagina.getByRole('table', { name: 'Experiências da OSC' })
     for (const n of [1, 2, 3]) await expect(tabela).toContainText(`Experiência ${n} do teste de uso (E2E)`)
     await expect(pagina.getByText(/D2 gravada pela \/api: [1-9]/)).toBeVisible()
-  })
-  t.concluir()
-})
-
-test('membro: registra níveis; não vê ações da D2 nem de homologação', async ({ browser, baseURL }) => {
-  const pagina = await comoPerfil(browser, 'membro', baseURL)
-  const t = cronometro('membro', 'registrar 3 níveis e conferir o que não pode fazer')
-
-  await t.etapa('registrar 3 níveis na D1', async () => {
-    await pagina.goto(`${proposta('membro')}/d1`)
-    await expect(pagina.getByRole('region', { name: 'Resumo da D1' })).toContainText('Faltam 28')
-    for (const faltam of [28, 27, 26]) await avaliarSubcriterio(pagina, faltam)
-  })
-
-  await t.etapa('D2 sem ações de escrita', async () => {
-    await pagina.goto(`${proposta('membro')}/d2`)
-    await esperarTela(pagina)
-    await expect(pagina.getByRole('status').filter({ hasText: 'Somente leitura' })).toBeVisible()
-    expect(await botoesDeEscrita(pagina)).toEqual([])
-  })
-
-  await t.etapa('classificação sem homologar nem reabrir', async () => {
-    await pagina.goto(`${ch('membro')}/lotes/L1/classificacao`)
-    await esperarTela(pagina)
-    await expect(pagina.getByRole('heading', { level: 1, name: 'Classificação — Lote L1' })).toBeVisible()
-    expect(await botoesDeEscrita(pagina)).toEqual([])
-  })
-
-  await t.etapa('sessão sem foco, presentes nem encerrar', async () => {
-    await pagina.goto(`${ch('membro')}/sessoes/${SESSAO}`)
-    await esperarTela(pagina)
-    expect(await botoesDeEscrita(pagina)).toEqual([])
   })
   t.concluir()
 })
@@ -216,37 +178,39 @@ test('presidente: projeta, homologa, reabre com justificativa, gera a ata e o es
   t.concluir()
 })
 
-test('controle: só leitura em todas as telas da proposta e do resultado', async ({ browser, baseURL }) => {
-  const pagina = await comoPerfil(browser, 'controle', baseURL)
-  const t = cronometro('controle', 'percorrer painel, sessão, admissibilidade, D1, D2, memória, diligências e classificação')
-  const telas = [
-    ch('presidente'),
-    `${ch('presidente')}/sessoes/${SESSAO}`,
-    `${proposta('presidente')}/admissibilidade`,
-    `${proposta('presidente')}/d1`,
-    `${proposta('presidente')}/d2`,
-    `${proposta('presidente')}/d2/memoria`,
-    `${proposta('presidente')}/diligencias`,
-    `${ch('presidente')}/lotes/L1/classificacao`,
-  ]
-  await t.etapa(`ler ${telas.length} telas sem nenhum botão de escrita`, async () => {
-    for (const caminho of telas) {
-      await pagina.goto(caminho)
-      await esperarTela(pagina)
-      expect(await botoesDeEscrita(pagina), caminho).toEqual([])
-      expect(await violacoesAxe(pagina), caminho).toEqual([])
-    }
+test('cadastro antigo: acesso precisa ser atualizado; o admin dá o perfil e libera na hora', async ({ browser, baseURL }) => {
+  const antigo = await browser.newPage({ baseURL, locale: 'pt-BR' })
+  const t = cronometro('cadastro antigo', 'ver o aviso e ser liberado pelo admin (perfil presidente)')
+
+  await t.etapa('login mostra "Seu acesso precisa ser atualizado pelo administrador"', async () => {
+    await antigo.goto('/login')
+    await antigo.getByLabel('E-mail').fill('antigo@e2e.go.gov.br')
+    await antigo.getByLabel('Senha').fill(SENHA_E2E)
+    await antigo.getByRole('button', { name: 'Entrar' }).click()
+    await expect(antigo.getByText(/Seu acesso precisa ser atualizado pelo administrador/)).toBeVisible({ timeout: 30_000 })
+    expect(await violacoesAxe(antigo)).toEqual([])
   })
-  await t.etapa('histórico de alterações: hoje só do administrador', async () => {
-    await pagina.goto('/auditoria')
-    await expect(pagina.getByRole('heading', { level: 1 })).toContainText('Acesso não autorizado')
+
+  const admin = await comoPerfil(browser, 'administrador', baseURL)
+  await t.etapa('admin dá o perfil presidente na tela Usuários', async () => {
+    await admin.goto('/usuarios')
+    await esperarTela(admin)
+    const linha = admin.getByRole('row').filter({ hasText: 'Cadastro antigo E2E' })
+    await expect(linha).toContainText('Precisa de perfil')
+    await linha.getByRole('button', { name: /^Gerenciar/ }).click()
+    await admin.getByRole('dialog', { name: 'Cadastro antigo E2E' }).getByRole('radio', { name: /^Presidente/ }).check()
+    await expect(linha).toContainText('Presidente')
+  })
+
+  await t.etapa('a pessoa entra sem sair e entrar de novo', async () => {
+    await expect(antigo.getByRole('banner')).toContainText('Cadastro antigo E2E', { timeout: 30_000 })
   })
   t.concluir()
 })
 
 test('telão: a projeção acompanha o foco sem recarregar a página', async ({ browser, baseURL }) => {
-  const telao = await comoPerfil(browser, 'consulta', baseURL)
-  const presidente = await comoPerfil(browser, 'presidente', baseURL)
+  const telao = await comoPerfil(browser, 'presidente', baseURL)
+  const presidente = await comoPerfil(browser, 'administrador', baseURL)
   const t = cronometro('telão', 'trocar o foco 3 vezes e ver o telão acompanhar')
 
   await telao.goto(`/projecao/${CHAMAMENTOS_USO.telao}/${SESSAO}`)

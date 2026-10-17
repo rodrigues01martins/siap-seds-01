@@ -23,7 +23,7 @@ const ROTAS_NOVAS: RotaE2E[] =
   FASE === 'antes'
     ? []
     : [
-        { slug: 'diligencia-nova', caminho: `/chamamentos/ensaio-2026/propostas/${PROPOSTA}/diligencias/nova`, exige: 'diligencias' },
+        { slug: 'diligencia-nova', caminho: `/chamamentos/ensaio-2026/propostas/${PROPOSTA}/diligencias/nova`, exige: null },
       ]
 
 interface Violacao {
@@ -49,8 +49,7 @@ interface Medicao {
 }
 const medicoes: Medicao[] = []
 
-const podeAcessar = (perfil: PerfilE2E, rota: RotaE2E) =>
-  perfil.admin || rota.exige === null || (rota.exige !== 'admin' && perfil.permissoes.includes(rota.exige))
+const podeAcessar = (perfil: PerfilE2E, rota: RotaE2E) => perfil.perfil === 'admin' || (perfil.perfil !== null && rota.exige === null)
 
 async function esperarTela(pagina: Page) {
   await expect(pagina.getByText('Carregando…', { exact: true })).toHaveCount(0, { timeout: 30_000 })
@@ -98,7 +97,8 @@ test('tela de login (sem sessão)', async ({ page }) => {
   await medir(page, 'anonimo', { slug: 'login', caminho: '/login' }, true)
 })
 
-for (const perfil of PERFIS_E2E) {
+// O cadastro antigo (sem perfil) não entra no app: fica fora da medição.
+for (const perfil of PERFIS_E2E.filter((p) => p.perfil !== null)) {
   test(`perfil ${perfil.id}: todas as rotas`, async ({ page }) => {
     await page.goto('/login')
     await page.getByLabel('E-mail').fill(perfil.email)
@@ -188,7 +188,7 @@ function relatorio(): string {
   linhas.push(`Gerado por \`tests/e2e/baseline.spec.ts\` (Playwright + axe-core, WCAG 2.2 AA: ${TAGS.join(', ')}).`)
   linhas.push('App local com os emuladores e os dados de ensaio (`scripts/lib/ensaio.ts`).', '')
   linhas.push('## Resumo', '')
-  linhas.push(`- Telas medidas: ${medicoes.length} (perfis: anônimo, ${PERFIS_E2E.map((p) => p.id).join(', ')}).`)
+  linhas.push(`- Telas medidas: ${medicoes.length} (perfis: anônimo, ${PERFIS_E2E.filter((p) => p.perfil !== null).map((p) => p.id).join(', ')}).`)
   linhas.push(`- Screenshots: ${medicoes.length * LARGURAS.length} em \`telas/\` (${LARGURAS.join(' e ')} px, página inteira).`)
   linhas.push(`- Violações axe (regra × tela): ${total}.`)
   const aprovadas = medicoes.map((m) => m.aprovadas)

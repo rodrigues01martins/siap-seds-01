@@ -105,13 +105,10 @@ test('exclusão de cadastros: menu da linha, bloqueios, confirmação e exclusã
   expect(await violacoesAxe(estreita)).toEqual([])
 })
 
-test('quem não é administrador não vê o menu de exclusão', async ({ browser, baseURL }) => {
-  const pagina = await comoPerfil(browser, 'avaliador', baseURL)
+test('o presidente também vê o menu de exclusão (exclusão livre para os dois perfis)', async ({ browser, baseURL }) => {
+  const pagina = await comoPerfil(browser, 'presidente', baseURL)
   await pagina.goto('/')
   await esperarTela(pagina)
   await expect(pagina.getByRole('table', { name: 'Chamamentos' })).toContainText(NUMERO_ENSAIO)
-  await expect(pagina.getByRole('button', { name: /Mais ações/ })).toHaveCount(0)
-  await pagina.goto(`/chamamentos/${CHAMAMENTO_ENSAIO}`)
-  await esperarTela(pagina)
-  await expect(pagina.getByRole('button', { name: /Mais ações/ })).toHaveCount(0)
+  await expect(pagina.getByRole('button', { name: `Mais ações — chamamento ${NUMERO_ENSAIO}` })).toBeVisible()
 })

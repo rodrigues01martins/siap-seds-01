@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import type { Acesso } from '../../domain/permissoes'
 import { gruposDeNavegacao, type ContextoNavegacao } from './navegacao'
 
-const ADMIN: Acesso = { admin: true, ativo: true, permissoes: [] }
-const comum = (permissoes: Acesso['permissoes']): Acesso => ({ admin: false, ativo: true, permissoes })
+const ADMIN: Acesso = { perfil: 'admin', ativo: true }
+const PRESIDENTE: Acesso = { perfil: 'presidente', ativo: true }
 const CONTEXTO: ContextoNavegacao = {
   chamamento: { id: 'ch1', numero: '001/2026', lotes: ['L1', 'L2'] },
   sessaoAberta: 's9',
@@ -35,26 +35,21 @@ describe('navegação por domínio (§12: agrupar por domínio; itens conforme o
     ])
   })
 
-  it('sem sessão aberta: "Abrir sessão" só para quem tem a permissão', () => {
+  it('sem sessão aberta: "Abrir sessão" (admin e presidente)', () => {
     const contexto = { ...CONTEXTO, sessaoAberta: null }
     expect(mapa(ADMIN, contexto)).toContainEqual(['Sessão', ['Abrir sessão → /chamamentos/ch1/sessoes/nova']])
-    expect(mapa(comum(['consultar']), contexto).map(([g]) => g)).not.toContain('Sessão')
+    expect(mapa(PRESIDENTE, contexto)).toContainEqual(['Sessão', ['Abrir sessão → /chamamentos/ch1/sessoes/nova']])
   })
 
-  it('só consulta: lê tudo, sem cadastros nem administração', () => {
-    expect(mapa(comum(['consultar']), CONTEXTO).map(([g]) => g)).toEqual(['Início', 'Sessão', 'Avaliação', 'Resultado'])
+  it('presidente: tudo, menos Usuários (só o admin gerencia usuários e perfis)', () => {
+    expect(mapa(PRESIDENTE, CONTEXTO)).toEqual(mapa(ADMIN, CONTEXTO).map(([g, itens]) => [g, g === 'Administração' ? (itens as string[]).filter((i) => !i.startsWith('Usuários')) : itens]))
+    expect(mapa(PRESIDENTE)).toContainEqual(['Administração', ['Histórico de alterações → /auditoria']])
   })
 
-  it('permissão OSCs: só OSCs em Cadastros', () => {
-    expect(mapa(comum(['oscs']))).toEqual([
-      ['Início', ['Chamamentos → /']],
-      ['Cadastros', ['OSCs → /oscs']],
-    ])
-  })
-
-  it('sem acesso: nenhum item', () => {
+  it('sem acesso (sem cadastro, cadastro antigo sem perfil ou desativado): nenhum item', () => {
     expect(gruposDeNavegacao(null, CONTEXTO)).toEqual([])
-    expect(gruposDeNavegacao(comum([]), CONTEXTO)).toEqual([])
+    expect(gruposDeNavegacao({ perfil: null, ativo: true }, CONTEXTO)).toEqual([])
+    expect(gruposDeNavegacao({ perfil: 'admin', ativo: false }, CONTEXTO)).toEqual([])
   })
 
   it('cada item tem ícone e lote com caractere especial é codificado na rota', () => {

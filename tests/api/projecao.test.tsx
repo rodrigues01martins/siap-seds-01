@@ -31,7 +31,7 @@ beforeAll(async () => {
   banco.db = ambiente.authenticatedContext('uid-telao').firestore()
   await obterAdmin()
     .db.doc('usuarios/uid-telao')
-    .set({ email: 'telao@teste.go.gov.br', admin: false, ativo: true, permissoes: ['consultar'] })
+    .set({ email: 'telao@teste.go.gov.br', perfil: 'presidente', ativo: true })
   await semearProposta()
   await obterAdmin().db.doc(CAMINHO_PROPOSTA).update({ numeroSEI: '95570001' })
   await obterAdmin()

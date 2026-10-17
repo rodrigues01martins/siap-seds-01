@@ -13,26 +13,18 @@ import { EmptyState } from '../../components/ui/EmptyState'
 import { ErrorState } from '../../components/ui/ErrorState'
 import { Skeleton } from '../../components/ui/Skeleton'
 import { useToast } from '../../components/ui/Toast'
-import { podeFazer } from '../../domain/permissoes'
 import { chamarApi } from '../../lib/api'
 import { useColecao } from '../../lib/firestore'
-import { useUsuario } from '../auth/useUsuario'
 import { AvisoSomenteLeitura, cabecalhoDaProposta, ContextoProposta, useDadosProposta, type DadosProposta } from '../avaliacao/CabecalhoProposta'
 import { AvisoConteudoNovo, FormNovaDiligencia, ListaDiligencias, TratarDiligencia, type DiligenciaGravada } from './ListaDiligencias'
 
 function useDiligencias() {
   const { ch = '', p = '' } = useParams()
-  const { usuario } = useUsuario()
   const leitura = useDadosProposta(ch, p)
   const diligencias = useColecao<Omit<DiligenciaGravada, 'id'>>(`chamamentos/${ch}/propostas/${p}/diligencias`)
   const carregando = leitura.carregando || diligencias.carregando
   const erro = leitura.erro ?? diligencias.erro
-  const motivo = (dados: DadosProposta) =>
-    dados.proposta.bloqueada
-      ? 'Proposta homologada.'
-      : !podeFazer(usuario?.acesso ?? null, 'diligencias')
-        ? 'Você consulta as diligências; o registro exige a permissão "Diligências".'
-        : null
+  const motivo = (dados: DadosProposta) => (dados.proposta.bloqueada ? 'Proposta homologada.' : null)
   const base = { chamamentoId: ch, propostaId: p }
   const caminho = `/chamamentos/${ch}/propostas/${p}/diligencias`
   const lista = [...diligencias.dados].sort((a, b) => a.prazo.localeCompare(b.prazo))

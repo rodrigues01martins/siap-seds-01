@@ -1,7 +1,7 @@
-// POST /api/propostas (criar) e PATCH /api/propostas (editar). Perfil: admin.
+// POST /api/propostas (criar) e PATCH /api/propostas (editar). Perfis: admin e presidente.
 // Proposta em chamamentos/{chamamentoId}/propostas/{id}; exige chamamento, lote e OSC existentes.
 // "bloqueada" só muda pela homologação (Etapa 3b): este endpoint não aceita o campo.
-// DELETE (excluir, somente admin, com justificativa) e GET ?simular=true (prévia): ver _lib/exclusao.ts.
+// DELETE (excluir, com justificativa) e GET ?simular=true (prévia): ver _lib/exclusao.ts.
 // Proposta homologada não pode ser excluída (409: reabra antes); apaga todas as subcoleções.
 
 import type { Transaction } from 'firebase-admin/firestore'
@@ -64,13 +64,13 @@ async function conferirDuplicidade(
 
 export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   GET: async (requisicao) => {
-    await autenticar(requisicao, 'admin')
+    await autenticar(requisicao)
     const { chamamentoId, propostaId } = lerConsulta(requisicao, esquemaPreviaProposta)
     return json(200, await previaExclusao(alvoProposta(chamamentoId, propostaId)))
   },
 
   POST: async (requisicao) => {
-    const autor = await autenticar(requisicao, 'propostas')
+    const autor = await autenticar(requisicao)
     const { chamamentoId, loteCodigo: lote, oscCnpj, ...demais } = await lerCorpo(requisicao, esquemaCriarProposta)
     const id = obterAdmin().db.collection(`chamamentos/${chamamentoId}/propostas`).doc().id
     await gravar(autor, async (transacao) => {
@@ -88,7 +88,7 @@ export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   },
 
   PATCH: async (requisicao) => {
-    const autor = await autenticar(requisicao, 'propostas')
+    const autor = await autenticar(requisicao)
     const { chamamentoId, propostaId, ...alteracoes } = await lerCorpo(requisicao, esquemaEditarProposta)
     const caminho = `chamamentos/${chamamentoId}/propostas/${propostaId}`
     await gravar(autor, async (transacao) => {
@@ -108,7 +108,7 @@ export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   },
 
   DELETE: async (requisicao) => {
-    const autor = await autenticar(requisicao, 'admin')
+    const autor = await autenticar(requisicao)
     const { chamamentoId, propostaId, justificativa } = await lerCorpo(requisicao, esquemaExcluirProposta)
     return json(200, await excluirComSeguranca(autor, alvoProposta(chamamentoId, propostaId), justificativa))
   },

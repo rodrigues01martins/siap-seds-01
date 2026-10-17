@@ -11,7 +11,7 @@ import { PainelChamamento } from '../chamamentos/PainelChamamento'
 import { TelaOscs } from '../oscs/TelaOscs'
 
 const simulado = vi.hoisted(() => ({
-  acesso: { admin: true, ativo: true, permissoes: [] as string[] },
+  acesso: { perfil: 'admin', ativo: true } as { perfil: 'admin' | 'presidente'; ativo: boolean },
   colecoes: {} as Record<string, Record<string, unknown>[]>,
   documentos: {} as Record<string, Record<string, unknown>>,
   chamarApi: vi.fn(),
@@ -31,7 +31,7 @@ const OSC = { id: '11222333000181', cnpj: '11222333000181', razaoSocial: 'Instit
 const PROPOSTA = { id: 'p1', loteCodigo: 'L1', oscCnpj: '11222333000181', protocolo: 'PROT-2026-0001', bloqueada: false }
 
 beforeEach(() => {
-  simulado.acesso = { admin: true, ativo: true, permissoes: [] }
+  simulado.acesso = { perfil: 'admin', ativo: true }
   simulado.colecoes = {
     chamamentos: [CHAMAMENTO, { ...CHAMAMENTO, id: 'ch2', numero: '002/2026', status: 'excluindo' }],
     oscs: [OSC],
@@ -62,7 +62,7 @@ async function escolherExcluir(rotuloMenu: string) {
   return screen.getByRole('alertdialog')
 }
 
-describe('exclusão nas telas (somente admin)', () => {
+describe('exclusão nas telas (admin e presidente)', () => {
   it('chamamentos: "Excluir" no menu da linha abre o diálogo pedindo o nº do chamamento', async () => {
     montar('/')
     const dialogo = await escolherExcluir('Mais ações — chamamento 001/2026')
@@ -96,13 +96,12 @@ describe('exclusão nas telas (somente admin)', () => {
     expect(await within(dialogo).findByLabelText(/digite o protocolo da proposta: PROT-2026-0001/)).toBeInTheDocument()
   })
 
-  it('quem não é admin não vê o menu de exclusão (mesmo com permissão de cadastro)', () => {
-    simulado.acesso = { admin: false, ativo: true, permissoes: ['consultar', 'chamamentos', 'oscs', 'propostas'] }
+  it('o presidente também vê o menu de exclusão (admin e presidente fazem tudo)', () => {
+    simulado.acesso = { perfil: 'presidente', ativo: true }
     const { unmount } = montar('/')
-    expect(screen.queryByRole('button', { name: /Mais ações/ })).not.toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: /Mais ações/ }).length).toBeGreaterThan(0)
     unmount()
     montar('/oscs')
-    expect(screen.queryByRole('button', { name: /Mais ações/ })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Editar Instituto Esperança' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Mais ações — Instituto Esperança' })).toBeInTheDocument()
   })
 })

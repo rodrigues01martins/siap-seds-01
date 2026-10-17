@@ -1,6 +1,6 @@
-// POST /api/oscs (criar) e PATCH /api/oscs (editar). Perfil: admin.
+// POST /api/oscs (criar) e PATCH /api/oscs (editar). Perfis: admin e presidente.
 // O documento fica em oscs/{CNPJ normalizado}: o CNPJ é único por construção.
-// DELETE (excluir, somente admin, com justificativa) e GET ?simular=true (prévia): ver _lib/exclusao.ts.
+// DELETE (excluir, com justificativa) e GET ?simular=true (prévia): ver _lib/exclusao.ts.
 // OSC com proposta vinculada não pode ser excluída (409 informando quantas e quais).
 
 import { esquemaCriarOsc, esquemaEditarOsc, esquemaExcluirOsc, esquemaPreviaOsc } from '../src/esquemas/cadastros.js'
@@ -14,13 +14,13 @@ import { lerConsulta, lerCorpo } from './_lib/validacao.js'
 
 export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   GET: async (requisicao) => {
-    await autenticar(requisicao, 'admin')
+    await autenticar(requisicao)
     const { cnpj } = lerConsulta(requisicao, esquemaPreviaOsc)
     return json(200, await previaExclusao(alvoOsc(cnpj)))
   },
 
   POST: async (requisicao) => {
-    const autor = await autenticar(requisicao, 'oscs')
+    const autor = await autenticar(requisicao)
     const dados = await lerCorpo(requisicao, esquemaCriarOsc)
     const caminho = `oscs/${dados.cnpj}`
     await gravar(autor, async (transacao) => {
@@ -33,14 +33,14 @@ export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   },
 
   PATCH: async (requisicao) => {
-    const autor = await autenticar(requisicao, 'oscs')
+    const autor = await autenticar(requisicao)
     const { cnpj: chave, ...alteracoes } = await lerCorpo(requisicao, esquemaEditarOsc)
     await gravar(autor, () => [{ caminho: `oscs/${chave}`, acao: 'editar', dados: alteracoes }])
     return json(200, { cnpj: chave })
   },
 
   DELETE: async (requisicao) => {
-    const autor = await autenticar(requisicao, 'admin')
+    const autor = await autenticar(requisicao)
     const { cnpj, justificativa } = await lerCorpo(requisicao, esquemaExcluirOsc)
     return json(200, await excluirComSeguranca(autor, alvoOsc(cnpj), justificativa))
   },

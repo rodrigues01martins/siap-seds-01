@@ -1,5 +1,5 @@
 // /api/experiencia (C3): experiências da OSC (D2) e seus documentos comprobatórios.
-// POST cria, PATCH edita, DELETE exclui. Perfis: presidente, relator.
+// POST cria, PATCH edita, DELETE exclui. Perfis: admin e presidente.
 // Documento em .../propostas/{p}/experiencias/{id}. Regras (categorias A–D, A+B, D com MROSC, datas,
 // porte, desconsideração por critério) vêm de src/domain; esquema em src/esquemas/experiencia.ts.
 // Internação vem da modalidade e execução satisfatória, dos documentos aceitos (Etapa 4b).
@@ -60,7 +60,7 @@ function exigirExistente(atual: Record<string, unknown> | null): Record<string, 
 
 export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   POST: async (requisicao) => {
-    const autor = await autenticar(requisicao, 'experienciasD2')
+    const autor = await autenticar(requisicao)
     const { chamamentoId, propostaId, sessaoId, ...campos } = await lerCorpo(requisicao, esquemaCriarExperiencia)
     const dados = { ...campos, sessaoId }
     const id = obterAdmin().db.collection(`chamamentos/${chamamentoId}/propostas/${propostaId}/experiencias`).doc().id
@@ -73,7 +73,7 @@ export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   },
 
   PATCH: async (requisicao) => {
-    const autor = await autenticar(requisicao, 'experienciasD2')
+    const autor = await autenticar(requisicao)
     const { chamamentoId, propostaId, sessaoId, id, ...campos } = await lerCorpo(requisicao, esquemaEditarExperiencia)
     const alteracoes = { ...campos, sessaoId }
     const caminho = `chamamentos/${chamamentoId}/propostas/${propostaId}/experiencias/${id}`
@@ -86,7 +86,7 @@ export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   },
 
   DELETE: async (requisicao) => {
-    const autor = await autenticar(requisicao, 'experienciasD2')
+    const autor = await autenticar(requisicao)
     const { chamamentoId, propostaId, sessaoId, id } = await lerCorpo(requisicao, esquemaExcluirExperiencia)
     const caminho = `chamamentos/${chamamentoId}/propostas/${propostaId}/experiencias/${id}`
     const totais = await alterar(autor, chamamentoId, propostaId, sessaoId, id, (atual) => {

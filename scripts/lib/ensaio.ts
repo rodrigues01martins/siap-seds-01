@@ -195,12 +195,17 @@ export function montarEnsaio(dataSessao: string): {
     documentos[caminho] = proposta
   }
 
+  // Sessão do ensaio: lote(s) das propostas avaliadas e presentes só por nome (exatamente um presidente).
+  const lotesAvaliados = [...new Set(ROTEIRO.filter((r) => avaliadas.includes(r.id)).map((r) => r.lote))].sort()
   documentos[`${base}/sessoes/${SESSAO}`] = {
     data: dataSessao,
     status: 'encerrada',
-    pauta: avaliadas,
-    presentes: [],
-    declaracoes: [],
+    lotes: lotesAvaliados,
+    presentes: [
+      { nome: 'Presidente do ensaio', papel: 'presidente' },
+      { nome: 'Membro do ensaio A', papel: 'membro' },
+      { nome: 'Membro do ensaio B', papel: 'membro' },
+    ],
     foco: null,
     abertaPor: AUTOR,
   }

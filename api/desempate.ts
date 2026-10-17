@@ -1,4 +1,4 @@
-// PUT /api/desempate — registra a decisão de desempate da Comissão (RF-27). Perfil: presidente.
+// PUT /api/desempate — registra a decisão de desempate da Comissão (RF-27). Perfis: admin e presidente.
 // Só para empates que os critérios do Edital (matriz: desempate) não resolveram: confere, com
 // src/domain/classificacao.ts, que as propostas informadas formam exatamente um desses grupos
 // empatados atuais do lote e grava a ordem decidida com a
@@ -23,7 +23,7 @@ function idDaDecisao(lote: string, propostas: string[]): string {
 
 export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   PUT: async (requisicao) => {
-    const autor = await autenticar(requisicao, 'desempate')
+    const autor = await autenticar(requisicao)
     const { chamamentoId, sessaoId, loteCodigo, ordem, justificativa } = await lerCorpo(requisicao, esquemaDesempate)
     const { db } = obterAdmin()
     const id = idDaDecisao(loteCodigo, ordem)

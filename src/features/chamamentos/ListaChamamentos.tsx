@@ -1,5 +1,5 @@
 // Início (ListPage): lista de chamamentos com busca e ordenação; "Novo chamamento" para quem cadastra.
-// Admin: "Excluir" no menu de ações da linha (DialogoExclusao).
+// "Excluir" no menu de ações da linha (DialogoExclusao). Admin e presidente fazem tudo.
 
 import { ClipboardList, FolderOpen } from 'lucide-react'
 import { ListPage } from '../../components/templates/paginas'
@@ -7,10 +7,8 @@ import { ButtonLink } from '../../components/ui/ButtonLink'
 import { DataTable, type ColunaTabela } from '../../components/ui/DataTable'
 import { MenuAcoes } from '../../components/ui/MenuAcoes'
 import { dataBr } from '../../lib/datas'
-import { podeFazer } from '../../domain/permissoes'
 import { useColecao, type ComId } from '../../lib/firestore'
 import type { Chamamento } from '../../lib/tipos'
-import { useUsuario } from '../auth/useUsuario'
 import { emExclusao, SeloEmExclusao, useExclusao } from '../exclusao/useExclusao'
 
 const COLUNAS: ColunaTabela<ComId<Chamamento>>[] = [
@@ -31,12 +29,9 @@ const COLUNAS: ColunaTabela<ComId<Chamamento>>[] = [
   { id: 'lotes', titulo: 'Lotes', celula: (c) => String(c.lotes?.length ?? 0), alinhar: 'direita' },
 ]
 
-/** Início: lista de chamamentos (qualquer usuário com acesso; quem tem "Chamamentos" cadastra). */
+/** Início: lista de chamamentos; admin e presidente cadastram e excluem. */
 export function Inicio() {
-  const { usuario } = useUsuario()
   const leitura = useColecao<Chamamento>('chamamentos')
-  const podeCadastrar = podeFazer(usuario?.acesso ?? null, 'chamamentos')
-  const admin = usuario?.acesso?.admin === true
   const exclusao = useExclusao()
 
   return (
@@ -44,11 +39,11 @@ export function Inicio() {
       cabecalho={{
         titulo: 'Chamamentos',
         descricao: 'Abra um chamamento para ver as propostas por lote, as sessões e a classificação.',
-        acaoPrimaria: podeCadastrar ? (
+        acaoPrimaria: (
           <ButtonLink para="/chamamentos/novo" icone={ClipboardList}>
             Novo chamamento
           </ButtonLink>
-        ) : undefined,
+        ),
       }}
     >
       <DataTable
@@ -59,18 +54,16 @@ export function Inicio() {
         carregando={leitura.carregando}
         erro={leitura.erro}
         busca={{ rotulo: 'Buscar por número ou título', texto: (c) => `${c.numero} ${c.titulo}` }}
-        vazio={{ titulo: 'Nenhum chamamento cadastrado', descricao: podeCadastrar ? 'Use "Novo chamamento" para começar.' : undefined }}
+        vazio={{ titulo: 'Nenhum chamamento cadastrado', descricao: 'Use "Novo chamamento" para começar.' }}
         acoes={(c) => (
           <span className="flex justify-end gap-1">
             <ButtonLink para={`/chamamentos/${c.id}`} variante="tertiary" tamanho="sm" icone={FolderOpen} aria-label={`Abrir chamamento ${c.numero}`}>
               Abrir
             </ButtonLink>
-            {admin && (
-              <MenuAcoes
-                rotulo={`Mais ações — chamamento ${c.numero}`}
-                itens={[exclusao.itemExcluir({ tipo: 'chamamento', ids: { id: c.id }, identificador: c.numero, nome: `chamamento ${c.numero}` })]}
-              />
-            )}
+            <MenuAcoes
+              rotulo={`Mais ações — chamamento ${c.numero}`}
+              itens={[exclusao.itemExcluir({ tipo: 'chamamento', ids: { id: c.id }, identificador: c.numero, nome: `chamamento ${c.numero}` })]}
+            />
           </span>
         )}
       />
