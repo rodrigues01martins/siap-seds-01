@@ -154,6 +154,7 @@ passa por uma função `/api`, que:
 4. grava numa transação junto com um registro em `auditoria/{id}`
    `{ caminho, acao, antes, depois, uid, email, perfil: 'admin' | 'usuario', dataHora }`;
 5. recusa qualquer escrita em proposta homologada (`bloqueada = true`) ou em suas subcoleções → **409**.
+6. recusa qualquer escrita em registro **em exclusão** (`status: "excluindo"`) ou abaixo dele → **409**.
 
 ### Endpoints de cadastros e usuários
 
@@ -162,6 +163,8 @@ passa por uma função `/api`, que:
 | `/api/chamamentos` | `POST` criar, `PATCH` editar | `{ numero, titulo, processoSei, dataLimitePropostas, justificativaMinima?, lotes: [{ codigo, descricao }] }` (`PATCH` com `id`) | `chamamentos` |
 | `/api/oscs` | `POST` criar, `PATCH` editar | `{ cnpj, razaoSocial, nomeFantasia? }` — CNPJ numérico ou alfanumérico | `oscs` |
 | `/api/propostas` | `POST` criar, `PATCH` editar | `{ chamamentoId, loteCodigo, oscCnpj, protocolo, numeroSEI, observacao? }` (`PATCH` com `propostaId`) | `propostas` |
+| `/api/chamamentos`, `/api/oscs`, `/api/propostas` | `DELETE` excluir | `{ id, justificativa }` · `{ cnpj, justificativa }` · `{ chamamentoId, propostaId, justificativa }` (justificativa com 20+ caracteres) | administrador |
+| `/api/chamamentos`, `/api/oscs`, `/api/propostas` | `GET` prévia da exclusão | `?id=…&simular=true` · `?cnpj=…&simular=true` · `?chamamentoId=…&propostaId=…&simular=true` → `{ existe, emExclusao, subcolecoes: { nome: n }, total, bloqueios: [{ mensagem, itens }] }` | administrador |
 | `/api/usuarios` | `POST` novo usuário | `{ nome, email, admin, permissoes: [...], comissao: 'presidente' \| 'relator' \| 'membro' \| null }` | administrador |
 | `/api/usuarios` | `PATCH` alterar | `{ uid, nome?, admin?, ativo?, permissoes?, comissao? }` | administrador |
 | `/api/usuarios` | `PUT` primeiro acesso | — | qualquer conta logada: cria o administrador inicial (seção 4); quem já tem cadastro recebe 200 |
@@ -177,12 +180,35 @@ passa por uma função `/api`, que:
   Enviar `indiceCorrecao` ou `dataBaseCorrecao` dá **400** ("Campo não permitido."). Para apagar esses campos de
   chamamentos antigos: `npm run remover-campos-correcao` (seção 7).
 
+### Exclusão de cadastros (somente administrador)
+
+| Cadastro | Bloqueio (**409**) | O que é apagado |
+|---|---|---|
+| Proposta | homologada: "Reabra a proposta antes de excluir" | a proposta e **todas** as subcoleções (avaliações, experiências e seus documentos, resultado da D2, diligências…) |
+| OSC | há proposta vinculada (a mensagem diz quantas e quais) | a OSC |
+| Chamamento | há propostas ou sessões | o chamamento e seus lotes |
+
+Como o Firestore não apaga subcoleções sozinho e a transação aceita no máximo 500 escritas, a exclusão
+(`api/_lib/exclusao.ts`) tem duas etapas: **(a)** numa transação, confere os bloqueios, marca o documento com
+`status: "excluindo"` e grava na auditoria a ação `excluir` com a **fotografia completa** (campo `antes` = documento,
+`subcolecoes` = todas as subcoleções, recursivamente), a `justificativa`, `uid` e `perfil`; **(b)** apaga com
+`recursiveDelete`. Se (b) falhar, a resposta é **503** ("Repita a operação para concluir"): o registro fica
+"excluindo" (escritas recusadas, selo **Em exclusão** nas telas) e repetir a exclusão termina o serviço, sem nova
+fotografia.
+
+Na tela, **Excluir** fica no menu de ações da linha (botão ⋯ nas listas de chamamentos, OSCs e propostas do
+painel), só para administrador. O diálogo mostra a prévia (o que será apagado ou o bloqueio, em alerta de erro)
+e só habilita **Excluir definitivamente** com a justificativa e o identificador digitado (nº do chamamento, CNPJ
+da OSC ou protocolo da proposta).
+
 ### Endpoint da Etapa 4a (sessão da Comissão)
 
 | Endpoint | Métodos | Corpo (JSON) | Permissão |
 |---|---|---|---|
 | `/api/sessao` | `POST` abrir | `{ chamamentoId, data, pauta: [propostaId], presentes?: [uid], declaracoes?: [{ uid, semImpedimento, motivo? }] }` | `sessaoAbrirEncerrar` |
 | `/api/sessao` | `PATCH` com `acao` | `{ chamamentoId, sessaoId, acao: 'presentes' \| 'declaracoes' \| 'foco' \| 'encerrar', ... }` | `sessaoConduzir` (`encerrar`: `sessaoAbrirEncerrar`) |
+| `/api/sessao` | `PATCH` resetar | `{ chamamentoId, sessaoId, acao: 'resetar', justificativa }` (20+ caracteres) | `resetarSessao` **e** papel presidente |
+| `/api/sessao` | `GET` prévia do reset | `?chamamentoId=…&sessaoId=…&simular=true` → `{ status, propostas: [{ propostaId, protocolo, reverter, apagar }], desempates, total, bloqueios }` | `resetarSessao` **e** papel presidente |
 
 - Sessão em `chamamentos/{ch}/sessoes/{id}`; **uma sessão aberta por chamamento** (abrir outra → **409**).
 - Presentes precisam ter papel na Comissão (presidente, relator ou membro, na tela Usuários); só presente declara; impedimento
@@ -190,13 +216,40 @@ passa por uma função `/api`, que:
 - Sessão encerrada não aceita alteração (**409**) e **a avaliação (C2) só é aceita em sessão aberta** (**409**).
 - Os esquemas zod ficam em `src/esquemas/` e são os mesmos na `/api` e nos formulários do app.
 
+### Reset da sessão (presidente)
+
+Descarta tudo o que a Comissão gravou **com o `sessaoId` da sessão**: admissibilidade, níveis da D1, experiências
+(e documentos) da D2 e decisões de desempate. **Diligências não são afetadas.** Cada documento volta ao estado
+anterior à sessão — o `antes` do primeiro registro de auditoria daquela sessão para ele; se não existia, é apagado.
+
+| Situação | Resposta |
+|---|---|
+| Proposta afetada homologada | **409** "Reabra antes de resetar" (lista os protocolos) |
+| Registro da sessão alterado depois, em outra sessão (não resetada) ou fora de sessão | **409** "Resete primeiro a sessão posterior" (lista as sessões) |
+| Queda no meio | **503** "Repita a operação para concluir"; a sessão fica `reiniciando` |
+
+Etapas (`api/_lib/resetSessao.ts`): marca a sessão `reiniciando` (nenhum registro novo entra) → reverte em lotes de
+até 400 escritas por transação, cada reversão com auditoria `resetar_sessao` (antes/depois, `resetDaSessao`,
+`justificativa`) → recalcula D1, D2, NF e status das propostas pelas regras de `src/domain` → marca `reiniciada`
+com `reiniciadaPor`, `reiniciadaEm`, `motivo`, `resets` e `historicoResets`. Presentes e declarações ficam; o foco do
+telão é limpo. A repetição é idempotente: pula o que já voltou ao estado anterior. A sessão reiniciada não recebe
+registros (para refazer, abra nova sessão) e a ata registra cada reset (data, hora, presidente e motivo).
+
+Na tela da sessão, **Resetar sessão** (botão destrutivo) fica numa seção própria no fim da página, só para o
+presidente com a permissão. O diálogo mostra a prévia por proposta (o que volta ao valor anterior e o que será
+apagado), os bloqueios em alerta de erro e só habilita com a justificativa e a palavra **RESETAR**.
+
 ### Endpoints da Etapa 3b (avaliação)
 
 | Endpoint | Métodos | Corpo (JSON) | Permissão |
 |---|---|---|---|
 | `/api/avaliacao` | `PUT` registrar/alterar nível | `{ chamamentoId, propostaId, codigo, nivel, justificativa, paginas?, decisao, votoDivergente?, sessaoId }` | `nivelD1` |
-| `/api/experiencia` | `POST` criar, `PATCH` editar, `DELETE` excluir | `{ chamamentoId, propostaId, descricao, categorias, modalidade, orgaoParceiro?, instrumento?, mrosc?, inicio, fim?, vagas?, unidades?, trabalhadores?, valorAnualCentavos?, documentos?: [{ tipo, numeroSEI, comprovaExecucaoSatisfatoria, aceito }], desconsideracoes?: [{ criterio, justificativa }] }` (`PATCH`/`DELETE` com `id`) | `experienciasD2` |
+| `/api/experiencia` | `POST` criar, `PATCH` editar, `DELETE` excluir | `{ chamamentoId, propostaId, sessaoId, descricao, categorias, modalidade, orgaoParceiro?, instrumento?, mrosc?, inicio, fim?, vagas?, unidades?, trabalhadores?, valorAnualCentavos?, documentos?: [{ tipo, numeroSEI, comprovaExecucaoSatisfatoria, aceito }], desconsideracoes?: [{ criterio, justificativa }] }` (`PATCH`/`DELETE` com `id`) | `experienciasD2` |
 | `/api/homologar` | `POST` | `{ chamamentoId, propostaId }` | `homologar` |
+
+> **Sessão obrigatória:** nível da D1, admissibilidade, experiências da D2 e desempate só são aceitos com o
+> `sessaoId` de uma sessão **aberta** do chamamento (e, exceto no desempate, com a proposta na pauta); senão **409**.
+> O `sessaoId` fica no documento e em cada registro da auditoria da operação (base do reset da sessão).
 
 - **C2 — nível** (`.../propostas/{p}/avaliacoes/{codigo}`): `codigo` precisa existir na matriz; `nivel` inteiro
   de 0 a 4; `paginas` (numeração interna do PA) não podem passar da página de corte do PA (Anexo III, 7.1);
@@ -236,9 +289,10 @@ O administrador tem todas. Para os demais, cada permissão é ligada na tela Usu
 | Consulta | `consultar` | ver chamamentos, avaliações, sessões, telão e relatórios (somente leitura) |
 | Cadastros | `chamamentos`, `oscs`, `propostas` | criar e editar cada cadastro |
 | Avaliação | `admissibilidade`, `nivelD1`, `experienciasD2`, `diligencias` | registrar cada etapa da avaliação |
-| Sessão e resultado | `sessaoAbrirEncerrar`, `sessaoConduzir`, `homologar`, `reabrir`, `desempate` | sessão, telão e resultado |
+| Sessão e resultado | `sessaoAbrirEncerrar`, `sessaoConduzir`, `homologar`, `reabrir`, `desempate`, `resetarSessao` | sessão, telão e resultado; `resetarSessao` só vale para quem também é o **presidente** da Comissão |
 
-Quem tem qualquer permissão também lê os dados. Gestão de usuários e histórico de alterações: só administrador.
+Quem tem qualquer permissão também lê os dados. Gestão de usuários, histórico de alterações e **exclusão de
+cadastros** (chamamento, OSC, proposta): só administrador.
 A fonte única no código é `src/domain/permissoes.ts` (um teste garante que ela bate com esta tabela).
 
 ### Telas (Etapa 4a)
@@ -258,7 +312,7 @@ A fonte única no código é `src/domain/permissoes.ts` (um teste garante que el
 
 | Endpoint | Método | Corpo (JSON) | Permissão |
 |---|---|---|---|
-| `/api/admissibilidade` | `PUT` | `{ chamamentoId, propostaId, requisitos: { '28.1.I': true, ... }, irregularidadesFormais?: ['28.5.II'], observacaoIrregularidades?, planos: [{ codigo, ausente, paginaInicial, paginaFinal }], resultado: 'admitida' \| 'nao_admitida', motivacao? }` | `admissibilidade` |
+| `/api/admissibilidade` | `PUT` | `{ chamamentoId, propostaId, sessaoId, requisitos: { '28.1.I': true, ... }, irregularidadesFormais?: ['28.5.II'], observacaoIrregularidades?, planos: [{ codigo, ausente, paginaInicial, paginaFinal }], resultado: 'admitida' \| 'nao_admitida', motivacao? }` | `admissibilidade` |
 
 - Textos do 28.1 (10 requisitos), 28.2 a 28.5 ficam em `matriz_2026.json` (`admissibilidade`).
 - Página de corte de cada PA = página inicial + limite do PA (Anexo III, 7.1) − 1; a tela alerta quando excede.
@@ -287,7 +341,7 @@ O componente `FormularioApi` (`src/components/ui`) valida com o mesmo esquema da
 
 | Endpoint | Método | Corpo (JSON) | Permissão |
 |---|---|---|---|
-| `/api/desempate` | `PUT` | `{ chamamentoId, loteCodigo, ordem: [propostaId, ...], justificativa }` | `desempate` |
+| `/api/desempate` | `PUT` | `{ chamamentoId, sessaoId, loteCodigo, ordem: [propostaId, ...], justificativa }` | `desempate` |
 | `/api/reabrir` | `POST` | `{ chamamentoId, propostaId, motivo }` | `reabrir` |
 | `/api/diligencias` | `POST` criar; `PATCH` com `acao` | `{ chamamentoId, propostaId, objeto, prazo }`; `{ ..., id, acao: 'responder', resposta }` ou `{ ..., id, acao: 'encerrar', conclusao }` | `diligencias` |
 
@@ -495,6 +549,8 @@ FASE_ETAPA4=antes npm run test:e2e:etapa4   # só screenshots, para comparar ant
 FASE_AUDITORIA=depois npm run test:e2e:baseline   # medição depois + comparativo com o antes (docs/auditoria-design/depois/)
 npm run test:e2e:uso        # testes de uso por perfil (relator, membro, presidente, controle, telão), com tempos
 npm run test:e2e:acessibilidade   # teclado, foco visível, zoom 200% e erros anunciados em todas as rotas
+npm run test:e2e:exclusao   # exclusão de cadastros: menu da linha, bloqueios, confirmação e axe (docs/auditoria-design/exclusao/)
+npm run test:e2e:reset      # reset da sessão: prévia, confirmação, sessão reiniciada e ata (docs/auditoria-design/reset-sessao/)
 ```
 
 Resultados e decisões: [`docs/auditoria-design/README.md`](docs/auditoria-design/README.md) (antes × depois),

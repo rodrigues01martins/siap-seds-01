@@ -16,12 +16,15 @@ export interface Chamamento {
   dataLimitePropostas?: string
   justificativaMinima?: number
   lotes: Lote[]
+  /** "excluindo": exclusão registrada pela /api e ainda não concluída. */
+  status?: 'excluindo'
 }
 
 export interface Osc {
   cnpj: string
   razaoSocial: string
   nomeFantasia?: string
+  status?: 'excluindo'
 }
 
 export interface Proposta {
@@ -33,6 +36,7 @@ export interface Proposta {
   bloqueada?: boolean
   totais?: { status?: StatusD1; d1?: number; d2?: number; nf?: number }
   admissibilidade?: { situacao?: 'admitida' | 'nao_admitida' | 'desclassificada' }
+  status?: 'excluindo'
 }
 
 export interface PresenteSessao {
@@ -48,9 +52,22 @@ export interface DeclaracaoSessao {
   motivo?: string
 }
 
+/** Reset da sessão (presidente): quem, quando e por quê. */
+export interface ResetSessao {
+  por: { uid: string; email: string | null }
+  em: { toDate(): Date }
+  motivo: string
+}
+
 export interface Sessao {
   data: string
-  status: 'aberta' | 'encerrada'
+  /** reiniciando: reset em andamento (ou interrompido); reiniciada: registros desconsiderados (sem novos registros). */
+  status: 'aberta' | 'encerrada' | 'reiniciando' | 'reiniciada'
+  reiniciadaPor?: { uid: string; email: string | null }
+  reiniciadaEm?: { toDate(): Date }
+  motivo?: string
+  resets?: number
+  historicoResets?: ResetSessao[]
   pauta: string[]
   presentes: PresenteSessao[]
   declaracoes: DeclaracaoSessao[]

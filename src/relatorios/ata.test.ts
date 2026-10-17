@@ -64,6 +64,23 @@ describe('minuta de ata — texto gerado', () => {
     expect(texto).toContain('Conclusão: Atendida, sem conteúdo técnico novo.')
   })
 
+  it('sessão reiniciada: a ata registra cada reset (data, hora de Goiás, presidente e motivo)', () => {
+    const base = dados()
+    const reiniciada = textoInicialAta(
+      dados({
+        sessao: {
+          ...base.sessao,
+          resets: [{ em: new Date('2026-11-10T17:32:00Z'), presidente: 'presidente@seds.go.gov.br', motivo: 'Conflito de interesse declarado após a sessão.' }],
+        },
+      }),
+    )
+    expect(reiniciada).toContain('REINÍCIO DA SESSÃO (RESET)')
+    expect(reiniciada).toContain(
+      'Em 10/11/2026, às 14:32, o presidente presidente@seds.go.gov.br resetou a sessão: os registros feitos nela foram desconsiderados e voltaram ao estado anterior. Motivo: Conflito de interesse declarado após a sessão.',
+    )
+    expect(textoInicialAta(base)).not.toContain('REINÍCIO DA SESSÃO')
+  })
+
   it('seções vazias dizem que não houve registro', () => {
     const vazio = textoInicialAta(dados({ decisoesPorMaioria: [], desempates: [], diligencias: [] }))
     expect(vazio).toContain('Todas as decisões desta sessão foram por unanimidade.')

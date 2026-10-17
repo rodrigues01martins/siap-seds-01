@@ -26,6 +26,8 @@ export type CamposAdmissibilidade = z.output<typeof esquemaCamposAdmissibilidade
 export const esquemaAdmissibilidade = esquemaCamposAdmissibilidade.extend({
   chamamentoId: idDocumento,
   propostaId: idDocumento,
+  /** Sessão aberta em que a Comissão registra (vai para admissibilidade.sessaoId e para a auditoria). */
+  sessaoId: idDocumento,
 })
 
 /** Campos + regras do domínio, para validar no navegador antes de enviar. */

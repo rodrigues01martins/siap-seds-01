@@ -99,3 +99,28 @@ export const esquemaEditarProposta = z
     observacao: opcional(observacao),
   })
   .refine(algumCampoAlem(['chamamentoId', 'propostaId']), 'Informe ao menos um campo para alterar.')
+
+// ---------- Exclusão (somente admin) ----------
+// Justificativa obrigatória; a prévia (GET ?simular=true) usa os mesmos identificadores, sem justificativa.
+
+export const MINIMO_JUSTIFICATIVA_EXCLUSAO = 20
+
+const justificativaExclusao = z
+  .string({ error: 'Informe a justificativa.' })
+  .trim()
+  .min(MINIMO_JUSTIFICATIVA_EXCLUSAO, `Justifique com ao menos ${MINIMO_JUSTIFICATIVA_EXCLUSAO} caracteres.`)
+  .max(2000, 'Use no máximo 2.000 caracteres.')
+
+const simular = z.literal('true', { error: 'Use simular=true para ver a prévia da exclusão.' })
+
+const idsChamamento = { id: idDocumento }
+const idsOsc = { cnpj }
+const idsProposta = { chamamentoId: idDocumento, propostaId: idDocumento }
+
+export const esquemaExcluirChamamento = z.strictObject({ ...idsChamamento, justificativa: justificativaExclusao })
+export const esquemaExcluirOsc = z.strictObject({ ...idsOsc, justificativa: justificativaExclusao })
+export const esquemaExcluirProposta = z.strictObject({ ...idsProposta, justificativa: justificativaExclusao })
+
+export const esquemaPreviaChamamento = z.strictObject({ ...idsChamamento, simular })
+export const esquemaPreviaOsc = z.strictObject({ ...idsOsc, simular })
+export const esquemaPreviaProposta = z.strictObject({ ...idsProposta, simular })

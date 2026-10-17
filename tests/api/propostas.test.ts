@@ -37,7 +37,9 @@ async function criar(dados = VALIDA): Promise<string> {
 
 describe('/api/propostas — acesso', () => {
   it('405, 401 e 403', async () => {
-    expect((await chamar(rota, 'GET', undefined, admin.token)).status).toBe(405)
+    const r = await chamar(rota, 'PUT', VALIDA, admin.token)
+    expect(r.status).toBe(405)
+    expect(r.headers.get('Allow')).toBe('GET, POST, PATCH, DELETE')
     expect((await chamar(rota, 'POST', VALIDA, null)).status).toBe(401)
     expect((await chamar(rota, 'POST', VALIDA, membro.token)).status).toBe(403)
   })

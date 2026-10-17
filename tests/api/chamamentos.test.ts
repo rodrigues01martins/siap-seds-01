@@ -26,10 +26,10 @@ beforeEach(limparFirestore)
 
 describe('/api/chamamentos — acesso', () => {
   it('método não suportado → 405 com Allow', async () => {
-    const r = await chamar(rota, 'GET', undefined, admin.token)
+    const r = await chamar(rota, 'PUT', VALIDO, admin.token)
     expect(r.status).toBe(405)
-    expect(r.corpo?.erro).toBe('Método GET não permitido.')
-    expect(r.headers.get('Allow')).toBe('POST, PATCH')
+    expect(r.corpo?.erro).toBe('Método PUT não permitido.')
+    expect(r.headers.get('Allow')).toBe('GET, POST, PATCH, DELETE')
   })
 
   it('sem token → 401', async () => {

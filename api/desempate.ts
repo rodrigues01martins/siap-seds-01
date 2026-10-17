@@ -3,6 +3,7 @@
 // src/domain/classificacao.ts, que as propostas informadas formam exatamente um desses grupos
 // empatados atuais do lote e grava a ordem decidida com a
 // justificativa em chamamentos/{ch}/desempates/{id}, auditado. Registrar de novo o mesmo grupo edita.
+// Só em sessão aberta do chamamento; o sessaoId vai para o documento e para a auditoria.
 
 import { FieldValue } from 'firebase-admin/firestore'
 import { classificarLote, type PropostaDoLote } from '../src/domain/classificacao.js'
@@ -12,6 +13,7 @@ import { ErroApi, MENSAGENS } from './_lib/erros.js'
 import { gravar } from './_lib/gravar.js'
 import { criarRota, json } from './_lib/http.js'
 import { autenticar } from './_lib/porteiro.js'
+import { exigirSessaoAberta } from './_lib/sessaoAberta.js'
 import { exigirSemProblemas, lerCorpo } from './_lib/validacao.js'
 
 /** Mesmo grupo → mesmo documento (a decisão pode ser refeita, com auditoria de antes/depois). */
@@ -22,13 +24,14 @@ function idDaDecisao(lote: string, propostas: string[]): string {
 export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   PUT: async (requisicao) => {
     const autor = await autenticar(requisicao, 'desempate')
-    const { chamamentoId, loteCodigo, ordem, justificativa } = await lerCorpo(requisicao, esquemaDesempate)
+    const { chamamentoId, sessaoId, loteCodigo, ordem, justificativa } = await lerCorpo(requisicao, esquemaDesempate)
     const { db } = obterAdmin()
     const id = idDaDecisao(loteCodigo, ordem)
 
     await gravar(autor, async (transacao) => {
       const chamamento = await transacao.get(db.doc(`chamamentos/${chamamentoId}`))
       if (!chamamento.exists) throw new ErroApi(404, MENSAGENS.chamamentoNaoEncontrado)
+      await exigirSessaoAberta(transacao, chamamentoId, sessaoId)
       const lotes = (chamamento.get('lotes') ?? []) as { codigo: string }[]
       if (!lotes.some((l) => l.codigo === loteCodigo)) exigirSemProblemas({ loteCodigo: 'Lote não encontrado neste chamamento.' })
 
@@ -59,10 +62,11 @@ export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
             justificativa,
             decididoPor: { uid: autor.uid, email: autor.email },
             decididoEm: FieldValue.serverTimestamp(),
+            sessaoId,
           },
         },
       ]
-    })
+    }, { sessaoId })
     return json(200, { id, chamamentoId })
   },
 })

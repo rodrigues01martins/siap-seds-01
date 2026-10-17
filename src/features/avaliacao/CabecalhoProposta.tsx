@@ -43,6 +43,16 @@ export function useDadosProposta(ch: string, p: string): Leitura<DadosProposta |
   return { carregando, erro, dados }
 }
 
+/**
+ * A Comissão só registra em sessão aberta, com a proposta na pauta (a /api exige o sessaoId): por que a tela
+ * não pode registrar `oQue` (ex.: "a admissibilidade"), ou null.
+ */
+export function motivoSemSessao(dados: DadosProposta, oQue: string): string | null {
+  if (!dados.sessaoAberta) return `Nenhuma sessão aberta: o presidente precisa abrir a sessão para registrar ${oQue}.`
+  if (!dados.sessaoAberta.pauta.includes(dados.proposta.id)) return 'Proposta fora da pauta da sessão aberta.'
+  return null
+}
+
 export type AbaProposta = 'admissibilidade' | 'd1' | 'd2' | 'memoria' | 'diligencias'
 
 const ABAS: { id: AbaProposta; rotulo: string; caminho: string }[] = [

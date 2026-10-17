@@ -4,6 +4,7 @@
 // porte, desconsideração por critério) vêm de src/domain; esquema em src/esquemas/experiencia.ts.
 // Internação vem da modalidade e execução satisfatória, dos documentos aceitos (Etapa 4b).
 // A D2 e os totais são recalculados na mesma transação (C4).
+// Só em sessão aberta com a proposta na pauta; o sessaoId vai para o documento e para a auditoria.
 
 import { problemasDaExperiencia } from '../src/domain/d2.js'
 import type { TotaisProposta } from '../src/domain/proposta.js'
@@ -19,6 +20,7 @@ import { gravar, type Autor, type Operacao } from './_lib/gravar.js'
 import { criarRota, json } from './_lib/http.js'
 import { autenticar } from './_lib/porteiro.js'
 import { exigirPropostaEditavel, recalcular, type Mudanca } from './_lib/recalcular.js'
+import { exigirSessaoAberta } from './_lib/sessaoAberta.js'
 import { exigirSemProblemas, lerCorpo } from './_lib/validacao.js'
 
 /**
@@ -29,6 +31,7 @@ async function alterar(
   autor: Autor,
   chamamentoId: string,
   propostaId: string,
+  sessaoId: string,
   id: string,
   montar: (atual: Record<string, unknown> | null) => { operacao: Operacao; final: Record<string, unknown> | null },
 ): Promise<TotaisProposta> {
@@ -37,6 +40,7 @@ async function alterar(
 
   await gravar(autor, async (transacao) => {
     await exigirPropostaEditavel(transacao, chamamentoId, propostaId)
+    await exigirSessaoAberta(transacao, chamamentoId, sessaoId, propostaId)
     const atual = await transacao.get(obterAdmin().db.doc(caminho))
     const { operacao, final } = montar(atual.exists ? (atual.data() ?? {}) : null)
     if (final) exigirSemProblemas(problemasDaExperiencia(paraExperiencia(id, final)))
@@ -45,7 +49,7 @@ async function alterar(
     const recalculo = await recalcular(transacao, chamamentoId, propostaId, mudanca)
     totais = recalculo.totais
     return [operacao, ...recalculo.operacoes]
-  })
+  }, { sessaoId })
   return totais!
 }
 
@@ -57,10 +61,11 @@ function exigirExistente(atual: Record<string, unknown> | null): Record<string, 
 export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   POST: async (requisicao) => {
     const autor = await autenticar(requisicao, 'experienciasD2')
-    const { chamamentoId, propostaId, ...dados } = await lerCorpo(requisicao, esquemaCriarExperiencia)
+    const { chamamentoId, propostaId, sessaoId, ...campos } = await lerCorpo(requisicao, esquemaCriarExperiencia)
+    const dados = { ...campos, sessaoId }
     const id = obterAdmin().db.collection(`chamamentos/${chamamentoId}/propostas/${propostaId}/experiencias`).doc().id
     const caminho = `chamamentos/${chamamentoId}/propostas/${propostaId}/experiencias/${id}`
-    const totais = await alterar(autor, chamamentoId, propostaId, id, () => ({
+    const totais = await alterar(autor, chamamentoId, propostaId, sessaoId, id, () => ({
       operacao: { caminho, acao: 'criar', dados },
       final: dados,
     }))
@@ -69,9 +74,10 @@ export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
 
   PATCH: async (requisicao) => {
     const autor = await autenticar(requisicao, 'experienciasD2')
-    const { chamamentoId, propostaId, id, ...alteracoes } = await lerCorpo(requisicao, esquemaEditarExperiencia)
+    const { chamamentoId, propostaId, sessaoId, id, ...campos } = await lerCorpo(requisicao, esquemaEditarExperiencia)
+    const alteracoes = { ...campos, sessaoId }
     const caminho = `chamamentos/${chamamentoId}/propostas/${propostaId}/experiencias/${id}`
-    const totais = await alterar(autor, chamamentoId, propostaId, id, (atual) => ({
+    const totais = await alterar(autor, chamamentoId, propostaId, sessaoId, id, (atual) => ({
       operacao: { caminho, acao: 'editar', dados: alteracoes },
       // Valida a junção com o que já existe (ex.: fim novo contra o início gravado).
       final: { ...exigirExistente(atual), ...alteracoes },
@@ -81,9 +87,9 @@ export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
 
   DELETE: async (requisicao) => {
     const autor = await autenticar(requisicao, 'experienciasD2')
-    const { chamamentoId, propostaId, id } = await lerCorpo(requisicao, esquemaExcluirExperiencia)
+    const { chamamentoId, propostaId, sessaoId, id } = await lerCorpo(requisicao, esquemaExcluirExperiencia)
     const caminho = `chamamentos/${chamamentoId}/propostas/${propostaId}/experiencias/${id}`
-    const totais = await alterar(autor, chamamentoId, propostaId, id, (atual) => {
+    const totais = await alterar(autor, chamamentoId, propostaId, sessaoId, id, (atual) => {
       exigirExistente(atual)
       return { operacao: { caminho, acao: 'excluir' }, final: null }
     })

@@ -47,7 +47,7 @@ describe('tela Usuários', () => {
     expect(within(linhaDe('Juliano Rodrigues')).getByText('Você')).toBeInTheDocument()
     expect(within(linhaDe('Juliano Rodrigues')).getByText('Todas as áreas')).toBeInTheDocument()
     expect(within(linhaDe('Cejanne Ribeiro')).getByText('Avaliação')).toBeInTheDocument()
-    expect(within(linhaDe('Cejanne Ribeiro')).getByText('2/13')).toBeInTheDocument()
+    expect(within(linhaDe('Cejanne Ribeiro')).getByText('2/14')).toBeInTheDocument()
     expect(within(linhaDe('Assessoria')).getByText('Nenhuma área')).toBeInTheDocument()
   })
 

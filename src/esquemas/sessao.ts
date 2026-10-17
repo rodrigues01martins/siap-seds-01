@@ -56,6 +56,21 @@ export const esquemaAbrirSessao = z.strictObject({
 
 const alvo = { chamamentoId: idDocumento, sessaoId: idDocumento }
 
+/** Reset da sessão (presidente): motivo obrigatório, registrado na sessão, na auditoria e na ata. */
+export const JUSTIFICATIVA_RESET_MINIMA = 20
+export const PALAVRA_RESET = 'RESETAR'
+const justificativaReset = z
+  .string({ error: 'Informe a justificativa.' })
+  .trim()
+  .min(JUSTIFICATIVA_RESET_MINIMA, `Justifique com ao menos ${JUSTIFICATIVA_RESET_MINIMA} caracteres.`)
+  .max(2000, 'Use no máximo 2.000 caracteres.')
+
+/** Prévia do reset (GET ?simular=true). */
+export const esquemaPreviaReset = z.strictObject({
+  ...alvo,
+  simular: z.literal('true', { error: 'Use simular=true para ver a prévia do reset.' }),
+})
+
 export const esquemaAlterarSessao = z.discriminatedUnion(
   'acao',
   [
@@ -63,8 +78,9 @@ export const esquemaAlterarSessao = z.discriminatedUnion(
     z.strictObject({ acao: z.literal('presentes'), ...alvo, presentes }),
     z.strictObject({ acao: z.literal('declaracoes'), ...alvo, declaracoes }),
     z.strictObject({ acao: z.literal('foco'), ...alvo, foco: esquemaFoco.nullable() }),
+    z.strictObject({ acao: z.literal('resetar'), ...alvo, justificativa: justificativaReset }),
   ],
-  { error: 'Ação inválida. Use encerrar, presentes, declaracoes ou foco.' },
+  { error: 'Ação inválida. Use encerrar, presentes, declaracoes, foco ou resetar.' },
 )
 
 export type AlteracaoSessao = z.output<typeof esquemaAlterarSessao>

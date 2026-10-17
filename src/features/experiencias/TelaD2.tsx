@@ -1,6 +1,7 @@
 // /chamamentos/:ch/propostas/:p/d2 (ListPage) — experiências da OSC (D2): tabela editável (DataTable),
 // painel lateral para criar/editar a experiência e seus documentos, desconsiderar por critério
-// (Anexo IV, 3.8.5) e linha do tempo A/B. Escrita: quem tem a permissão "Experiências da D2".
+// (Anexo IV, 3.8.5) e linha do tempo A/B. Escrita: quem tem a permissão "Experiências da D2", na sessão
+// aberta com a proposta na pauta (o sessaoId vai em cada gravação).
 
 import { Calculator, Plus } from 'lucide-react'
 import { useState } from 'react'
@@ -24,7 +25,7 @@ import type { CamposExperiencia } from '../../esquemas/experiencia'
 import { chamarApi } from '../../lib/api'
 import { useColecao } from '../../lib/firestore'
 import { useUsuario } from '../auth/useUsuario'
-import { AvisoSomenteLeitura, cabecalhoDaProposta, ContextoProposta, useDadosProposta } from '../avaliacao/CabecalhoProposta'
+import { AvisoSomenteLeitura, cabecalhoDaProposta, ContextoProposta, motivoSemSessao, useDadosProposta } from '../avaliacao/CabecalhoProposta'
 import { FormExperiencia } from './FormExperiencia'
 import { GraficoLinhaDoTempo } from './GraficoLinhaDoTempo'
 import { TabelaExperiencias, type ExperienciaGravada } from './TabelaExperiencias'
@@ -53,8 +54,8 @@ export function TelaD2() {
       ? 'Proposta não admitida (Anexo III, item 28): não segue para avaliação.'
       : !podeFazer(usuario?.acesso ?? null, 'experienciasD2')
         ? 'Você consulta as experiências, mas não as edita (permissão "Experiências da D2").'
-        : null
-  const alvo = { chamamentoId: ch, propostaId: p }
+        : motivoSemSessao(leitura.dados, 'experiências')
+  const alvo = { chamamentoId: ch, propostaId: p, sessaoId: leitura.dados.sessaoAberta?.id }
   const nomes = Object.fromEntries(lista.map((e) => [e.id, e.descricao]))
   const d2 = proposta.totais?.d2
 

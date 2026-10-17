@@ -58,7 +58,8 @@ const campos = {
     .refine(semRepeticao((d: { criterio: string }) => d.criterio), 'Critério informado mais de uma vez.'),
 }
 
-const alvo = { chamamentoId: idDocumento, propostaId: idDocumento }
+/** Proposta e sessão aberta em que a Comissão registra (o sessaoId vai para o documento e a auditoria). */
+const alvo = { chamamentoId: idDocumento, propostaId: idDocumento, sessaoId: idDocumento }
 
 /** Campos da experiência (sem identificação), com os padrões de criação. */
 export const esquemaCamposExperiencia = z.strictObject({
@@ -90,7 +91,7 @@ export const esquemaCamposExperienciaComRegras = esquemaCamposExperiencia.superR
 
 export const esquemaEditarExperiencia = z
   .strictObject({ ...alvo, id: idDocumento, ...z.object(campos).partial().shape })
-  .refine(algumCampoAlem(['chamamentoId', 'propostaId', 'id']), 'Informe ao menos um campo para alterar.')
+  .refine(algumCampoAlem(['chamamentoId', 'propostaId', 'sessaoId', 'id']), 'Informe ao menos um campo para alterar.')
 
 export const esquemaExcluirExperiencia = z.strictObject({ ...alvo, id: idDocumento })
 

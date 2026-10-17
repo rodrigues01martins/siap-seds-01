@@ -3,16 +3,30 @@
 // proposta já tem totais calculados. justificativaMinima configura o mínimo da justificativa (C2).
 // processoSei: Etapa 4a. Sem índice de correção nem data-base (Manutenção 1): os valores da D2 já chegam
 // atualizados conforme o Edital; o esquema estrito recusa esses campos.
+// DELETE (excluir, somente admin, com justificativa) e GET ?simular=true (prévia): ver _lib/exclusao.ts.
+// Chamamento com propostas ou sessões não pode ser excluído (409); os lotes vão junto (estão no documento).
 
-import { esquemaCriarChamamento, esquemaEditarChamamento } from '../src/esquemas/cadastros.js'
+import {
+  esquemaCriarChamamento,
+  esquemaEditarChamamento,
+  esquemaExcluirChamamento,
+  esquemaPreviaChamamento,
+} from '../src/esquemas/cadastros.js'
 import { obterAdmin } from './_lib/admin.js'
 import { ErroApi } from './_lib/erros.js'
+import { alvoChamamento, excluirComSeguranca, previaExclusao } from './_lib/exclusao.js'
 import { gravar } from './_lib/gravar.js'
 import { criarRota, json } from './_lib/http.js'
 import { autenticar } from './_lib/porteiro.js'
-import { lerCorpo } from './_lib/validacao.js'
+import { lerConsulta, lerCorpo } from './_lib/validacao.js'
 
 export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
+  GET: async (requisicao) => {
+    await autenticar(requisicao, 'admin')
+    const { id } = lerConsulta(requisicao, esquemaPreviaChamamento)
+    return json(200, await previaExclusao(alvoChamamento(id)))
+  },
+
   POST: async (requisicao) => {
     const autor = await autenticar(requisicao, 'chamamentos')
     const dados = await lerCorpo(requisicao, esquemaCriarChamamento)
@@ -41,5 +55,11 @@ export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
       return [{ caminho: `chamamentos/${id}`, acao: 'editar', dados: alteracoes }]
     })
     return json(200, { id })
+  },
+
+  DELETE: async (requisicao) => {
+    const autor = await autenticar(requisicao, 'admin')
+    const { id, justificativa } = await lerCorpo(requisicao, esquemaExcluirChamamento)
+    return json(200, await excluirComSeguranca(autor, alvoChamamento(id), justificativa))
   },
 })

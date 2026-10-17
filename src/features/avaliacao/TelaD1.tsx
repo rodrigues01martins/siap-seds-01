@@ -25,7 +25,7 @@ import { chamarApi } from '../../lib/api'
 import { useColecao } from '../../lib/firestore'
 import type { Avaliacao } from '../../lib/tipos'
 import { useUsuario } from '../auth/useUsuario'
-import { cabecalhoDaProposta, ContextoProposta, useDadosProposta, type DadosProposta } from './CabecalhoProposta'
+import { cabecalhoDaProposta, ContextoProposta, useDadosProposta, motivoSemSessao, type DadosProposta } from './CabecalhoProposta'
 import { ControleProjecao, type PedidoProjecao } from './ControleProjecao'
 import { PainelSubcriterio } from './PainelSubcriterio'
 
@@ -41,9 +41,7 @@ export function motivoSomenteLeituraD1(dados: DadosProposta, podeRegistrar: bool
     return 'Proposta não admitida (Anexo III, item 28): não segue para avaliação.'
   }
   if (!podeRegistrar) return 'Você consulta a avaliação, mas não registra níveis (permissão "Níveis da D1").'
-  if (!dados.sessaoAberta) return 'Nenhuma sessão aberta: o presidente precisa abrir a sessão para registrar níveis.'
-  if (!dados.sessaoAberta.pauta.includes(dados.proposta.id)) return 'Proposta fora da pauta da sessão aberta.'
-  return null
+  return motivoSemSessao(dados, 'níveis')
 }
 
 /** Barra de progresso do PA (subcritérios avaliados), com o número sempre em texto. */

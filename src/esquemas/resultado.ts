@@ -7,6 +7,8 @@ export const MOTIVO_REABERTURA_MINIMO = 20
 
 export const esquemaDesempate = z.strictObject({
   chamamentoId: idDocumento,
+  /** Sessão aberta em que a Comissão decide (vai para o documento e para a auditoria). */
+  sessaoId: idDocumento,
   loteCodigo: z.string({ error: 'Informe o lote.' }).trim().min(1, 'Informe o lote.'),
   /** Propostas empatadas na ordem decidida pela Comissão (1ª = melhor posição). */
   ordem: z

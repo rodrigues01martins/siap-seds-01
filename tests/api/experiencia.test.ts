@@ -6,6 +6,7 @@ import {
   CH,
   DATA_LIMITE,
   PROP,
+  SESSAO,
   auditoriaDe,
   chamar,
   criarUsuario,
@@ -37,7 +38,7 @@ const EXPERIENCIA = {
   ],
 }
 
-const corpo = (dados: Record<string, unknown> = {}) => ({ chamamentoId: CH, propostaId: PROP, ...EXPERIENCIA, ...dados })
+const corpo = (dados: Record<string, unknown> = {}) => ({ chamamentoId: CH, propostaId: PROP, sessaoId: SESSAO, ...EXPERIENCIA, ...dados })
 
 let relator: Usuario
 let presidente: Usuario
@@ -102,13 +103,13 @@ describe('/api/experiencia — validação (400)', () => {
 
   it('PATCH valida o resultado da junção com o que já existe (fim antes do início gravado)', async () => {
     const id = await criar({ inicio: '2020-06-01', fim: '2021-06-01' })
-    const r = await chamar(rota, 'PATCH', { chamamentoId: CH, propostaId: PROP, id, fim: '2020-01-01' }, relator.token)
+    const r = await chamar(rota, 'PATCH', { chamamentoId: CH, propostaId: PROP, sessaoId: SESSAO, id, fim: '2020-01-01' }, relator.token)
     expect(r).toMatchObject({ status: 400, corpo: { campos: { fim: 'O fim não pode ser anterior ao início.' } } })
   })
 
   it('proposta inexistente → 404; experiência inexistente → 404', async () => {
     expect((await chamar(rota, 'POST', corpo({ propostaId: 'nao-existe' }), relator.token)).status).toBe(404)
-    const r = await chamar(rota, 'PATCH', { chamamentoId: CH, propostaId: PROP, id: 'nao-existe', vagas: 1 }, relator.token)
+    const r = await chamar(rota, 'PATCH', { chamamentoId: CH, propostaId: PROP, sessaoId: SESSAO, id: 'nao-existe', vagas: 1 }, relator.token)
     expect(r.status).toBe(404)
   })
 })
@@ -180,7 +181,7 @@ describe('/api/experiencia — criar, editar, excluir, auditoria e recálculo (C
   it('editar → auditoria antes/depois e D2 recalculada', async () => {
     const id = await criar()
     const antes = (await ler(CAMINHO_PROPOSTA))?.totais as { d2: number }
-    const r = await chamar(rota, 'PATCH', { chamamentoId: CH, propostaId: PROP, id, vagas: 130 }, relator.token)
+    const r = await chamar(rota, 'PATCH', { chamamentoId: CH, propostaId: PROP, sessaoId: SESSAO, id, vagas: 130 }, relator.token)
     expect(r.status).toBe(200)
     const registros = await auditoriaDe(`${CAMINHO_PROPOSTA}/experiencias/${id}`)
     expect(registros[1]).toMatchObject({ acao: 'editar', antes: { vagas: 90 }, depois: { vagas: 130 } })
@@ -190,7 +191,7 @@ describe('/api/experiencia — criar, editar, excluir, auditoria e recálculo (C
 
   it('excluir → documento removido, auditoria com depois = null e D2 zerada', async () => {
     const id = await criar()
-    const r = await chamar(rota, 'DELETE', { chamamentoId: CH, propostaId: PROP, id }, relator.token)
+    const r = await chamar(rota, 'DELETE', { chamamentoId: CH, propostaId: PROP, sessaoId: SESSAO, id }, relator.token)
     expect(r.status).toBe(200)
     expect(await ler(`${CAMINHO_PROPOSTA}/experiencias/${id}`)).toBeUndefined()
     expect((await auditoriaDe(`${CAMINHO_PROPOSTA}/experiencias/${id}`)).at(-1)).toMatchObject({ acao: 'excluir', depois: null })
@@ -226,7 +227,7 @@ describe('/api/experiencia — campos da Etapa 4b', () => {
     await chamar(
       rota,
       'PATCH',
-      { chamamentoId: CH, propostaId: PROP, id, documentos: [{ tipo: 'Atestado', numeroSEI: '1', comprovaExecucaoSatisfatoria: true, aceito: true }] },
+      { chamamentoId: CH, propostaId: PROP, sessaoId: SESSAO, id, documentos: [{ tipo: 'Atestado', numeroSEI: '1', comprovaExecucaoSatisfatoria: true, aceito: true }] },
       relator.token,
     )
     expect((await d2()).criterios['C2.4'].usadas).toEqual([id])
@@ -247,7 +248,7 @@ describe('/api/experiencia — campos da Etapa 4b', () => {
 
   it('desconsiderar em um critério (Anexo IV, 3.8.5): justificativa obrigatória; recalcula e audita', async () => {
     const id = await criar()
-    const base = { chamamentoId: CH, propostaId: PROP, id }
+    const base = { chamamentoId: CH, propostaId: PROP, sessaoId: SESSAO, id }
     const vazia = await chamar(rota, 'PATCH', { ...base, desconsideracoes: [{ criterio: 'C2.3', justificativa: '' }] }, relator.token)
     expect(vazia).toMatchObject({
       status: 400,
@@ -277,7 +278,7 @@ describe('/api/experiencia — proposta homologada', () => {
     const id = await criar()
     const { db } = await import('../../api/_lib/admin').then((m) => m.obterAdmin())
     await db.doc(CAMINHO_PROPOSTA).update({ bloqueada: true })
-    const base = { chamamentoId: CH, propostaId: PROP }
+    const base = { chamamentoId: CH, propostaId: PROP, sessaoId: SESSAO }
     expect((await chamar(rota, 'POST', corpo(), relator.token)).status).toBe(409)
     expect((await chamar(rota, 'PATCH', { ...base, id, vagas: 1 }, relator.token)).status).toBe(409)
     expect((await chamar(rota, 'DELETE', { ...base, id }, relator.token)).status).toBe(409)

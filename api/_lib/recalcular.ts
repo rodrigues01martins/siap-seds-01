@@ -16,14 +16,14 @@ export interface Mudanca {
 }
 
 /**
- * Lê avaliações, experiências e a data limite, aplica a mudança em memória e devolve as
+ * Lê avaliações, experiências e a data limite, aplica a mudança em memória (se houver) e devolve as
  * operações que gravam `totais` na proposta e `resultadoD2/atual` (com a memória de cálculo).
  */
 export async function recalcular(
   transacao: Transaction,
   chamamentoId: string,
   propostaId: string,
-  mudanca: Mudanca,
+  mudanca?: Mudanca,
 ): Promise<{ operacoes: Operacao[]; totais: TotaisProposta }> {
   const { db } = obterAdmin()
   const caminho = `chamamentos/${chamamentoId}/propostas/${propostaId}`
@@ -42,7 +42,9 @@ export async function recalcular(
   const niveis: Record<string, number> = Object.fromEntries(avaliacoes.docs.map((d) => [d.id, d.get('nivel') as number]))
   const porId = new Map(experiencias.docs.map((d) => [d.id, paraExperiencia(d.id, d.data())]))
 
-  if (mudanca.colecao === 'avaliacoes') {
+  if (!mudanca) {
+    // Só recalcula com o que está gravado (ex.: depois do reset da sessão).
+  } else if (mudanca.colecao === 'avaliacoes') {
     if (mudanca.dados) niveis[mudanca.id] = mudanca.dados.nivel as number
     else delete niveis[mudanca.id]
   } else if (mudanca.dados) {

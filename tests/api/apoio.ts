@@ -21,6 +21,13 @@ export interface RegistroAuditoria {
   antes: Record<string, unknown> | null
   depois: Record<string, unknown> | null
   uid: string
+  /** Só na exclusão: motivo informado e fotografia das subcoleções apagadas. */
+  justificativa?: string
+  subcolecoes?: Record<string, unknown>
+  /** Sessão da Comissão em que a gravação foi feita (admissibilidade, D1, D2, desempate). */
+  sessaoId?: string
+  /** Só no reset: a sessão cujos registros foram revertidos. */
+  resetDaSessao?: string
   /** 'admin' ou 'usuario' (quem gravou). */
   perfil: string
   dataHora: Timestamp
@@ -38,7 +45,7 @@ export const ACESSO_TESTE: Record<PerfilTeste, { admin: boolean; permissoes: str
   admin: { admin: true, permissoes: [], comissao: null },
   presidente: {
     admin: false,
-    permissoes: ['consultar', ...AVALIACAO, 'sessaoAbrirEncerrar', 'sessaoConduzir', 'homologar', 'reabrir', 'desempate'],
+    permissoes: ['consultar', ...AVALIACAO, 'sessaoAbrirEncerrar', 'sessaoConduzir', 'homologar', 'reabrir', 'desempate', 'resetarSessao'],
     comissao: 'presidente',
   },
   relator: { admin: false, permissoes: ['consultar', ...AVALIACAO, 'sessaoConduzir'], comissao: 'relator' },
@@ -123,6 +130,16 @@ export async function chamar(
   if (token) headers.set('Authorization', `Bearer ${token}`)
   const body = corpoBruto ?? (corpo === undefined ? undefined : JSON.stringify(corpo))
   const resposta = await rota[metodo](new Request('http://localhost/api/teste', { method: metodo, headers, body }))
+  const texto = await resposta.text()
+  return { status: resposta.status, corpo: texto ? JSON.parse(texto) : null, headers: resposta.headers }
+}
+
+/** GET com parâmetros na URL (ex.: prévia de exclusão ?simular=true). */
+export async function consultar(rota: Rota, parametros: Record<string, string>, token?: string | null): Promise<RespostaTeste> {
+  const headers = new Headers()
+  if (token) headers.set('Authorization', `Bearer ${token}`)
+  const url = `http://localhost/api/teste?${new URLSearchParams(parametros).toString()}`
+  const resposta = await rota.GET(new Request(url, { method: 'GET', headers }))
   const texto = await resposta.text()
   return { status: resposta.status, corpo: texto ? JSON.parse(texto) : null, headers: resposta.headers }
 }

@@ -1,7 +1,7 @@
 import { Timestamp } from 'firebase-admin/firestore'
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import * as rota from '../../api/desempate'
-import { CH, auditoriaDe, chamar, criarUsuario, ler, limparAuth, limparFirestore, semearProposta, semearPropostaComTotais, totalAuditoria, type Usuario } from './apoio'
+import { CH, SESSAO, auditoriaDe, chamar, criarUsuario, ler, limparAuth, limparFirestore, semearProposta, semearPropostaComTotais, totalAuditoria, type Usuario } from './apoio'
 
 let presidente: Usuario
 let relator: Usuario
@@ -13,7 +13,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await limparFirestore()
-  await semearProposta({ sessao: null })
+  await semearProposta()
   await semearPropostaComTotais('a', 90)
   await semearPropostaComTotais('b', 84)
   await semearPropostaComTotais('c', 84)
@@ -22,6 +22,7 @@ beforeEach(async () => {
 const JUSTIFICATIVA = 'Critério do Edital aplicado pela Comissão em sessão de 10/11/2026: maior pontuação no PA1.'
 const corpo = (dados: Record<string, unknown> = {}) => ({
   chamamentoId: CH,
+  sessaoId: SESSAO,
   loteCodigo: 'L1',
   ordem: ['c', 'b'],
   justificativa: JUSTIFICATIVA,

@@ -1,5 +1,5 @@
 // /chamamentos/:ch/propostas/:p/admissibilidade (FormPage) — registro da admissibilidade (quem tem a
-// permissão); os demais perfis consultam. Grava por PUT /api/admissibilidade.
+// permissão); os demais perfis consultam. Grava por PUT /api/admissibilidade, na sessão aberta (sessaoId).
 
 import { useParams } from 'react-router'
 import { FormPage } from '../../components/templates/paginas'
@@ -12,7 +12,7 @@ import { podeFazer } from '../../domain/permissoes'
 import { chamarApi } from '../../lib/api'
 import { dataBr } from '../../lib/datas'
 import { useUsuario } from '../auth/useUsuario'
-import { cabecalhoDaProposta, ContextoProposta, useDadosProposta } from '../avaliacao/CabecalhoProposta'
+import { cabecalhoDaProposta, ContextoProposta, motivoSemSessao, useDadosProposta } from '../avaliacao/CabecalhoProposta'
 import { FormAdmissibilidade } from './FormAdmissibilidade'
 
 const ROTULO_SITUACAO = { admitida: 'Admitida', nao_admitida: 'Não admitida', desclassificada: 'Desclassificada (28.2)' }
@@ -27,13 +27,13 @@ export function TelaAdmissibilidade() {
   if (leitura.erro) return <ErrorState mensagem={leitura.erro} />
   if (!leitura.dados) return <EmptyState titulo="Proposta não encontrada" descricao="Confira o endereço ou volte ao painel do chamamento." />
 
-  const { proposta } = leitura.dados
+  const { proposta, sessaoAberta } = leitura.dados
   const gravada = (proposta as { admissibilidade?: Gravada }).admissibilidade ?? null
   const motivo = proposta.bloqueada
     ? 'Proposta homologada.'
     : !podeFazer(usuario?.acesso ?? null, 'admissibilidade')
       ? 'Você consulta a admissibilidade; o registro exige a permissão "Admissibilidade".'
-      : null
+      : motivoSemSessao(leitura.dados, 'a admissibilidade')
   const autoria = gravada?.registradaPor
     ? ` Registrada por ${gravada.registradaPor.email ?? 'usuário'}${gravada.registradaEm ? ` em ${dataBr(gravada.registradaEm.toDate().toISOString().slice(0, 10))}` : ''}.`
     : ''
@@ -62,7 +62,7 @@ export function TelaAdmissibilidade() {
         somenteLeitura={motivo !== null}
         motivoSomenteLeitura={motivo ?? undefined}
         onSalvar={async (corpo) => {
-          await chamarApi('/api/admissibilidade', { metodo: 'PUT', corpo: { chamamentoId: ch, propostaId: p, ...corpo } })
+          await chamarApi('/api/admissibilidade', { metodo: 'PUT', corpo: { chamamentoId: ch, propostaId: p, sessaoId: sessaoAberta?.id, ...corpo } })
         }}
       />
     </FormPage>
