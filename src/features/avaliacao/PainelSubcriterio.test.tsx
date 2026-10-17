@@ -19,7 +19,6 @@ const salvar = () => userEvent.click(screen.getByRole('button', { name: 'Salvar 
 
 async function preencher({ nivel = 3, justificativa = 'Metodologia descrita com fluxos e responsáveis.', paginas = '2, 5' } = {}) {
   await userEvent.click(screen.getByRole('radio', { name: new RegExp(`^Nível ${nivel}\\b`) }))
-  await userEvent.click(screen.getByRole('radio', { name: 'Unanimidade' }))
   await userEvent.type(screen.getByRole('textbox', { name: /^Justificativa/ }), justificativa)
   if (paginas) await userEvent.type(screen.getByLabelText('Páginas citadas'), paginas)
 }
@@ -45,7 +44,7 @@ describe('Painel do subcritério', () => {
     expect(onSalvar).not.toHaveBeenCalled()
   })
 
-  it('envia nível, decisão, justificativa e páginas no formato da /api', async () => {
+  it('envia nível, justificativa e páginas no formato da /api (sem decisão nem voto divergente)', async () => {
     const onSalvar = montar('3.1')
     await preencher()
     await salvar()
@@ -55,19 +54,22 @@ describe('Painel do subcritério', () => {
       nivel: 3,
       justificativa: 'Metodologia descrita com fluxos e responsáveis.',
       paginas: [2, 5],
-      decisao: 'unanimidade',
     })
   })
 
-  it('voto divergente só aparece com decisão por maioria e vai junto', async () => {
-    const onSalvar = montar('3.1')
+  it('não há campos de decisão (unanimidade/maioria) nem de voto divergente', () => {
+    montar('3.1')
+    expect(screen.queryByRole('radio', { name: 'Unanimidade' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('radio', { name: 'Maioria' })).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Voto divergente')).not.toBeInTheDocument()
-    await preencher()
-    await userEvent.click(screen.getByRole('radio', { name: 'Maioria' }))
-    await userEvent.type(screen.getByLabelText('Voto divergente'), 'Membro X: nível 2.')
-    await salvar()
-    await waitFor(() => expect(onSalvar).toHaveBeenCalled())
-    expect(onSalvar.mock.calls[0]![0]).toMatchObject({ decisao: 'maioria', votoDivergente: 'Membro X: nível 2.' })
+  })
+
+  it('lixeira do nível (acaoExcluir) aparece na identificação do subcritério já registrado', () => {
+    montar('3.1', {
+      registro: { nivel: 2, justificativa: 'Registro anterior da Comissão.', paginas: [3] },
+      acaoExcluir: <button type="button">Excluir nível do 3.1</button>,
+    })
+    expect(within(screen.getByRole('region', { name: 'Identificação' })).getByRole('button', { name: 'Excluir nível do 3.1' })).toBeInTheDocument()
   })
 
   it('contador da justificativa com o mínimo do chamamento; curta não envia', async () => {
@@ -114,19 +116,19 @@ describe('Painel do subcritério', () => {
 
   it('preenche com o registro já gravado', () => {
     montar('3.1', {
-      registro: { nivel: 2, justificativa: 'Registro anterior da Comissão.', paginas: [3, 4], decisao: 'maioria', votoDivergente: 'Y' },
+      registro: { nivel: 2, justificativa: 'Registro anterior da Comissão.', paginas: [3, 4] },
     })
     expect(screen.getByRole('radio', { name: /^Nível 2\b/ })).toBeChecked()
     expect(screen.getByLabelText('Páginas citadas')).toHaveValue('3, 4')
-    expect(screen.getByLabelText('Voto divergente')).toHaveValue('Y')
   })
 
-  it('seções do formulário longo: Identificação, Elementos, Escala 0–4, Decisão, Justificativa e páginas', () => {
+  it('seções do formulário longo: Identificação, Elementos, Escala 0–4, Justificativa e páginas (sem Decisão)', () => {
     montar('1.1')
     expect(screen.getByRole('region', { name: 'Identificação' })).toHaveTextContent('Eliminatório: nível 0 desclassifica')
-    for (const titulo of ['Elementos de avaliação', 'Escala 0–4', 'Decisão', 'Justificativa e páginas']) {
+    for (const titulo of ['Elementos de avaliação', 'Escala 0–4', 'Justificativa e páginas']) {
       expect(screen.getByRole('heading', { level: 3, name: titulo })).toBeInTheDocument()
     }
+    expect(screen.queryByRole('heading', { level: 3, name: 'Decisão' })).not.toBeInTheDocument()
   })
 
   it('com idFormulario o botão fica fora do painel (rodapé da tela)', () => {
@@ -135,10 +137,10 @@ describe('Painel do subcritério', () => {
     expect(screen.getByRole('form', { name: 'Avaliação do subcritério 3.1' })).toHaveAttribute('id', 'form-sub')
   })
 
-  it('somente leitura (homologada ou sem permissão): sem botão de salvar e com o motivo', () => {
-    montar('3.1', { somenteLeitura: true, motivoSomenteLeitura: 'Proposta homologada: somente leitura.' })
+  it('somente leitura (sem sessão aberta, por exemplo): sem botão de salvar e com o motivo', () => {
+    montar('3.1', { somenteLeitura: true, motivoSomenteLeitura: 'Nenhuma sessão aberta.' })
     expect(screen.queryByRole('button', { name: 'Salvar avaliação' })).not.toBeInTheDocument()
-    expect(screen.getByText('Proposta homologada: somente leitura.')).toBeInTheDocument()
+    expect(screen.getByText('Nenhuma sessão aberta.')).toBeInTheDocument()
     expect(screen.getByRole('radio', { name: /^Nível 3\b/ })).toBeDisabled()
   })
 

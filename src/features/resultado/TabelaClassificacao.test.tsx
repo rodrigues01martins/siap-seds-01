@@ -18,7 +18,7 @@ const linha = (id: string, nome: string, dados: Partial<LinhaClassificacao> = {}
   id,
   nomeOsc: nome,
   totais: totais(3),
-  bloqueada: false,
+  concluida: false,
   ...dados,
 })
 
@@ -30,24 +30,23 @@ const PROPOSTAS: LinhaClassificacao[] = [
   linha('e', 'Obra Épsilon', { totais: totais(2) }),
   linha('f', 'Grupo Zeta', {
     totais: undefined,
-    admissibilidade: { situacao: 'nao_admitida', motivos: ['Requisito 28.1.IV não atendido: possibilidade de abertura e leitura integral do arquivo.'] },
+    admissibilidade: { situacao: 'nao_admitida', motivo: 'Arquivo do Caderno não abre integralmente no SEI.' },
   }),
 ]
 
 function montar(props: Partial<Parameters<typeof TabelaClassificacao>[0]> = {}) {
   const acoes = {
-    onHomologar: vi.fn().mockResolvedValue(undefined),
+    onConcluir: vi.fn().mockResolvedValue(undefined),
     onDesempatar: vi.fn().mockResolvedValue(undefined),
-    onReabrir: vi.fn().mockResolvedValue(undefined),
+    onDesfazer: vi.fn().mockResolvedValue(undefined),
   }
   render(
     <TabelaClassificacao
       lote={{ codigo: 'L1', descricao: 'CASE Goiânia' }}
       propostas={PROPOSTAS}
       decisoes={[]}
-      podeHomologar
+      podeConcluir
       podeDesempatar
-      podeReabrir
       {...acoes}
       {...props}
     />,
@@ -99,7 +98,7 @@ describe('Classificação do lote — ranking, pendentes e empates', () => {
     expect(linhaPorNome(fora, 'Obra Épsilon')).toHaveTextContent('Inapta')
     expect(linhaPorNome(fora, 'Obra Épsilon')).toHaveTextContent('inferior ao corte de 67,2 pontos')
     expect(linhaPorNome(fora, 'Grupo Zeta')).toHaveTextContent('Não admitida')
-    expect(linhaPorNome(fora, 'Grupo Zeta')).toHaveTextContent('28.1.IV')
+    expect(linhaPorNome(fora, 'Grupo Zeta')).toHaveTextContent('Arquivo do Caderno não abre integralmente no SEI.')
     expect(within(ranking()).queryByText('Fundação Delta')).not.toBeInTheDocument()
   })
 
@@ -138,40 +137,48 @@ describe('Desempate pelo presidente (RF-27)', () => {
   })
 })
 
-describe('Homologação na tela (C5) e reabertura (RF-18)', () => {
-  it('confirmação dupla (ConfirmDialog) mostrando NF e status; Cancelar recebe o foco', async () => {
-    const { onHomologar } = montar()
-    await userEvent.click(within(linhaDe('Instituto Alfa')).getByRole('button', { name: 'Homologar' }))
-    const dialogo = screen.getByRole('alertdialog', { name: 'Homologar Instituto Alfa?' })
+describe('Concluir / Desfazer conclusão (ação reversível, sem justificativa)', () => {
+  it('Concluir abre um ConfirmDialog com NF e status (sem "conferi" nem justificativa); Cancelar recebe o foco', async () => {
+    const { onConcluir } = montar()
+    await userEvent.click(within(linhaDe('Instituto Alfa')).getByRole('button', { name: 'Concluir' }))
+    const dialogo = screen.getByRole('alertdialog', { name: 'Concluir Instituto Alfa?' })
     expect(within(dialogo).getByRole('button', { name: 'Cancelar' })).toHaveFocus()
     expect(dialogo).toHaveTextContent('NF 112')
     expect(within(dialogo).getByText('Apta')).toHaveAttribute('data-status', 'success')
-    const confirmar = within(dialogo).getByRole('button', { name: 'Confirmar homologação' })
-    expect(confirmar).toBeDisabled()
-    await userEvent.click(within(dialogo).getByRole('checkbox', { name: /Conferi a NF e o status/ }))
-    await userEvent.click(confirmar)
-    await waitFor(() => expect(onHomologar).toHaveBeenCalledWith('a'))
+    expect(within(dialogo).queryByRole('checkbox')).not.toBeInTheDocument()
+    expect(within(dialogo).queryByRole('textbox')).not.toBeInTheDocument()
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Concluir' }))
+    await waitFor(() => expect(onConcluir).toHaveBeenCalledWith('a'))
   })
 
-  it('homologada: selo e botão Reabrir destrutivo com motivo obrigatório', async () => {
-    const { onReabrir } = montar({ propostas: [linha('a', 'Instituto Alfa', { totais: totais(4), bloqueada: true })] })
+  it('o que falta para concluir (409 da /api) aparece no diálogo', async () => {
+    const { ErroApi } = await import('../../lib/api')
+    montar({ onConcluir: vi.fn().mockRejectedValue(new ErroApi(409, 'Não é possível concluir: registre a admissibilidade.')) })
+    await userEvent.click(within(linhaDe('Instituto Alfa')).getByRole('button', { name: 'Concluir' }))
+    const dialogo = screen.getByRole('alertdialog', { name: 'Concluir Instituto Alfa?' })
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Concluir' }))
+    expect(await within(dialogo).findByText(/registre a admissibilidade/)).toBeInTheDocument()
+  })
+
+  it('concluída: selo "Concluída" e "Desfazer conclusão" direto, sem motivo', async () => {
+    const { onDesfazer } = montar({ propostas: [linha('a', 'Instituto Alfa', { totais: totais(4), concluida: true })] })
     const alfa = linhaDe('Instituto Alfa')
-    expect(alfa).toHaveTextContent('Homologada')
-    expect(within(alfa).queryByRole('button', { name: 'Homologar' })).not.toBeInTheDocument()
-    await userEvent.click(within(alfa).getByRole('button', { name: 'Reabrir' }))
-    const dialogo = screen.getByRole('alertdialog', { name: 'Reabrir Instituto Alfa?' })
-    const confirmar = within(dialogo).getByRole('button', { name: 'Confirmar reabertura' })
-    expect(confirmar.className).toContain('bg-button-destructive-bg')
-    await userEvent.click(confirmar)
-    expect(await within(dialogo).findByText('Informe o motivo da reabertura (ao menos 20 caracteres).')).toBeInTheDocument()
-    expect(onReabrir).not.toHaveBeenCalled()
-    await userEvent.type(within(dialogo).getByRole('textbox', { name: /^Motivo/ }), 'Erro material no registro do subcritério 3.1.')
-    await userEvent.click(within(dialogo).getByRole('button', { name: 'Confirmar reabertura' }))
-    await waitFor(() => expect(onReabrir).toHaveBeenCalledWith('a', 'Erro material no registro do subcritério 3.1.'))
+    expect(alfa).toHaveTextContent('Concluída')
+    expect(within(alfa).queryByRole('button', { name: 'Concluir' })).not.toBeInTheDocument()
+    await userEvent.click(within(alfa).getByRole('button', { name: 'Desfazer conclusão' }))
+    await waitFor(() => expect(onDesfazer).toHaveBeenCalledWith('a'))
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
   })
 
-  it('sem permissão: nenhum botão de homologar, reabrir ou desempatar', () => {
-    montar({ podeHomologar: false, podeDesempatar: false, podeReabrir: false })
+  it('fora da classificação (não admitida) também conclui; o campo antigo bloqueada não vira "Homologada"', () => {
+    montar({ propostas: [linha('f', 'Grupo Zeta', { totais: undefined, admissibilidade: { situacao: 'nao_admitida', motivo: 'Fora do prazo.' }, bloqueada: true } as unknown as LinhaClassificacao)] })
+    const fora = screen.getByRole('table', { name: 'Fora da classificação' })
+    expect(within(linhaPorNome(fora, 'Grupo Zeta')).getByRole('button', { name: 'Concluir' })).toBeInTheDocument()
+    expect(screen.queryByText('Homologada')).not.toBeInTheDocument()
+  })
+
+  it('sem permissão: nenhum botão de concluir, desfazer ou desempatar', () => {
+    montar({ podeConcluir: false, podeDesempatar: false })
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
   })
 })

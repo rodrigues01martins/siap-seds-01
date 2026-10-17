@@ -9,7 +9,7 @@ import { useParams } from 'react-router'
 import { formatarCnpj } from '../../domain/cnpj'
 import type { ResultadoD2 } from '../../domain/d2'
 import type { TotaisProposta } from '../../domain/proposta'
-import { statusDaProposta } from '../../domain/statusProposta'
+import { situacaoDaProposta } from '../../domain/situacaoProposta'
 import type { Admissibilidade } from '../../domain/admissibilidade'
 import { dataBr } from '../../lib/datas'
 import { useColecao, useDocumento } from '../../lib/firestore'
@@ -63,7 +63,7 @@ export function TelaProjecao() {
   else if (tipo === 'admissibilidade') conteudo = <ProjecaoAdmissibilidade admissibilidade={proposta.dados.admissibilidade ?? null} />
   else if (tipo === 'subcriterio') conteudo = <ProjecaoSubcriterio codigo={foco.subcriterio ?? ''} registro={avaliacao.dados} />
   else if (tipo === 'd2') conteudo = <ProjecaoD2 resultado={resultadoD2.dados} nomes={nomes} />
-  else conteudo = <ProjecaoResumo totais={proposta.dados.totais ?? null} status={statusDaProposta(proposta.dados)} />
+  else conteudo = <ProjecaoResumo totais={proposta.dados.totais ?? null} status={situacaoDaProposta(proposta.dados)} />
 
   return (
     <div className="min-h-screen bg-projecao-bg text-projecao-fg">

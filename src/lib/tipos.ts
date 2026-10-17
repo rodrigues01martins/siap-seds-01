@@ -16,15 +16,12 @@ export interface Chamamento {
   dataLimitePropostas?: string
   justificativaMinima?: number
   lotes: Lote[]
-  /** "excluindo": exclusão registrada pela /api e ainda não concluída. */
-  status?: 'excluindo'
 }
 
 export interface Osc {
   cnpj: string
   razaoSocial: string
   nomeFantasia?: string
-  status?: 'excluindo'
 }
 
 export interface Proposta {
@@ -33,10 +30,38 @@ export interface Proposta {
   protocolo?: string
   numeroSEI?: string
   observacao?: string
-  bloqueada?: boolean
+  /** Concluída (ação reversível): relatórios saem como finais; alterar a avaliação desfaz a conclusão. */
+  concluida?: boolean
   totais?: { status?: StatusD1; d1?: number; d2?: number; nf?: number }
-  admissibilidade?: { situacao?: 'admitida' | 'nao_admitida' | 'desclassificada' }
-  status?: 'excluindo'
+  admissibilidade?: AdmissibilidadeGravada
+  atualizadoPor?: AtualizadoPor
+}
+
+/** Quem gravou o documento por último (sem auditoria detalhada). */
+export interface AtualizadoPor {
+  nome: string | null
+  email: string | null
+}
+
+/** Página inicial/final de um PA, com limite, página de corte e excedente (Anexo III, 7.1). */
+export interface PlanoAdmissibilidadeGravado {
+  codigo: string
+  paginaInicial: number | null
+  paginaFinal: number | null
+  limite: number
+  paginas: number | null
+  paginaCorte: number | null
+  excede: number
+}
+
+/** Admissibilidade simplificada: admitida (sim/não), motivo e páginas por PA. */
+export interface AdmissibilidadeGravada {
+  admitida?: boolean
+  motivo?: string
+  planos?: PlanoAdmissibilidadeGravado[]
+  /** desclassificada só em registros anteriores à Simplificação 2/4. */
+  situacao?: 'admitida' | 'nao_admitida' | 'desclassificada'
+  sessaoId?: string
 }
 
 /** Quem está presente na sessão: só o nome e o papel (sem login). */
@@ -45,37 +70,22 @@ export interface PresenteSessao {
   papel: PapelSessao
 }
 
-/** Reset da sessão (presidente): quem, quando e por quê. */
-export interface ResetSessao {
-  por: { uid: string; email: string | null }
-  em: { toDate(): Date }
-  motivo: string
-}
-
 export interface Sessao {
   data: string
-  /** reiniciando: reset em andamento (ou interrompido); reiniciada: registros desconsiderados (sem novos registros). */
-  status: 'aberta' | 'encerrada' | 'reiniciando' | 'reiniciada'
-  reiniciadaPor?: { uid: string; email: string | null }
-  reiniciadaEm?: { toDate(): Date }
-  motivo?: string
-  resets?: number
-  historicoResets?: ResetSessao[]
+  status: 'aberta' | 'encerrada'
   /** Lote(s) em pauta: as propostas desses lotes são as analisadas na sessão. */
   lotes: string[]
   presentes: PresenteSessao[]
   /** O que o telão mostra; dados anteriores à Etapa 5 não têm `tipo` (= subcritério). */
   foco: { tipo?: 'admissibilidade' | 'subcriterio' | 'd2' | 'resumo'; propostaId: string; subcriterio?: string } | null
-  abertaPor?: { uid: string; email: string | null }
 }
 
 export interface Avaliacao {
   nivel: number
   justificativa: string
   paginas: number[]
-  decisao: 'unanimidade' | 'maioria'
-  votoDivergente?: string
   sessaoId: string
+  atualizadoPor?: AtualizadoPor
 }
 
 /** Cadastro em usuarios/{uid} (tela Usuários, /api/usuarios). */

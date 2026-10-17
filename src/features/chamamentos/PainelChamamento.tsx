@@ -1,5 +1,5 @@
-// /chamamentos/:ch (DetailPage): dados do chamamento, propostas por lote com status e sessões.
-// "Excluir" proposta no menu de ações da linha (DialogoExclusao; homologada fica bloqueada).
+// /chamamentos/:ch (DetailPage): dados do chamamento, propostas por lote com status (e "Concluída") e sessões.
+// Lixeira em cada item (lote, proposta, sessão): exclusão livre em cascata com a prévia (DialogoExclusao).
 
 import { FilePlus2, Presentation, SquarePen, Trophy } from 'lucide-react'
 import { useParams } from 'react-router'
@@ -7,7 +7,6 @@ import { DetailPage } from '../../components/templates/paginas'
 import { ButtonLink } from '../../components/ui/ButtonLink'
 import { Card } from '../../components/ui/Card'
 import { DataTable } from '../../components/ui/DataTable'
-import { MenuAcoes } from '../../components/ui/MenuAcoes'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { ErrorState } from '../../components/ui/ErrorState'
 import { StatusBadge } from '../../components/ui/StatusBadge'
@@ -15,11 +14,11 @@ import { Skeleton } from '../../components/ui/Skeleton'
 import { dataBr } from '../../lib/datas'
 import { formatarCnpj } from '../../domain/cnpj'
 import { podeFazer } from '../../domain/permissoes'
-import { statusDaProposta } from '../../domain/statusProposta'
+import { situacaoDaProposta } from '../../domain/situacaoProposta'
 import { useColecao, useDocumento, type ComId } from '../../lib/firestore'
 import type { Chamamento, Osc, Proposta, Sessao } from '../../lib/tipos'
 import { useUsuario } from '../auth/useUsuario'
-import { emExclusao, SeloEmExclusao, useExclusao } from '../exclusao/useExclusao'
+import { useExclusao } from '../exclusao/useExclusao'
 import { SeloSessao } from '../sessoes/SeloSessao'
 
 const numero = (valor: number | undefined) => (valor === undefined ? '—' : valor.toLocaleString('pt-BR', { maximumFractionDigits: 2 }))
@@ -76,9 +75,12 @@ export function PainelChamamento() {
           key={lote.codigo}
           titulo={`Lote ${lote.codigo} — ${lote.descricao}`}
           acoes={
-            <ButtonLink para={`${caminho}/lotes/${encodeURIComponent(lote.codigo)}/classificacao`} variante="secondary" tamanho="sm" icone={Trophy}>
-              Classificação do lote
-            </ButtonLink>
+            <span className="flex flex-wrap items-center gap-1">
+              <ButtonLink para={`${caminho}/lotes/${encodeURIComponent(lote.codigo)}/classificacao`} variante="secondary" tamanho="sm" icone={Trophy}>
+                Classificação do lote
+              </ButtonLink>
+              {podeGravar && exclusao.botao({ rota: '/api/chamamentos', ids: { id: ch ?? '', lote: lote.codigo }, nome: `lote ${lote.codigo} — ${lote.descricao}` })}
+            </span>
           }
         >
           <DataTable<ComId<Proposta>>
@@ -101,7 +103,16 @@ export function PainelChamamento() {
               { id: 'protocolo', titulo: 'Protocolo', celula: (p) => p.protocolo ?? '—' },
               { id: 'sei', titulo: 'Nº SEI', celula: (p) => p.numeroSEI ?? '—' },
               { id: 'nf', titulo: 'NF', celula: (p) => numero(p.totais?.nf), ordenar: (p) => p.totais?.nf ?? -1, alinhar: 'direita' },
-              { id: 'status', titulo: 'Status', celula: (p) => (emExclusao(p) ? <SeloEmExclusao /> : <StatusBadge status={statusDaProposta(p)} />) },
+              {
+                id: 'status',
+                titulo: 'Status',
+                celula: (p) => (
+                  <span className="flex flex-wrap gap-1">
+                    <StatusBadge status={situacaoDaProposta(p)} />
+                    {p.concluida && <StatusBadge status="concluida" />}
+                  </span>
+                ),
+              },
             ]}
             acoes={(p) => {
               const nome = nomeOsc.get(p.oscCnpj) ?? p.id
@@ -113,31 +124,19 @@ export function PainelChamamento() {
                       ['admissibilidade', 'Admissibilidade'],
                       ['d1', 'D1'],
                       ['d2', 'D2'],
-                      ['diligencias', 'Diligências'],
                     ] as const
                   ).map(([rota, rotulo]) => (
                     <ButtonLink key={rota} para={`${base}/${rota}`} variante="tertiary" tamanho="sm" aria-label={`${rotulo} — ${nome}`}>
                       {rotulo}
                     </ButtonLink>
                   ))}
-                  {podeGravar && !p.bloqueada && (
+                  {podeGravar && (
                     <ButtonLink para={`${base}/editar`} variante="tertiary" tamanho="sm" aria-label={`Editar proposta — ${nome}`}>
                       Editar
                     </ButtonLink>
                   )}
-                  {podeGravar && (
-                    <MenuAcoes
-                      rotulo={`Mais ações — proposta ${p.protocolo ?? p.id}`}
-                      itens={[
-                        exclusao.itemExcluir({
-                          tipo: 'proposta',
-                          ids: { chamamentoId: ch ?? '', propostaId: p.id },
-                          identificador: p.protocolo ?? p.id,
-                          nome: `proposta ${p.protocolo ?? p.id} — ${nome}`,
-                        }),
-                      ]}
-                    />
-                  )}
+                  {podeGravar &&
+                    exclusao.botao({ rota: '/api/propostas', ids: { chamamentoId: ch ?? '', propostaId: p.id }, nome: `proposta ${p.protocolo ?? p.id} — ${nome}` })}
                 </span>
               )
             }}
@@ -167,9 +166,12 @@ export function PainelChamamento() {
             { id: 'lotes', titulo: 'Lotes em pauta', celula: (s) => (s.lotes ?? []).join(', ') || '—' },
           ]}
           acoes={(s) => (
-            <ButtonLink para={`${caminho}/sessoes/${s.id}`} variante="tertiary" tamanho="sm" aria-label={`Abrir sessão de ${dataBr(s.data)}`}>
-              Abrir
-            </ButtonLink>
+            <span className="flex justify-end gap-1">
+              <ButtonLink para={`${caminho}/sessoes/${s.id}`} variante="tertiary" tamanho="sm" aria-label={`Abrir sessão de ${dataBr(s.data)}`}>
+                Abrir
+              </ButtonLink>
+              {podeGravar && exclusao.botao({ rota: '/api/sessao', ids: { chamamentoId: ch ?? '', sessaoId: s.id }, nome: `sessão de ${dataBr(s.data)}` })}
+            </span>
           )}
         />
       </Card>

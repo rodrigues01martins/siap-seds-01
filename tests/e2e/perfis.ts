@@ -37,10 +37,10 @@ export const PROPOSTA_USO = 'uso-p1'
 export const CHAMAMENTO_EXCLUIR = 'e2e-excluir'
 export const CHAMAMENTO_EXCLUIR_PROPOSTA = 'e2e-excluir-prop'
 export const PROPOSTA_EXCLUIR = 'e2e-excluir-p1'
-/** Reset da sessão e acessibilidade: chamamento com proposta sem admissibilidade nem níveis e sessão aberta. */
-export const CHAMAMENTO_RESET = 'e2e-reset'
-export const PROPOSTA_RESET = 'e2e-reset-p1'
-export const SESSAO_RESET = 'e2e-reset-sessao'
+/** Exclusão da sessão (exclusao.spec.ts) e acessibilidade: proposta sem admissibilidade nem níveis, numa sessão aberta. */
+export const CHAMAMENTO_PAUTA = 'e2e-pauta'
+export const PROPOSTA_PAUTA = 'e2e-pauta-p1'
+export const SESSAO_PAUTA = 'e2e-pauta-sessao'
 
 /** Primeira proposta avaliada do ensaio (a mais completa: apta). */
 export const propostaE2E = (propostas: { id: string; esperado: string }[]) => propostas.find((p) => p.esperado === 'apta')!.id
@@ -69,11 +69,9 @@ export function rotasE2E(proposta: string): RotaE2E[] {
     { slug: 'd1', caminho: `${p}/d1`, exige: null },
     { slug: 'd2', caminho: `${p}/d2`, exige: null },
     { slug: 'd2-memoria', caminho: `${p}/d2/memoria`, exige: null },
-    { slug: 'diligencias', caminho: `${p}/diligencias`, exige: null },
     { slug: 'classificacao', caminho: `${ch}/lotes/L1/classificacao`, exige: null },
     { slug: 'oscs', caminho: '/oscs', exige: null },
     { slug: 'usuarios', caminho: '/usuarios', exige: 'admin' },
-    { slug: 'auditoria', caminho: '/auditoria', exige: null },
     { slug: 'projecao', caminho: `/projecao/${CHAMAMENTO_ENSAIO}/${SESSAO_ABERTA}`, exige: null },
   ]
 }

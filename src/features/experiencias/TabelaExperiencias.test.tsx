@@ -27,9 +27,19 @@ const CASE: ExperienciaGravada = {
 }
 
 function montar(props: Partial<Parameters<typeof TabelaExperiencias>[0]> = {}) {
-  const acoes = { onEditar: vi.fn(), onExcluir: vi.fn(), onDesconsiderar: vi.fn().mockResolvedValue(undefined) }
+  const excluir = vi.fn()
+  const acoes = {
+    onEditar: vi.fn(),
+    onDesconsiderar: vi.fn().mockResolvedValue(undefined),
+    acaoExcluir: (e: { id: string; descricao: string }) => (
+      <button type="button" onClick={() => excluir(e.id)}>{`Excluir experiência ${e.descricao}`}</button>
+    ),
+    acaoExcluirDocumento: (e: { id: string }, indice: number, d: { tipo: string }) => (
+      <button type="button" onClick={() => excluir(e.id, indice)}>{`Excluir documento ${d.tipo}`}</button>
+    ),
+  }
   render(<TabelaExperiencias experiencias={[CASE]} somenteLeitura={false} {...acoes} {...props} />)
-  return acoes
+  return { ...acoes, excluir }
 }
 
 describe('Tabela de experiências da D2', () => {
@@ -72,21 +82,21 @@ describe('Tabela de experiências da D2', () => {
     expect(screen.getByRole('row', { name: /Gestão do CASE Goiânia/ })).toHaveTextContent('Desconsiderada em C2.3')
   })
 
-  it('excluir pede confirmação destrutiva (Cancelar é o caminho seguro)', async () => {
-    const { onExcluir } = montar()
-    await userEvent.click(screen.getByRole('button', { name: 'Excluir Gestão do CASE Goiânia' }))
-    const confirmacao = screen.getByRole('alertdialog', { name: 'Excluir a experiência?' })
-    expect(within(confirmacao).getByRole('button', { name: 'Cancelar' })).toHaveFocus()
-    expect(onExcluir).not.toHaveBeenCalled()
-    await userEvent.click(within(confirmacao).getByRole('button', { name: 'Excluir' }))
-    await waitFor(() => expect(onExcluir).toHaveBeenCalledWith('e1'))
+  it('lixeira da experiência em cada linha e de cada documento no painel de documentos', async () => {
+    const { excluir } = montar()
+    await userEvent.click(screen.getByRole('button', { name: 'Excluir experiência Gestão do CASE Goiânia' }))
+    expect(excluir).toHaveBeenCalledWith('e1')
+    await userEvent.click(screen.getByRole('button', { name: 'Documentos (2) de Gestão do CASE Goiânia' }))
+    const lista = screen.getByRole('table', { name: 'Documentos de Gestão do CASE Goiânia' })
+    await userEvent.click(within(within(lista).getByRole('row', { name: /Atestado/ })).getByRole('button', { name: /Excluir documento/ }))
+    expect(excluir).toHaveBeenLastCalledWith('e1', 1)
   })
 
-  it('somente leitura: sem editar, excluir ou desconsiderar', () => {
+  it('somente leitura (sem sessão aberta): sem editar nem desconsiderar; a exclusão é livre e continua', () => {
     montar({ somenteLeitura: true })
     expect(screen.queryByRole('button', { name: /^Editar/ })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /^Excluir/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /^Desconsiderar/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Excluir experiência Gestão do CASE Goiânia' })).toBeInTheDocument()
   })
 })
 

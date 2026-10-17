@@ -21,16 +21,10 @@ function dados(ajustes: Partial<DadosAta> = {}): DadosAta {
       ],
     },
     propostas: [
-      { id: 'p1', nomeOsc: 'Instituto Alfa', cnpj: '11222333000181', loteCodigo: 'L1', numeroSEI: '95570001', status: 'Apta', nf: 96.5, bloqueada: false },
-      { id: 'p2', nomeOsc: 'Associação Beta', cnpj: '11444777000161', loteCodigo: 'L1', status: 'Homologada', nf: 90, bloqueada: true },
-    ],
-    decisoesPorMaioria: [
-      { propostaId: 'p1', codigo: '1.1', titulo: 'Título do 1.1', nivel: 3, votoDivergente: 'Membro C votou pelo nível 2.', justificativa: 'Metodologia coerente.' },
+      { id: 'p1', nomeOsc: 'Instituto Alfa', cnpj: '11222333000181', loteCodigo: 'L1', numeroSEI: '95570001', status: 'Apta', nf: 96.5, concluida: false },
+      { id: 'p2', nomeOsc: 'Associação Beta', cnpj: '11444777000161', loteCodigo: 'L1', status: 'Apta', nf: 90, concluida: true },
     ],
     desempates: [{ loteCodigo: 'L1', nf: 90, ordem: ['Associação Beta', 'Centro Gama'], justificativa: 'Maior nota no PA1, conforme deliberação.' }],
-    diligencias: [
-      { propostaId: 'p1', objeto: 'Apresentar procuração do signatário.', prazo: '2026-11-20', status: 'encerrada', resposta: 'Procuração juntada.', conclusao: 'Atendida, sem conteúdo técnico novo.' },
-    ],
     ...ajustes,
   }
 }
@@ -53,37 +47,21 @@ describe('minuta de ata — texto gerado', () => {
     expect(texto).toMatch(/_+\nCarla Dias \(Membro\)/)
   })
 
-  it('propostas analisadas, decisões por maioria com voto divergente, desempates e diligências', () => {
+  it('propostas analisadas (com a conclusão) e desempates', () => {
     expect(texto).toContain('Instituto Alfa (CNPJ 11.222.333/0001-81) — Lote L1 — SEI 95570001 — NF 96,5 — Apta')
-    expect(texto).toContain('Instituto Alfa — subcritério 1.1 (Título do 1.1): nível 3, por maioria. Voto divergente: Membro C votou pelo nível 2.')
+    expect(texto).toContain('Associação Beta (CNPJ 11.444.777/0001-61) — Lote L1 — NF 90 — Apta (concluída)')
     expect(texto).toContain('Lote L1, NF 90: Associação Beta > Centro Gama. Justificativa: Maior nota no PA1, conforme deliberação.')
-    expect(texto).toContain('Instituto Alfa: Apresentar procuração do signatário. Prazo: 20/11/2026. Situação: Encerrada.')
-    expect(texto).toContain('Resposta: Procuração juntada.')
-    expect(texto).toContain('Conclusão: Atendida, sem conteúdo técnico novo.')
   })
 
-  it('sessão reiniciada: a ata registra cada reset (data, hora de Goiás, quem resetou e motivo)', () => {
-    const base = dados()
-    const reiniciada = textoInicialAta(
-      dados({
-        sessao: {
-          ...base.sessao,
-          resets: [{ em: new Date('2026-11-10T17:32:00Z'), por: 'presidente@seds.go.gov.br', motivo: 'Conflito de interesse declarado após a sessão.' }],
-        },
-      }),
-    )
-    expect(reiniciada).toContain('REINÍCIO DA SESSÃO (RESET)')
-    expect(reiniciada).toContain(
-      'Em 10/11/2026, às 14:32, a sessão foi resetada por presidente@seds.go.gov.br: os registros feitos nela foram desconsiderados e voltaram ao estado anterior. Motivo: Conflito de interesse declarado após a sessão.',
-    )
-    expect(textoInicialAta(base)).not.toContain('REINÍCIO DA SESSÃO')
+  it('sem decisões por maioria, diligências nem reset (removidos na Simplificação 2/4)', () => {
+    expect(texto).not.toMatch(/maioria|unanimidade/i)
+    expect(texto).not.toMatch(/dilig/i)
+    expect(texto).not.toMatch(/RESET/)
+    expect(texto).toMatch(/1\. PRESENTES[\s\S]*2\. PROPOSTAS ANALISADAS[\s\S]*3\. DESEMPATES \(RF-27\)[\s\S]*4\. ENCERRAMENTO/)
   })
 
-  it('seções vazias dizem que não houve registro', () => {
-    const vazio = textoInicialAta(dados({ decisoesPorMaioria: [], desempates: [], diligencias: [] }))
-    expect(vazio).toContain('Todas as decisões desta sessão foram por unanimidade.')
-    expect(vazio).toContain('Não houve decisão de desempate.')
-    expect(vazio).toContain('Não houve diligência.')
+  it('seção de desempates vazia diz que não houve decisão', () => {
+    expect(textoInicialAta(dados({ desempates: [] }))).toContain('Não houve decisão de desempate.')
   })
 })
 
@@ -95,7 +73,7 @@ describe('minuta de ata — PDF', () => {
     expect(textoDoRodape(pdf)).toContain('d'.repeat(64))
   })
 
-  it('MINUTA quando há proposta analisada não homologada', () => {
+  it('MINUTA quando há proposta analisada não concluída', () => {
     expect(marcaDagua(montarAtaPdf('x', RODAPE, true))).toBe('MINUTA')
     expect(marcaDagua(montarAtaPdf('x', RODAPE, false))).toBeNull()
   })

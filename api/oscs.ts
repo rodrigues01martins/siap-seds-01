@@ -1,12 +1,13 @@
 // POST /api/oscs (criar) e PATCH /api/oscs (editar). Perfis: admin e presidente.
 // O documento fica em oscs/{CNPJ normalizado}: o CNPJ é único por construção.
-// DELETE (excluir, com justificativa) e GET ?simular=true (prévia): ver _lib/exclusao.ts.
-// OSC com proposta vinculada não pode ser excluída (409 informando quantas e quais).
+// DELETE { cnpj } apaga a OSC e as propostas dela em todos os chamamentos; GET ?simular=true: prévia.
+// Ver _lib/cascata.ts.
 
-import { esquemaCriarOsc, esquemaEditarOsc, esquemaExcluirOsc, esquemaPreviaOsc } from '../src/esquemas/cadastros.js'
+import { esquemaCriarOsc, esquemaEditarOsc } from '../src/esquemas/cadastros.js'
+import { esquemaExcluirOsc, esquemaPreviaOsc } from '../src/esquemas/exclusao.js'
 import { obterAdmin } from './_lib/admin.js'
+import { alvoOsc, excluir, previaExclusao } from './_lib/cascata.js'
 import { ErroApi } from './_lib/erros.js'
-import { alvoOsc, excluirComSeguranca, previaExclusao } from './_lib/exclusao.js'
 import { gravar } from './_lib/gravar.js'
 import { criarRota, json } from './_lib/http.js'
 import { autenticar } from './_lib/porteiro.js'
@@ -41,7 +42,7 @@ export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
 
   DELETE: async (requisicao) => {
     const autor = await autenticar(requisicao)
-    const { cnpj, justificativa } = await lerCorpo(requisicao, esquemaExcluirOsc)
-    return json(200, await excluirComSeguranca(autor, alvoOsc(cnpj), justificativa))
+    const { cnpj } = await lerCorpo(requisicao, esquemaExcluirOsc)
+    return json(200, await excluir(autor, alvoOsc(cnpj)))
   },
 })

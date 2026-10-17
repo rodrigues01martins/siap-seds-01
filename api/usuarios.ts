@@ -1,5 +1,5 @@
 // /api/usuarios — gestão de usuários (tela Usuários, só o admin). Cadastro em usuarios/{uid}: nome, e-mail,
-// perfil (admin ou presidente) e ativo. Tudo com histórico (auditoria).
+// perfil (admin ou presidente) e ativo, com atualizadoPor e atualizadoEm.
 // POST (admin): novo usuário com perfil. Cria a conta no Firebase Authentication com senha aleatória; o app
 //   envia em seguida o e-mail "redefinir senha" do Firebase, com que a pessoa cria a própria senha.
 // PATCH (admin): perfil, nome e ativo. Dar perfil a um cadastro do modelo anterior apaga os campos antigos

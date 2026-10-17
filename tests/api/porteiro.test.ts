@@ -54,10 +54,11 @@ describe('porteiro: login (ID token) e perfil (usuarios/{uid}: admin ou presiden
     })
   })
 
-  it('presidente faz tudo no sistema → devolve uid, e-mail, perfil e acesso', async () => {
+  it('presidente faz tudo no sistema → devolve uid, e-mail, nome (para atualizadoPor), perfil e acesso', async () => {
     await expect(autenticar(requisicao(`Bearer ${presidente.token}`))).resolves.toEqual({
       uid: presidente.uid,
       email: presidente.email,
+      nome: presidente.nome,
       perfil: 'presidente',
       acesso: { perfil: 'presidente', ativo: true },
     })

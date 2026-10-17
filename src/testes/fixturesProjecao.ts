@@ -1,30 +1,24 @@
 // Dados de exemplo para os testes da projeção (calculados pelo próprio domínio).
 
-import { calcularAdmissibilidade, type Admissibilidade } from '../domain/admissibilidade'
 import { calcularD2, type ResultadoD2 } from '../domain/d2'
 import { MATRIZ_2026 } from '../domain/matriz'
 import { consolidarProposta, type TotaisProposta } from '../domain/proposta'
+import { apurarPlanos } from '../esquemas/admissibilidade'
+import type { AdmissibilidadeGravada } from '../lib/tipos'
 
 const CODIGOS = MATRIZ_2026.dimensao1.planos.flatMap((p) => p.subcriterios.map((s) => s.codigo))
 export const DATA_LIMITE = '2026-10-31'
 
-export function admissibilidadeExemplo(): Admissibilidade {
+/** Não admitida, com motivo, e o PA3 acima do limite de páginas. */
+export function admissibilidadeExemplo(): AdmissibilidadeGravada {
   let pagina = 3
   const planos = [12, 12, 8, 12, 10, 8].map((limite, i) => {
     const extra = i === 2 ? 2 : 0
-    const plano = { codigo: `PA${i + 1}`, ausente: false, paginaInicial: pagina, paginaFinal: pagina + limite - 1 + extra }
+    const plano = { codigo: `PA${i + 1}`, paginaInicial: pagina, paginaFinal: pagina + limite - 1 + extra }
     pagina += limite + extra
     return plano
   })
-  return calcularAdmissibilidade({
-    requisitos: Object.fromEntries(
-      ['I', 'II', 'III', 'IV', 'V', 'VI', 'VIII', 'IX', 'X'].map((n) => [`28.1.${n}`, n !== 'IV']),
-    ),
-    irregularidadesFormais: ['28.5.II'],
-    planos,
-    resultado: 'nao_admitida',
-    motivacao: 'Arquivo não abre integralmente.',
-  })
+  return { admitida: false, motivo: 'Arquivo não abre integralmente.', situacao: 'nao_admitida', planos: apurarPlanos(planos) }
 }
 
 export const EXPERIENCIAS_EXEMPLO = [

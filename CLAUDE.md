@@ -16,9 +16,9 @@ Eliminatórias: D1 < 67,2 → inapta; nível 0 em 1.1 ou 1.2 → desclassificada
 1. src/domain é código puro: não importa Firebase, React nem nada de rede.
 2. O cliente NUNCA escreve no Firestore. Toda escrita passa por /api, que:
    verifica o ID token, confere o acesso no cadastro usuarios/{uid} (perfil, ativo),
-   valida os dados, grava e registra em /auditoria na mesma transação.
+   valida os dados e grava numa transação; cada documento guarda só atualizadoPor (nome/e-mail) e atualizadoEm.
 3. A matriz vem de src/domain/matriz/matriz_2026.json; nada de pesos ou faixas fixos no código.
-4. Proposta com campo bloqueada=true não aceita escrita (homologada).
+4. Proposta concluída (concluida=true) continua aceitando escrita: qualquer alteração na avaliação desfaz a conclusão.
 5. Segredos nunca usam prefixo VITE_. FIREBASE_SERVICE_ACCOUNT só existe no servidor.
 6. Componentes só usam tokens semânticos; nunca cores HEX diretas. Fonte de verdade visual:
    docs/DESIGN-SYSTEM-SEDS.md (Sistema de Design SEDS — Web Corporativo 1.0).
@@ -35,33 +35,29 @@ Eliminatórias: D1 < 67,2 → inapta; nível 0 em 1.1 ou 1.2 → desclassificada
 - Os PDFs dos Cadernos NÃO são carregados no app. A consulta é feita no SEI; o app guarda apenas o
   nº SEI (campo numeroSEI) e as páginas citadas. Nada de react-pdf, Firebase Storage ou pdfRef.
 - Páginas citadas na avaliação da D1 usam a numeração interna do PA (1 até o limite do PA na matriz).
-- Relatórios (espelho, quadro-resumo, ata) e a exportação da auditoria são gerados no navegador (pdfmake,
-  exceljs), sem gravar nada. Rodapé com código de verificação = SHA-256 dos dados usados; "MINUTA" se houver
-  proposta não homologada no documento.
-- Exclusão de cadastros (chamamento, OSC, proposta): livre para os dois perfis, justificativa obrigatória (mín. 20 caracteres).
-  Proposta homologada → 409 ("Reabra a proposta antes de excluir"); apaga a proposta e TODAS as subcoleções.
-  OSC com proposta vinculada → 409 (quantas e quais). Chamamento com propostas ou sessões → 409; apaga o chamamento
-  e seus lotes. Ordem (api/_lib/exclusao.ts): transação confere bloqueios, marca status "excluindo" (o gravar recusa
-  com 409 toda escrita no documento "excluindo" ou abaixo dele) e grava auditoria "excluir" com fotografia completa
-  (documento + subcoleções), justificativa, uid e perfil; depois recursiveDelete; se falhar, fica "excluindo" e a
-  repetição conclui (idempotente). Prévia: GET ?simular=true. Na tela: "Excluir" no menu de ações da linha
-  (MenuAcoes), nunca ação primária; ConfirmDialog com a prévia, a justificativa e o identificador digitado.
+- Relatórios (espelho, quadro-resumo, ata) são gerados no navegador (pdfmake, exceljs), sem gravar nada. Rodapé com
+  código de verificação = SHA-256 dos dados usados; "MINUTA" se houver proposta não concluída no documento.
+- Exclusão livre (admin e presidente, api/_lib/cascata.ts): DELETE de chamamento, lote ({ id, lote } em
+  /api/chamamentos), OSC, proposta, sessão, experiência, documento ({ ..., documento: índice } em /api/experiencia)
+  e nível de subcritério (/api/avaliacao). Sem justificativa, sem identificador digitado, sem status "excluindo" e
+  sem exigir sessão. Cascata: chamamento → lotes, sessões, propostas e tudo dentro delas, desempates; lote → propostas
+  e desempates do lote (sai do chamamento e da pauta das sessões); OSC → suas propostas; proposta → admissibilidade,
+  avaliações, experiências (com documentos) e resultado; sessão → a sessão e tudo registrado com o sessaoId dela.
+  recursiveDelete e recálculo dos totais das propostas afetadas. Prévia: GET ?simular=true → { itens, total,
+  resumo } ("1 proposta, 28 avaliações, 4 experiências"). Na tela: ícone de lixeira em cada item e um único
+  ConfirmDialog destrutivo com a prévia ("Serão apagados: …").
 - Gravações da Comissão só em sessão aberta: nível da D1, admissibilidade, experiências da D2 e desempate exigem o
-  sessaoId de sessão aberta do chamamento (proposta de um lote em pauta, exceto no desempate); o sessaoId vai para o documento
-  e para cada registro de auditoria da operação (gravar({ sessaoId })). Diligências não dependem de sessão.
-- Reset da sessão (PATCH /api/sessao ação "resetar"; prévia GET ?simular=true): admin ou presidente (perfis de
-  login), justificativa obrigatória (mín. 20). Desfaz tudo o que foi gravado com o
-  sessaoId (admissibilidade, níveis da D1, experiências e documentos da D2, desempates; diligências não): cada
-  documento volta ao "antes" do primeiro registro de auditoria da sessão para ele (antes nulo → apagado).
-  Bloqueios 409: proposta afetada homologada ("Reabra antes de resetar"); registro alterado depois em outra sessão
-  não resetada ou fora de sessão ("Resete primeiro a sessão posterior"). Execução (api/_lib/resetSessao.ts): marca
-  a sessão "reiniciando", reverte em lotes de até 400 escritas por transação (auditoria "resetar_sessao" com
-  antes/depois), recalcula D1, D2, NF e status pelas regras de src/domain (recalcular.ts) e marca "reiniciada"
-  (reiniciadaPor, reiniciadaEm, motivo, resets, historicoResets; presentes mantidos; foco limpo).
-  Interrompido, fica "reiniciando" e a repetição continua de onde parou. Sessão reiniciada não recebe registros
-  (para refazer, abre-se nova sessão). A ata registra cada reset (data, hora, quem resetou, motivo). Na tela da
-  sessão, "Resetar sessão" (destructive) fica numa seção própria, fora das ações do cabeçalho; ConfirmDialog com
-  a prévia, a justificativa e a palavra RESETAR.
+  sessaoId de sessão aberta do chamamento (proposta de um lote em pauta, exceto no desempate); o sessaoId vai para o
+  documento (base da exclusão da sessão em cascata). Exclusões não dependem de sessão.
+- "Homologar" virou "Concluir" (POST /api/concluir { acao: 'concluir' | 'desfazer' }): reversível, sem
+  justificativa e sem trava. Só conclui com a admissibilidade registrada e, se admitida, os 28 níveis e as 28
+  justificativas da D1 (src/domain/conclusao.ts; não admitida conclui só com a admissibilidade). Alterar a avaliação
+  (nível, experiência, documento, admissibilidade ou exclusão em cascata) grava concluida=false. Relatórios: não
+  concluída leva MINUTA; concluída sai como final.
+- Admissibilidade: admitida (sim/não), motivo (obrigatório se não) e páginas inicial/final por PA com página de corte
+  (apurarPlano). D1: nível, justificativa e páginas (sem decisão nem voto divergente). As regras antigas de
+  src/domain (calcularAdmissibilidade, decisão em problemasDoRegistro, status "homologada") não foram alteradas e
+  ficam sem uso; a /api passa "unanimidade" ao domínio (esquemas/avaliacao.ts, problemasDoNivel).
 - Sessão: data, chamamento, lote(s) em pauta (lotes), status (aberta | encerrada) e presentes como lista de
   { nome, papel: 'presidente' | 'membro' }, sem login e sem declaração de impedimento; exatamente 1 presidente e
   nomes não repetidos (comparados sem acento, caixa e espaços extras). Abertura numa página só (data, lotes,
@@ -69,12 +65,16 @@ Eliminatórias: D1 < 67,2 → inapta; nível 0 em 1.1 ou 1.2 → desclassificada
 - O app foi simplificado: dois perfis com login (admin e presidente); presentes da sessão são apenas nomes;
   exclusão livre; sem auditoria detalhada. A revisão completa está na seção 0 do documento de requisitos.
   Decisão de 17/10/2026.
+- Simplificação 2/4 (17/10/2026): saíram a auditoria detalhada (gravação em auditoria/, tela /auditoria, exportação;
+  os registros antigos ficam no Firestore, sem leitura pelo app, e entram no backup), as diligências, a reabertura
+  e a trava de homologação (bloqueada), o reset da sessão (dependia da auditoria; substituído pela exclusão da sessão
+  em cascata), decisão/voto divergente da D1, o checklist 28.1 e o de formatação (28.5) e a exclusão antiga.
 - O catálogo de componentes não faz parte do sistema; a documentação de componentes é mantida fora do
   repositório. Decisão de 15/10/2026. (Rota inexistente, como /ui, mostra a página "não encontrado".)
 
 ## Acesso (dois perfis: admin e presidente)
 - Cadastro em usuarios/{uid}: nome, email, perfil ('admin' | 'presidente') e ativo.
-- Os dois perfis fazem tudo (cadastros, avaliação, sessão, resultado, exclusão, reset e histórico); só o admin
+- Os dois perfis fazem tudo (cadastros, avaliação, sessão, resultado e exclusão); só o admin
   gerencia usuários e perfis na tela Usuários (/usuarios, api/usuarios.ts): novo usuário com perfil (conta criada
   com senha aleatória + e-mail "redefinir senha" do Firebase), mudar perfil, desativar. Ninguém tira o próprio
   admin nem se desativa.
@@ -94,7 +94,7 @@ Fonte no código: src/domain/permissoes.ts (teste garante que bate com esta tabe
 
 Empate de NF (RF-27): aplicam-se, em ordem, os critérios do Edital da matriz (matriz_2026.json: desempate e
 fonteDesempate; src/domain/classificacao.ts). Só se persistir o empate a Comissão decide e um dos perfis registra
-a ordem com justificativa (api/desempate.ts, auditado; 409 para grupo que o Edital já resolveu).
+a ordem com justificativa (api/desempate.ts; 409 para grupo que o Edital já resolveu).
 
 ## Fluxo de trabalho (obrigatório)
 - Existem só duas branches: dev e main. Nunca crie outras branches nem Pull Requests.
@@ -126,8 +126,7 @@ npm run test:e2e:baseline (Playwright + axe nos emuladores; FASE_AUDITORIA=antes
 npm run test:e2e:etapa3 (telas migradas: teclado, axe 1280/768 e screenshots → docs/auditoria-design/etapa-3/)
 npm run test:e2e:etapa4 (telas operacionais: axe, screenshots antes/depois e fluxo completo pela /api nos emuladores)
 npm run test:e2e:uso (testes de uso por perfil, com tempos) | npm run test:e2e:acessibilidade (teclado, foco, zoom 200%, aria-live)
-npm run test:e2e:exclusao (exclusão de cadastros pela interface: bloqueios, confirmação, axe → docs/auditoria-design/exclusao/)
-npm run test:e2e:reset (reset da sessão pela interface: prévia, confirmação, sessão reiniciada, ata → docs/auditoria-design/reset-sessao/)
+npm run test:e2e:exclusao (exclusão livre pela interface: lixeira, prévia, cascata, sessão, axe → docs/auditoria-design/exclusao/)
 Teste com usuários: docs/TESTE-USABILIDADE.md · Backlog de interface: docs/auditoria-design/pendencias.md
 npm run seed:matriz -- --projeto dev|prod | npm run tornar-admin -- --projeto dev|prod --email X (emergência)
 npm run backup -- --projeto dev|prod [--chamamento ID] | npm run restaurar -- --projeto dev --arquivo F | npm run ensaio -- --projeto dev

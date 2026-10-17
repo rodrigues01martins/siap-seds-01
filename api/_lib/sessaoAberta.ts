@@ -1,5 +1,5 @@
 // Gravações da Comissão só em sessão aberta do chamamento (Etapa 4a): nível da D1, admissibilidade,
-// experiências da D2 e desempate trazem o sessaoId, guardado no documento e na auditoria (base do reset).
+// experiências da D2 e desempate trazem o sessaoId, guardado no documento (base da exclusão da sessão em cascata).
 
 import type { Transaction } from 'firebase-admin/firestore'
 import { obterAdmin } from './admin.js'

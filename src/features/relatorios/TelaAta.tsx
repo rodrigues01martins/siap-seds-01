@@ -1,6 +1,6 @@
 // /chamamentos/:ch/sessoes/:s/ata — minuta de ata da sessão: texto gerado dos registros, editável,
 // exportado em PDF com o rodapé de verificação (dados usados + texto final) e "MINUTA" se houver
-// proposta da pauta não homologada.
+// proposta da pauta não concluída.
 
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router'

@@ -1,5 +1,7 @@
 // C4: recálculo dos totais da proposta dentro da MESMA transação da alteração,
 // usando apenas src/domain (consolidarProposta = calcularD1 + calcularD2).
+// Toda alteração na avaliação (nível, experiência, documento) desfaz a conclusão da proposta (concluida = false):
+// o documento final só sai de proposta concluída com os dados que estão gravados.
 
 import type { Transaction } from 'firebase-admin/firestore'
 import { consolidarProposta, type TotaisProposta } from '../../src/domain/proposta.js'
@@ -43,7 +45,7 @@ export async function recalcular(
   const porId = new Map(experiencias.docs.map((d) => [d.id, paraExperiencia(d.id, d.data())]))
 
   if (!mudanca) {
-    // Só recalcula com o que está gravado (ex.: depois do reset da sessão).
+    // Só recalcula com o que está gravado (ex.: depois da exclusão de uma sessão).
   } else if (mudanca.colecao === 'avaliacoes') {
     if (mudanca.dados) niveis[mudanca.id] = mudanca.dados.nivel as number
     else delete niveis[mudanca.id]
@@ -60,7 +62,7 @@ export async function recalcular(
   return {
     totais,
     operacoes: [
-      { caminho, acao: 'editar', dados: { totais } },
+      { caminho, acao: 'editar', dados: { totais, concluida: false } },
       {
         caminho: `${caminho}/resultadoD2/atual`,
         acao: resultado.exists ? 'editar' : 'criar',
@@ -71,8 +73,8 @@ export async function recalcular(
 }
 
 /**
- * Lê a proposta (404 se não existe) e recusa, antes de qualquer validação, se homologada ou se a
- * admissibilidade a deixou fora da avaliação (não admitida ou desclassificada) — 409.
+ * Lê a proposta (404 se não existe) e recusa, antes de qualquer validação, se a admissibilidade a deixou
+ * fora da avaliação (não admitida ou desclassificada) — 409.
  */
 export async function exigirPropostaEditavel(
   transacao: Transaction,
@@ -81,7 +83,6 @@ export async function exigirPropostaEditavel(
 ): Promise<void> {
   const proposta = await transacao.get(obterAdmin().db.doc(`chamamentos/${chamamentoId}/propostas/${propostaId}`))
   if (!proposta.exists) throw new ErroApi(404, MENSAGENS.propostaNaoEncontrada)
-  if (proposta.get('bloqueada') === true) throw new ErroApi(409, MENSAGENS.homologada)
   const admissao = proposta.get('admissibilidade.situacao') as string | undefined
   if (admissao === 'nao_admitida' || admissao === 'desclassificada') throw new ErroApi(409, MENSAGENS.naoAdmitida)
 }

@@ -3,18 +3,14 @@
 // proposta já tem totais calculados. justificativaMinima configura o mínimo da justificativa (C2).
 // processoSei: Etapa 4a. Sem índice de correção nem data-base (Manutenção 1): os valores da D2 já chegam
 // atualizados conforme o Edital; o esquema estrito recusa esses campos.
-// DELETE (excluir, com justificativa) e GET ?simular=true (prévia): ver _lib/exclusao.ts.
-// Chamamento com propostas ou sessões não pode ser excluído (409); os lotes vão junto (estão no documento).
+// DELETE { id } apaga o chamamento em cascata (lotes, sessões, propostas e tudo dentro delas, desempates);
+// DELETE { id, lote } apaga só o lote (com suas propostas). GET ?simular=true: prévia. Ver _lib/cascata.ts.
 
-import {
-  esquemaCriarChamamento,
-  esquemaEditarChamamento,
-  esquemaExcluirChamamento,
-  esquemaPreviaChamamento,
-} from '../src/esquemas/cadastros.js'
+import { esquemaCriarChamamento, esquemaEditarChamamento } from '../src/esquemas/cadastros.js'
+import { esquemaExcluirChamamento, esquemaPreviaChamamento } from '../src/esquemas/exclusao.js'
 import { obterAdmin } from './_lib/admin.js'
+import { alvoChamamento, alvoLote, excluir, previaExclusao } from './_lib/cascata.js'
 import { ErroApi } from './_lib/erros.js'
-import { alvoChamamento, excluirComSeguranca, previaExclusao } from './_lib/exclusao.js'
 import { gravar } from './_lib/gravar.js'
 import { criarRota, json } from './_lib/http.js'
 import { autenticar } from './_lib/porteiro.js'
@@ -23,8 +19,8 @@ import { lerConsulta, lerCorpo } from './_lib/validacao.js'
 export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   GET: async (requisicao) => {
     await autenticar(requisicao)
-    const { id } = lerConsulta(requisicao, esquemaPreviaChamamento)
-    return json(200, await previaExclusao(alvoChamamento(id)))
+    const { id, lote } = lerConsulta(requisicao, esquemaPreviaChamamento)
+    return json(200, await previaExclusao(lote ? alvoLote(id, lote) : alvoChamamento(id)))
   },
 
   POST: async (requisicao) => {
@@ -59,7 +55,7 @@ export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
 
   DELETE: async (requisicao) => {
     const autor = await autenticar(requisicao)
-    const { id, justificativa } = await lerCorpo(requisicao, esquemaExcluirChamamento)
-    return json(200, await excluirComSeguranca(autor, alvoChamamento(id), justificativa))
+    const { id, lote } = await lerCorpo(requisicao, esquemaExcluirChamamento)
+    return json(200, await excluir(autor, lote ? alvoLote(id, lote) : alvoChamamento(id)))
   },
 })

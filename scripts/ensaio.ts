@@ -5,10 +5,10 @@
 // Uso: FIREBASE_SERVICE_ACCOUNT='{...}' npm run ensaio -- --projeto dev [--recriar | --remover]
 
 import { parseArgs } from 'node:util'
-import { FieldValue, getFirestore } from 'firebase-admin/firestore'
+import { getFirestore } from 'firebase-admin/firestore'
 import { hojeEmGoias } from '../src/esquemas/base'
 import { executar, iniciarAdmin } from './lib/admin'
-import { registroDeScript } from './lib/auditoria'
+import { autoriaDeScript } from './lib/autoria'
 import { CHAMAMENTO_ENSAIO, montarEnsaio } from './lib/ensaio'
 import { gravarDocumentos, removerEnsaio } from './lib/firestore'
 
@@ -24,13 +24,10 @@ executar(async () => {
   const { app, executor } = iniciarAdmin('dev', false)
   const db = getFirestore(app)
   const caminho = `chamamentos/${CHAMAMENTO_ENSAIO}`
-  const auditar = (acao: string, detalhes: Record<string, unknown>) =>
-    db.collection('auditoria').doc().create(registroDeScript({ acao, caminho, detalhes, origem: 'scripts/ensaio.ts', executor }))
 
   const existe = (await db.doc(caminho).get()).exists
   if (values.remover || values.recriar) {
     const { oscs } = await removerEnsaio(db)
-    await auditar('ensaio.removido', { oscs })
     console.log(`Ensaio removido (${caminho} e ${oscs} OSCs de ensaio).`)
     if (values.remover) return
   } else if (existe) {
@@ -38,12 +35,9 @@ executar(async () => {
   }
 
   const ensaio = montarEnsaio(hojeEmGoias())
-  const agora = FieldValue.serverTimestamp()
-  const comDatas = Object.fromEntries(
-    Object.entries(ensaio.documentos).map(([c, d]) => [c, c.includes('/resultadoD2/') ? d : { ...d, criadoEm: agora, atualizadoEm: agora }]),
-  )
-  const gravados = await gravarDocumentos(db, comDatas)
-  await auditar('ensaio.populado', { documentos: gravados, propostas: ensaio.propostas.map((p) => p.id) })
+  const autoria = autoriaDeScript('scripts/ensaio.ts', executor)
+  const comAutoria = Object.fromEntries(Object.entries(ensaio.documentos).map(([c, d]) => [c, { ...d, ...autoria }]))
+  const gravados = await gravarDocumentos(db, comAutoria)
 
   console.log(`Ensaio gravado no dev: ${gravados} documentos em ${caminho}.`)
   console.table(ensaio.propostas.map((p) => ({ proposta: p.id, lote: p.lote, osc: p.osc, esperado: p.esperado })))

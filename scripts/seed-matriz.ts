@@ -1,4 +1,4 @@
-// Grava src/domain/matriz/matriz_2026.json em matrizes/{versao} e registra em auditoria.
+// Grava src/domain/matriz/matriz_2026.json em matrizes/{versao}, com atualizadoPor (o script) e atualizadoEm.
 //
 // Uso: FIREBASE_SERVICE_ACCOUNT='{...}' npm run seed:matriz -- --projeto dev [--forcar] [--confirmar]
 
@@ -9,7 +9,7 @@ import { FieldValue, getFirestore } from 'firebase-admin/firestore'
 import { validarMatriz } from '../src/domain/matriz'
 import type { Matriz } from '../src/domain/matriz/tipos'
 import { executar, iniciarAdmin } from './lib/admin'
-import { registroDeScript } from './lib/auditoria'
+import { autoriaDeScript } from './lib/autoria'
 
 const ARQUIVO = 'src/domain/matriz/matriz_2026.json'
 
@@ -30,22 +30,17 @@ executar(async () => {
   const db = getFirestore(app)
   const ref = db.doc(`matrizes/${matriz.versao}`)
 
-  // Matriz e auditoria na mesma transação. O callback não lança erro: em caso de erro o SDK
+  // Em transação: confere se já existe e grava. O callback não lança erro: em caso de erro o SDK
   // dispara o rollback sem aguardar, e encerrar o processo logo depois deixaria o documento travado.
   const resultado = await db.runTransaction(async (transacao) => {
     const atual = await transacao.get(ref)
     if (atual.exists && !values.forcar) return 'ja-existe' as const
-    transacao.set(ref, { ...matriz, origem: { arquivo: ARQUIVO, sha256 }, publicadaEm: FieldValue.serverTimestamp() })
-    transacao.create(
-      db.collection('auditoria').doc(),
-      registroDeScript({
-        acao: 'matriz.publicada',
-        caminho: ref.path,
-        detalhes: { sha256, sobrescreveu: atual.exists },
-        origem: 'scripts/seed-matriz.ts',
-        executor,
-      }),
-    )
+    transacao.set(ref, {
+      ...matriz,
+      origem: { arquivo: ARQUIVO, sha256 },
+      publicadaEm: FieldValue.serverTimestamp(),
+      ...autoriaDeScript('scripts/seed-matriz.ts', executor),
+    })
     return atual.exists ? ('sobrescrita' as const) : ('criada' as const)
   })
 

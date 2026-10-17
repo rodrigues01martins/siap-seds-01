@@ -1,6 +1,6 @@
 // Manutenção 1: apaga dos chamamentos já gravados os campos de correção monetária que saíram do sistema
-// (indiceCorrecao e dataBaseCorrecao). Cada chamamento alterado ganha um registro em /auditoria com os
-// valores antigos. Use --simular primeiro: só lista o que seria alterado, sem gravar nada.
+// (indiceCorrecao e dataBaseCorrecao). Os valores antigos são listados no terminal; o chamamento guarda
+// atualizadoPor (o script) e atualizadoEm. Use --simular primeiro: só lista o que seria alterado, sem gravar nada.
 //
 // Uso: FIREBASE_SERVICE_ACCOUNT='{...}' npm run remover-campos-correcao -- --projeto dev --simular
 //      FIREBASE_SERVICE_ACCOUNT='{...}' npm run remover-campos-correcao -- --projeto dev
@@ -9,7 +9,7 @@
 import { parseArgs } from 'node:util'
 import { FieldValue, getFirestore } from 'firebase-admin/firestore'
 import { executar, iniciarAdmin } from './lib/admin'
-import { registroDeScript } from './lib/auditoria'
+import { autoriaDeScript } from './lib/autoria'
 import { planejarRemocao } from './lib/correcao'
 
 executar(async () => {
@@ -37,28 +37,16 @@ executar(async () => {
     console.log('Nada a fazer.')
     return
   }
-  // Lotes de até 200 chamamentos (2 gravações cada: o documento e a auditoria; limite do Firestore: 500).
-  for (let i = 0; i < plano.length; i += 200) {
+  // Lotes de até 400 chamamentos (limite do Firestore: 500 gravações por lote).
+  for (let i = 0; i < plano.length; i += 400) {
     const lote = db.batch()
-    for (const p of plano.slice(i, i + 200)) {
-      const caminho = `chamamentos/${p.id}`
-      lote.update(db.doc(caminho), {
+    for (const p of plano.slice(i, i + 400)) {
+      lote.update(db.doc(`chamamentos/${p.id}`), {
         ...Object.fromEntries(p.campos.map((c) => [c, FieldValue.delete()])),
-        atualizadoEm: FieldValue.serverTimestamp(),
+        ...autoriaDeScript('scripts/remover-campos-correcao.ts', executor),
       })
-      lote.create(
-        db.collection('auditoria').doc(),
-        registroDeScript({
-          acao: 'editar',
-          caminho,
-          antes: p.antes,
-          detalhes: { camposRemovidos: p.campos, motivo: 'Manutenção 1: índice de correção e data-base removidos do chamamento' },
-          origem: 'scripts/remover-campos-correcao.ts',
-          executor,
-        }),
-      )
     }
     await lote.commit()
   }
-  console.log(`Campos removidos de ${plano.length} chamamento(s) e registrados na auditoria.`)
+  console.log(`Campos removidos de ${plano.length} chamamento(s).`)
 })

@@ -1,6 +1,6 @@
-// Painel de um subcritério da D1 (formulário longo em seções): Identificação | Elementos (apoio, não gera
-// nota) | Escala 0–4 (cartões com o descritor sempre visível) | Decisão (e voto divergente) | Justificativa e
-// páginas. Valida no navegador com o mesmo esquema da /api + as regras de src/domain (página de corte,
+// Painel de um subcritério da D1 (formulário longo em seções): Identificação (com a lixeira do nível, se houver)
+// | Elementos (apoio, não gera nota) | Escala 0–4 (cartões com o descritor sempre visível) | Justificativa e
+// páginas. Sem decisão (unanimidade/maioria) nem voto divergente (Simplificação 2/4). Valida no navegador com o mesmo esquema da /api + as regras de src/domain (página de corte,
 // justificativa mínima) e avisa ANTES de enviar quando a página citada passa do corte do PA.
 // Com `idFormulario`, o botão de salvar fica fora do painel (rodapé fixo da tela, atributo form).
 
@@ -14,7 +14,6 @@ import { MensagemErro } from '../../components/ui/Field'
 import { cx } from '../../components/ui/cx'
 import { CampoTexto, FormularioApi } from '../../components/ui/FormularioApi'
 import { Icone } from '../../components/ui/Icone'
-import { RadioGroup } from '../../components/ui/RadioGroup'
 import { Badge } from '../../components/ui/StatusBadge'
 import { TextArea } from '../../components/ui/TextArea'
 import { JUSTIFICATIVA_MINIMA_PADRAO, ehEliminatorio, lerPaginas, paginasAcimaDoCorte, planoDoSubcriterio } from '../../domain/avaliacao'
@@ -26,8 +25,6 @@ export interface RegistroGravado {
   nivel: number
   justificativa: string
   paginas: number[]
-  decisao: 'unanimidade' | 'maioria'
-  votoDivergente?: string
 }
 
 interface Props {
@@ -39,6 +36,8 @@ interface Props {
   onSalvar: (dados: CamposRegistro) => Promise<void>
   /** Id do <form>: o botão de salvar fica fora do painel (ex.: rodapé fixo) com form={idFormulario}. */
   idFormulario?: string
+  /** Lixeira do nível registrado (exclusão livre), mostrada na identificação. */
+  acaoExcluir?: ReactNode
 }
 
 const ESCALA = MATRIZ_2026.dimensao1.escala
@@ -100,7 +99,7 @@ function Escala() {
   const erro = mensagemDoCampo(formState.errors, 'nivel')
   return (
     <Secao titulo="Escala 0–4" descricao="Escolha o nível que melhor descreve o que o Caderno apresenta.">
-      <fieldset role="radiogroup" aria-invalid={erro ? true : undefined} aria-describedby={erro ? 'erro-nivel' : undefined} className="min-w-0">
+      <fieldset role="radiogroup" aria-invalid={erro ? true : undefined} aria-describedby={erro ? 'nivel-mensagem' : undefined} className="min-w-0">
         <legend className="sr-only">Nível</legend>
         <div className="grid gap-3">
           {ESCALA.map(({ nivel, descritor }) => (
@@ -128,7 +127,7 @@ function Escala() {
             </label>
           ))}
         </div>
-        <MensagemErro id="erro-nivel" erro={erro} className="mt-2" />
+        <MensagemErro id="nivel-mensagem" erro={erro} className="mt-2" />
       </fieldset>
     </Secao>
   )
@@ -141,27 +140,6 @@ function AlertaEliminatorio({ codigo }: { codigo: string }) {
     <Alert tom="error" titulo="Subcritério eliminatório" rotulo="Subcritério eliminatório">
       Nível 0 no subcritério {codigo} implica desclassificação da proposta, independentemente da pontuação global (Anexo IV, 3.10).
     </Alert>
-  )
-}
-
-function Decisao() {
-  const { register, formState } = useFormContext()
-  const decisao = useWatch({ name: 'decisao' }) as string | undefined
-  return (
-    <Secao titulo="Decisão">
-      <div className="space-y-4">
-        <RadioGroup
-          rotulo="Decisão da Comissão"
-          opcoes={[
-            { valor: 'unanimidade', rotulo: 'Unanimidade' },
-            { valor: 'maioria', rotulo: 'Maioria' },
-          ]}
-          erro={mensagemDoCampo(formState.errors, 'decisao')}
-          {...register('decisao')}
-        />
-        {decisao === 'maioria' && <CampoTexto nome="votoDivergente" rotulo="Voto divergente" tipo="textarea" />}
-      </div>
-    </Secao>
   )
 }
 
@@ -200,7 +178,7 @@ function AvisoCorte({ codigo }: { codigo: string }) {
   )
 }
 
-export function PainelSubcriterio({ codigo, registro, justificativaMinima, somenteLeitura, motivoSomenteLeitura, onSalvar, idFormulario }: Props) {
+export function PainelSubcriterio({ codigo, registro, justificativaMinima, somenteLeitura, motivoSomenteLeitura, onSalvar, idFormulario, acaoExcluir }: Props) {
   const plano = planoDoSubcriterio(codigo)
   const subcriterio = plano?.subcriterios.find((s) => s.codigo === codigo)
   if (!plano || !subcriterio) return <Alert tom="error" titulo="Subcritério inexistente">Subcritério {codigo} não existe na matriz.</Alert>
@@ -208,15 +186,12 @@ export function PainelSubcriterio({ codigo, registro, justificativaMinima, somen
 
   const transformar = (v: FieldValues) => {
     const { paginas, invalidos } = lerPaginas((v.paginas as string | undefined) ?? '')
-    const voto = (v.votoDivergente as string | undefined)?.trim()
     return {
       codigo,
       nivel: v.nivel === '' || v.nivel == null ? undefined : Number(v.nivel),
       justificativa: v.justificativa ?? '',
       // Texto que não é página vira 0: o domínio recusa com a mensagem certa.
       paginas: [...paginas, ...invalidos.map(() => 0)],
-      decisao: v.decisao || undefined,
-      ...(v.decisao === 'maioria' && voto ? { votoDivergente: voto } : {}),
     }
   }
 
@@ -233,6 +208,7 @@ export function PainelSubcriterio({ codigo, registro, justificativaMinima, somen
           <Badge tom="neutral">{`Limite do ${plano.codigo}: ${plano.limitePaginas} páginas`}</Badge>
           {ehEliminatorio(codigo) && <Badge tom="error">Eliminatório: nível 0 desclassifica</Badge>}
           {registro ? <Badge tom="success">{`Registrado: nível ${registro.nivel}`}</Badge> : <Badge tom="warning">Pendente</Badge>}
+          {registro && acaoExcluir}
         </div>
       </section>
 
@@ -247,8 +223,6 @@ export function PainelSubcriterio({ codigo, registro, justificativaMinima, somen
         esquema={esquemaCamposComRegras(justificativaMinima)}
         valoresIniciais={{
           nivel: registro ? String(registro.nivel) : '',
-          decisao: registro?.decisao ?? '',
-          votoDivergente: registro?.votoDivergente ?? '',
           justificativa: registro?.justificativa ?? '',
           paginas: registro?.paginas.join(', ') ?? '',
         }}
@@ -260,7 +234,6 @@ export function PainelSubcriterio({ codigo, registro, justificativaMinima, somen
       >
         <Escala />
         <AlertaEliminatorio codigo={codigo} />
-        <Decisao />
         <Secao titulo="Justificativa e páginas">
           <div className="space-y-4">
             <Justificativa minimo={minimo} />

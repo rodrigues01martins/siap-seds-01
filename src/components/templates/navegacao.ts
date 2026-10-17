@@ -6,7 +6,6 @@ import {
   Building2,
   ClipboardList,
   FilePlus2,
-  History,
   LayoutGrid,
   ListChecks,
   Presentation,
@@ -88,7 +87,6 @@ export function gruposDeNavegacao(acesso: Acesso | null, { chamamento, sessaoAbe
       rotulo: 'Administração',
       itens: [
         { rotulo: 'Usuários', caminho: '/usuarios', icone: Users, exige: 'admin' },
-        { rotulo: 'Histórico de alterações', caminho: '/auditoria', icone: History },
       ],
     },
   ]

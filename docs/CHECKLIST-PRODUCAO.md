@@ -77,10 +77,9 @@ Pelo terminal, com a chave do Admin SDK do **prod** em `FIREBASE_SERVICE_ACCOUNT
 
 - [ ] **Prod**: nenhum chamamento, OSC ou proposta de teste. Em *Firestore → Data*, confira as coleções
       `chamamentos` e `oscs`. O script de ensaio **não roda em prod**; mesmo assim, procure ids `ensaio-` e
-      nomes com `(ENSAIO)`. O app não exclui chamamentos nem propostas: se houver dado de teste em prod,
-      apague-o **antes de cadastrar dados reais**, no Firebase Console (*Firestore → documento → Delete
-      document*, marcando a exclusão das subcoleções). Exclusão pelo Console não entra na trilha de
-      auditoria: registre-a no processo SEI e rode um backup em seguida.
+      nomes com `(ENSAIO)`. Se houver dado de teste em prod, apague-o **antes de cadastrar dados reais**
+      pela lixeira do próprio app (exclusão em cascata, com a prévia do que será apagado) e rode um backup
+      em seguida.
 - [ ] **Prod**: nenhum usuário de teste no Authentication (item 2).
 - [ ] **Dev**: depois do ensaio, `npm run ensaio -- --projeto dev --remover`. Depois de testar uma restauração
       de prod no dev, apague o chamamento restaurado (o dev passa a ter dados reais).
@@ -91,6 +90,6 @@ Pelo terminal, com a chave do Admin SDK do **prod** em `FIREBASE_SERVICE_ACCOUNT
 
 - [ ] `npm run ensaio -- --projeto dev` (ou `--recriar`) e uma sessão simulada completa com o roteiro
       ([ROTEIRO-SESSAO.md](ROTEIRO-SESSAO.md)): abrir a sessão, avaliar a proposta pendente, registrar o
-      desempate, homologar, gerar os PDFs, ata e encerramento.
+      desempate, concluir, gerar os PDFs, ata e encerramento.
 - [ ] Simular a queda de internet (desligar o Wi-Fi) e a sessão expirada (sair e entrar) seguindo o roteiro.
 - [ ] Remover o ensaio ao terminar.

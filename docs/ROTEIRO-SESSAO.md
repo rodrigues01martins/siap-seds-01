@@ -26,7 +26,7 @@ gerencia usuários): quem conduz e quem registra entram com uma conta de perfil 
 
 ### 1. Logins (antes de abrir)
 - Cada membro entra em **https://<endereço de produção>** com o próprio e-mail. Ninguém usa o login de outro:
-  toda gravação fica na auditoria com o e-mail de quem gravou.
+  cada documento gravado guarda quem gravou por último (atualizadoPor: nome e e-mail) e quando.
 - Se aparecer **"Acesso não autorizado"** ou "Seu acesso precisa ser atualizado pelo administrador", o admin dá
   o perfil em **Usuários**: a tela da pessoa atualiza sozinha, sem sair e entrar.
 
@@ -49,12 +49,11 @@ Siga as abas da proposta (cabeçalho com OSC, lote e **nº SEI com botão Copiar
 
 | # | Tela | O que fazer | Projetar no telão (botões e atalhos na tela da D1) |
 |---|---|---|---|
-| 1 | **Admissibilidade** | Requisitos 28.1, páginas inicial e final de cada PA, irregularidades formais, resultado. Não admitida ou desclassificada para aqui. | **Projetar admissibilidade** |
-| 2 | **Dimensão 1** | Para cada subcritério: nível 0–4, decisão (unanimidade ou maioria; se maioria, o voto divergente), justificativa e páginas citadas (numeração interna do PA). Salvar leva ao próximo pendente. | Cada subcritério; **Alt+→ / Alt+←** navega, **Alt+R** mostra o resumo |
+| 1 | **Admissibilidade** | Admitida (sim/não), motivo se não, e páginas inicial e final de cada PA (a tela mostra a página de corte). Não admitida para aqui. | **Projetar admissibilidade** |
+| 2 | **Dimensão 1** | Para cada subcritério: nível 0–4, justificativa e páginas citadas (numeração interna do PA). Salvar leva ao próximo pendente. Registrou errado? A lixeira do nível apaga o registro. | Cada subcritério; **Alt+→ / Alt+←** navega, **Alt+R** mostra o resumo |
 | 3 | **Dimensão 2** | Experiências da OSC: categorias, modalidade, período, porte, documentos (aceitos e se comprovam execução satisfatória), desconsiderações por critério com justificativa. | **Projetar D2** |
 | 4 | **Memória da D2** | Conferir o cálculo passo a passo com a Comissão. | (já projetada no passo 3) |
 | 5 | **Resumo** | PA1…PA6, D1, D2, NF e status. Conferir antes de passar para a próxima proposta. | **Alt+R** |
-| 6 | **Diligências** (se preciso) | Objeto e prazo. Não admite conteúdo técnico novo (Anexo III, 29.3). Proposta com diligência aberta **não é homologada**. | — |
 
 Rodapé da tela da D1: **D1 parcial**, quantos subcritérios **faltam** e os status prévio e oficial.
 O status oficial é o calculado pelo servidor.
@@ -65,14 +64,15 @@ O status oficial é o calculado pelo servidor.
 3. **Empate de NF**: o sistema aplica os critérios do Edital (I D1, II PA1, III PA2, IV PA5, V C2.1, VI C2.3)
    e mostra o selo **"Desempate pelo Edital (critério N)"**. Só se o empate persistir em todos eles a Comissão
    decide e o presidente registra a ordem e a **justificativa** em **Registrar desempate** (RF-27).
-4. **Homologar** cada proposta (confirmação dupla: conferir NF e status). Homologada fica **somente leitura**.
-   Erro material depois da homologação: **Reabrir** com o motivo (RF-18), corrigir e homologar de novo.
+4. **Concluir** cada proposta (confirmação mostrando NF e status). Só conclui com a admissibilidade e, se admitida,
+   os 28 níveis e justificativas. A conclusão pode ser desfeita (**Desfazer conclusão**, sem motivo), e qualquer
+   alteração na avaliação também a desfaz: depois de corrigir, conclua de novo.
 5. **Quadro-resumo (PDF/XLSX)** do lote e **Espelho (PDF)** de cada proposta (botão no cabeçalho da proposta).
-   Documento com proposta não homologada sai com a marca **MINUTA**.
+   Documento com proposta não concluída sai com a marca **MINUTA**.
 
 ### 6. Ata e encerramento — [relator] e [presidente]
 1. **[relator]** Tela da sessão → **Minuta de ata**: o texto vem dos registros (lotes, presentes com os papéis,
-   propostas, decisões por maioria, desempates, diligências e resets). Ajuste o texto e **Exportar PDF**.
+   propostas com a situação e a conclusão, desempates). Ajuste o texto e **Exportar PDF**.
    A edição não fica gravada no sistema: exporte antes de sair da página.
 2. **[presidente]** **Encerrar sessão** (depois disso não se registram avaliações nela).
 3. **[admin]** Rode o **backup depois da sessão** (o mesmo comando) e guarde o arquivo na rede da SEDS.
@@ -104,17 +104,18 @@ O status oficial é o calculado pelo servidor.
 
 ### A gravação foi recusada (mensagem vermelha)
 - **"Operação não permitida"** (409) explica o motivo: nenhuma sessão aberta, proposta de lote fora da pauta,
-  proposta homologada, diligência em aberto, proposta não admitida. Corrija a causa e repita.
+  proposta não admitida, falta algo para concluir (admissibilidade, níveis ou justificativas). Corrija a causa e repita.
 - **"Dados inválidos"** (400): o campo com problema fica destacado (justificativa curta, página acima do
-  limite do PA, voto divergente sem maioria…).
+  limite do PA, motivo da não admissão em branco…).
 
 ### O telão parou de atualizar
 - Recarregue a página do telão (F5) e volte para tela cheia. O registro não é afetado.
 
 ### Erro de registro já gravado
-- Antes da homologação: corrija na própria tela (o novo registro substitui o anterior e a auditoria
-  guarda os dois).
-- Depois da homologação: **Reabrir** (com motivo), corrigir, homologar de novo.
+- Corrija na própria tela: o novo registro substitui o anterior (o app guarda só quem alterou por último e
+  quando). Se a proposta estava concluída, a alteração desfaz a conclusão: conclua de novo.
+- Registro que não deveria existir: use a **lixeira** (nível, experiência, documento, proposta). Para descartar
+  tudo o que foi feito numa sessão, exclua a sessão no painel do chamamento (a prévia mostra o que será apagado).
 
 ### Algo grave (dados apagados ou corrompidos)
 - Pare a sessão e chame o admin. Os backups ficam na rede da SEDS (arquivos `.json.cifrado`).

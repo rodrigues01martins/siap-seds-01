@@ -23,7 +23,6 @@ const ROTAS_NOVAS: RotaE2E[] =
   FASE === 'antes'
     ? []
     : [
-        { slug: 'diligencia-nova', caminho: `/chamamentos/ensaio-2026/propostas/${PROPOSTA}/diligencias/nova`, exige: null },
       ]
 
 interface Violacao {

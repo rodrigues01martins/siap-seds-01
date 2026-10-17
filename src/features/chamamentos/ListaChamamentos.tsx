@@ -1,27 +1,21 @@
 // Início (ListPage): lista de chamamentos com busca e ordenação; "Novo chamamento" para quem cadastra.
-// "Excluir" no menu de ações da linha (DialogoExclusao). Admin e presidente fazem tudo.
+// Lixeira em cada linha: exclusão livre com a prévia (DialogoExclusao). Admin e presidente fazem tudo.
 
 import { ClipboardList, FolderOpen } from 'lucide-react'
 import { ListPage } from '../../components/templates/paginas'
 import { ButtonLink } from '../../components/ui/ButtonLink'
 import { DataTable, type ColunaTabela } from '../../components/ui/DataTable'
-import { MenuAcoes } from '../../components/ui/MenuAcoes'
 import { dataBr } from '../../lib/datas'
 import { useColecao, type ComId } from '../../lib/firestore'
 import type { Chamamento } from '../../lib/tipos'
-import { emExclusao, SeloEmExclusao, useExclusao } from '../exclusao/useExclusao'
+import { useExclusao } from '../exclusao/useExclusao'
 
 const COLUNAS: ColunaTabela<ComId<Chamamento>>[] = [
   { id: 'numero', titulo: 'Nº', celula: (c) => c.numero, ordenar: (c) => c.numero },
   {
     id: 'titulo',
     titulo: 'Título',
-    celula: (c) => (
-      <span className="flex flex-wrap items-center gap-2">
-        <span className="font-semibold">{c.titulo}</span>
-        {emExclusao(c) && <SeloEmExclusao />}
-      </span>
-    ),
+    celula: (c) => <span className="font-semibold">{c.titulo}</span>,
     ordenar: (c) => c.titulo,
   },
   { id: 'sei', titulo: 'Processo SEI', celula: (c) => c.processoSei ?? '—' },
@@ -60,10 +54,7 @@ export function Inicio() {
             <ButtonLink para={`/chamamentos/${c.id}`} variante="tertiary" tamanho="sm" icone={FolderOpen} aria-label={`Abrir chamamento ${c.numero}`}>
               Abrir
             </ButtonLink>
-            <MenuAcoes
-              rotulo={`Mais ações — chamamento ${c.numero}`}
-              itens={[exclusao.itemExcluir({ tipo: 'chamamento', ids: { id: c.id }, identificador: c.numero, nome: `chamamento ${c.numero}` })]}
-            />
+            {exclusao.botao({ rota: '/api/chamamentos', ids: { id: c.id }, nome: `chamamento ${c.numero}` })}
           </span>
         )}
       />

@@ -1,5 +1,5 @@
-// /chamamentos/:ch/lotes/:lote/classificacao (ListPage) — classificação do lote, com homologação (C5),
-// reabertura (RF-18) e registro do desempate (RF-27). Admin e presidente fazem tudo.
+// /chamamentos/:ch/lotes/:lote/classificacao (ListPage) — classificação do lote, com Concluir / Desfazer
+// conclusão (POST /api/concluir) e registro do desempate (RF-27). Admin e presidente fazem tudo.
 // Quadro-resumo do lote em PDF e XLSX, gerado no navegador com a mesma tabela.
 // O desempate é decisão da Comissão: só em sessão aberta (o sessaoId vai na gravação).
 
@@ -73,16 +73,15 @@ export function TelaClassificacao() {
         lote={dadosLote}
         propostas={linhas}
         decisoes={decisoes}
-        podeHomologar={podeGravar}
+        podeConcluir={podeGravar}
         podeDesempatar={podeGravar && sessaoAberta !== null}
-        podeReabrir={podeGravar}
-        onHomologar={async (id) => {
-          await chamarApi('/api/homologar', { metodo: 'POST', corpo: alvo(id) })
-          mostrar({ tom: 'success', titulo: 'Proposta homologada', mensagem: nome(id) })
+        onConcluir={async (id) => {
+          await chamarApi('/api/concluir', { metodo: 'POST', corpo: { ...alvo(id), acao: 'concluir' } })
+          mostrar({ tom: 'success', titulo: 'Proposta concluída', mensagem: nome(id) })
         }}
-        onReabrir={async (id, motivo) => {
-          await chamarApi('/api/reabrir', { metodo: 'POST', corpo: { ...alvo(id), motivo } })
-          mostrar({ tom: 'info', titulo: 'Proposta reaberta', mensagem: nome(id) })
+        onDesfazer={async (id) => {
+          await chamarApi('/api/concluir', { metodo: 'POST', corpo: { ...alvo(id), acao: 'desfazer' } })
+          mostrar({ tom: 'info', titulo: 'Conclusão desfeita', mensagem: nome(id) })
         }}
         onDesempatar={async (ordem, justificativa) => {
           await chamarApi('/api/desempate', { metodo: 'PUT', corpo: { chamamentoId: ch, sessaoId: sessaoAberta?.id, loteCodigo: lote, ordem, justificativa } })

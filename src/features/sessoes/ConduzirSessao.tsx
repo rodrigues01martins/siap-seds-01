@@ -1,14 +1,13 @@
 // /chamamentos/:ch/sessoes/:s (DetailPage) — sessão: foco da projeção { tipo, propostaId, subcriterio? }, presentes
 // (nome e papel, editáveis com o mesmo bloco da abertura), pauta (propostas dos lotes da sessão) e encerrar (com
-// confirmação destrutiva). Reset da sessão: seção própria no fim da página, fora das ações do cabeçalho, com
-// DialogoResetSessao. Sessão reiniciada mostra quem resetou, quando e por quê. Admin e presidente fazem tudo.
+// confirmação destrutiva). Excluir a sessão: seção própria no fim da página, fora das ações do cabeçalho; apaga a
+// sessão e tudo o que foi registrado com ela (prévia no DialogoExclusao). Admin e presidente fazem tudo.
 
-import { FileText, MonitorUp, Power, RotateCcw, SquarePen } from 'lucide-react'
+import { FileText, MonitorUp, Power, SquarePen, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { useWatch } from 'react-hook-form'
-import { useParams } from 'react-router'
+import { useNavigate, useParams } from 'react-router'
 import { DetailPage } from '../../components/templates/paginas'
-import { Alert } from '../../components/ui/Alert'
 import { AlertaErroApi } from '../../components/ui/AlertaErroApi'
 import { Button, classesBotao } from '../../components/ui/Button'
 import { ButtonLink } from '../../components/ui/ButtonLink'
@@ -21,19 +20,18 @@ import { CampoLista, FormularioApi } from '../../components/ui/FormularioApi'
 import { Icone } from '../../components/ui/Icone'
 import { Skeleton } from '../../components/ui/Skeleton'
 import { Badge } from '../../components/ui/StatusBadge'
-import { useToast } from '../../components/ui/Toast'
 import { ROTULO_PAPEL } from '../../domain/comissao'
 import { MATRIZ_2026 } from '../../domain/matriz'
 import { podeFazer } from '../../domain/permissoes'
 import type { z } from '../../esquemas/base'
 import { TIPOS_FOCO, esquemaAbrirSessao, esquemaFoco } from '../../esquemas/sessao'
 import { chamarApi } from '../../lib/api'
-import { dataBr, dataHoraBr } from '../../lib/datas'
+import { dataBr } from '../../lib/datas'
 import { useColecao, useDocumento } from '../../lib/firestore'
 import type { Chamamento, Osc, Proposta, Sessao } from '../../lib/tipos'
 import { useUsuario } from '../auth/useUsuario'
 import { ROTULO_TIPO_FOCO, descreverFoco } from '../projecao/foco'
-import { DialogoResetSessao } from './DialogoResetSessao'
+import { useExclusao } from '../exclusao/useExclusao'
 import { CamposPresentes, PRESENTES_INICIAIS } from './FormAberturaSessao'
 import { SeloSessao } from './SeloSessao'
 
@@ -57,8 +55,8 @@ export function ConduzirSessao() {
   const sessao = useDocumento<Sessao>(`chamamentos/${ch}/sessoes/${s}`)
   const propostas = useColecao<Proposta>(`chamamentos/${ch}/propostas`)
   const oscs = useColecao<Osc>('oscs')
-  const { mostrar } = useToast()
-  const [resetando, setResetando] = useState(false)
+  const navegar = useNavigate()
+  const exclusao = useExclusao({ aoExcluir: () => navegar(`/chamamentos/${ch}`) })
   const [erro, setErro] = useState<unknown>(null)
   const [confirmarEncerrar, setConfirmarEncerrar] = useState(false)
   const [encerrando, setEncerrando] = useState(false)
@@ -76,7 +74,6 @@ export function ConduzirSessao() {
   const podeGravar = podeFazer(acesso)
   const conduz = aberta && podeGravar
   const encerra = aberta && podeGravar
-  const podeResetar = podeGravar
   const nomeOsc = new Map(oscs.dados.map((o) => [o.cnpj, o.razaoSocial]))
   // Pauta: as propostas dos lotes da sessão.
   const lotesPauta = dados.lotes ?? []
@@ -107,12 +104,7 @@ export function ConduzirSessao() {
       cabecalho={{
         trilha: [{ rotulo: 'Chamamentos', para: '/' }, { rotulo: `Chamamento ${chamamento.dados?.numero ?? ch}`, para: caminho }, { rotulo: titulo }],
         titulo,
-        descricao: {
-          aberta: 'Sessão aberta: a Comissão registra avaliações e conduz a projeção.',
-          encerrada: 'Sessão encerrada: somente consulta.',
-          reiniciando: 'Reset em andamento ou interrompido: nenhum registro novo entra nesta sessão.',
-          reiniciada: 'Sessão reiniciada: os registros feitos nela foram desconsiderados. Somente consulta.',
-        }[dados.status],
+        descricao: aberta ? 'Sessão aberta: a Comissão registra avaliações e conduz a projeção.' : 'Sessão encerrada: somente consulta.',
         acoesSecundarias: (
           <>
             <ButtonLink para={`${caminho}/sessoes/${s}/ata`} variante="secondary" icone={FileText}>
@@ -142,18 +134,6 @@ export function ConduzirSessao() {
       ]}
     >
       <AlertaErroApi erro={erro} />
-      {dados.status === 'reiniciada' && (
-        <Alert tom="info" titulo="Sessão reiniciada" rotulo="Sessão reiniciada" papel="status">
-          Resetada por {dados.reiniciadaPor?.email ?? dados.reiniciadaPor?.uid ?? 'presidente'}
-          {dados.reiniciadaEm ? ` em ${dataHoraBr(dados.reiniciadaEm.toDate())}` : ''}
-          {(dados.resets ?? 1) > 1 ? ` (${dados.resets} resets)` : ''}. Motivo: {dados.motivo}
-        </Alert>
-      )}
-      {dados.status === 'reiniciando' && (
-        <Alert tom="warning" titulo="Reset não concluído" papel="status">
-          O reset desta sessão começou e não terminou. Repita o reset para concluir.
-        </Alert>
-      )}
 
       <Card
         titulo="Foco da projeção"
@@ -233,29 +213,21 @@ export function ConduzirSessao() {
         </ol>
       </Card>
 
-      {podeResetar && (
+      {podeGravar && (
         <Card
-          titulo="Reset da sessão"
-          descricao="Descarta tudo o que a Comissão registrou nesta sessão: cada registro volta ao estado anterior. Exige justificativa e fica na ata."
+          titulo="Exclusão da sessão"
+          descricao="Apaga a sessão e tudo o que a Comissão registrou com ela (admissibilidade, níveis, experiências e desempates); os totais das propostas são recalculados."
         >
-          <Button variante="destructive" icone={RotateCcw} onClick={() => setResetando(true)}>
-            Resetar sessão
+          <Button
+            variante="destructive"
+            icone={Trash2}
+            onClick={() => exclusao.abrir({ rota: '/api/sessao', ids: { chamamentoId: ch ?? '', sessaoId: s ?? '' }, nome: `sessão de ${dataBr(dados.data)}` })}
+          >
+            Excluir sessão
           </Button>
         </Card>
       )}
-
-      <DialogoResetSessao
-        aberto={resetando}
-        chamamentoId={ch ?? ''}
-        sessaoId={s ?? ''}
-        rotuloSessao={`sessão de ${dataBr(dados.data)}`}
-        nomeProposta={rotuloProposta}
-        onFechar={() => setResetando(false)}
-        onConcluido={({ revertidos, apagados }) => {
-          setResetando(false)
-          mostrar({ tom: 'success', titulo: 'Sessão reiniciada', mensagem: `${revertidos} registro(s) revertido(s) e ${apagados} apagado(s).` })
-        }}
-      />
+      {exclusao.dialogo}
 
       <ConfirmDialog
         aberto={confirmarEncerrar}

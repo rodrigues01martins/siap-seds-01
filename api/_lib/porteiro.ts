@@ -6,7 +6,7 @@ import { ACESSO_DESATUALIZADO, lerAcesso, podeFazer, precisaAtualizarAcesso, typ
 import { obterAdmin } from './admin.js'
 import { ErroApi, MENSAGENS } from './erros.js'
 
-/** Quem grava (vai para o histórico): uid, e-mail e perfil. */
+/** Quem grava: uid, e-mail, perfil e nome (nome e e-mail vão para atualizadoPor de cada documento gravado). */
 export interface Assinatura {
   uid: string
   email: string | null
@@ -22,7 +22,7 @@ export interface Autor extends Assinatura {
 /** Quem está chamando: ID token válido (401 se ausente, inválido ou revogado) e o cadastro, se houver. */
 export async function identificar(
   requisicao: Request,
-): Promise<{ uid: string; email: string | null; acesso: Acesso | null }> {
+): Promise<{ uid: string; email: string | null; nome: string | null; acesso: Acesso | null }> {
   const cabecalho = requisicao.headers.get('Authorization') ?? ''
   const token = /^Bearer\s+(\S+)$/i.exec(cabecalho)?.[1]
   if (!token) throw new ErroApi(401, MENSAGENS.semLogin)
@@ -37,7 +37,13 @@ export async function identificar(
     throw new ErroApi(401, MENSAGENS.sessaoInvalida)
   }
   const cadastro = await db.doc(`usuarios/${decodificado.uid}`).get()
-  return { uid: decodificado.uid, email: decodificado.email ?? null, acesso: lerAcesso(cadastro.data()) }
+  const nome = cadastro.get('nome') as unknown
+  return {
+    uid: decodificado.uid,
+    email: decodificado.email ?? null,
+    nome: typeof nome === 'string' && nome.trim() ? nome.trim() : null,
+    acesso: lerAcesso(cadastro.data()),
+  }
 }
 
 /**
@@ -46,8 +52,8 @@ export async function identificar(
  * usuários → 403.
  */
 export async function autenticar(requisicao: Request, exigencia: Exigencia = 'usuario'): Promise<Autor> {
-  const { uid, email, acesso } = await identificar(requisicao)
+  const { uid, email, nome, acesso } = await identificar(requisicao)
   if (precisaAtualizarAcesso(acesso)) throw new ErroApi(403, ACESSO_DESATUALIZADO)
   if (!podeFazer(acesso, exigencia)) throw new ErroApi(403, MENSAGENS.semPermissao)
-  return { uid, email, perfil: acesso!.perfil!, acesso: acesso! }
+  return { uid, email, nome, perfil: acesso!.perfil!, acesso: acesso! }
 }

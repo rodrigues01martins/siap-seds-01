@@ -52,9 +52,9 @@ beforeEach(async () => {
 
 describe('/api/avaliacao — acesso', () => {
   it('405, 401 e 403 (cadastro antigo, sem perfil)', async () => {
-    const r405 = await chamar(rota, 'GET', undefined, presidente.token)
+    const r405 = await chamar(rota, 'POST', undefined, presidente.token)
     expect(r405.status).toBe(405)
-    expect(r405.headers.get('Allow')).toBe('PUT')
+    expect(r405.headers.get('Allow')).toBe('GET, PUT, DELETE')
     expect((await chamar(rota, 'PUT', registro(), null)).status).toBe(401)
     expect((await chamar(rota, 'PUT', registro(), antigo.token)).status).toBe(403)
   })

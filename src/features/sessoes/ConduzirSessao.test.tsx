@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-// Tela da sessão: presentes por nome e papel (edição com o mesmo bloco da abertura); "Resetar sessão" (admin e
-// presidente) fora das ações do cabeçalho; sessão reiniciada mostra o selo "Reiniciada" e quem, quando e por quê.
+// Tela da sessão: presentes por nome e papel (edição com o mesmo bloco da abertura); "Excluir sessão" (admin e
+// presidente) numa seção própria, fora das ações do cabeçalho, com a prévia do que será apagado.
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router'
@@ -53,53 +53,31 @@ beforeEach(() => {
     'chamamentos/ch1': { id: 'ch1', numero: '001/2026', titulo: 'C', lotes: [{ codigo: 'L1', descricao: 'Lote 1' }] },
     'chamamentos/ch1/sessoes/s1': SESSAO,
   }
-  simulado.chamarApi.mockReset().mockImplementation(async (_c: string, { metodo }: { metodo: string }) =>
-    metodo === 'GET'
-      ? { sessaoId: 's1', status: 'aberta', propostas: [], desempates: { reverter: [], apagar: [] }, total: 0, bloqueios: [] }
-      : { revertidos: 0, apagados: 0, propostas: [], resets: 1 },
-  )
+  simulado.chamarApi.mockReset().mockResolvedValue({ itens: { sessao: 1, avaliacao: 2 }, total: 3, resumo: '1 sessão, 2 avaliações' })
 })
 
-describe('tela da sessão — reset', () => {
-  it('presidente: "Resetar sessão" (destrutivo) numa seção própria, fora do cabeçalho', async () => {
+describe('tela da sessão — exclusão (o reset saiu)', () => {
+  it('"Excluir sessão" (destrutivo) numa seção própria, com a prévia; confirma com DELETE /api/sessao', async () => {
     montar()
-    const secao = screen.getByRole('region', { name: 'Reset da sessão' })
-    const botao = within(secao).getByRole('button', { name: 'Resetar sessão' })
+    expect(screen.queryByRole('button', { name: /Resetar/ })).not.toBeInTheDocument()
+    const secao = screen.getByRole('region', { name: 'Exclusão da sessão' })
+    const botao = within(secao).getByRole('button', { name: 'Excluir sessão' })
     expect(botao.className).toContain('bg-button-destructive-bg')
-    expect(screen.getAllByRole('button', { name: 'Resetar sessão' })).toHaveLength(1)
 
     await userEvent.click(botao)
-    const dialogo = screen.getByRole('alertdialog')
-    await within(dialogo).findByText(/Nenhum registro desta sessão para desfazer/)
-    await userEvent.type(within(dialogo).getByLabelText(/Justificativa do reset/), 'A Comissão decidiu refazer as decisões da sessão.')
-    await userEvent.type(within(dialogo).getByLabelText(/Para confirmar, digite RESETAR/), 'RESETAR')
-    await userEvent.click(within(dialogo).getByRole('button', { name: 'Resetar sessão' }))
-    await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument())
-    expect(await screen.findByText('Sessão reiniciada')).toBeInTheDocument()
+    const dialogo = screen.getByRole('alertdialog', { name: 'Excluir sessão de 10/11/2026' })
+    expect(await within(dialogo).findByText('Serão apagados: 1 sessão, 2 avaliações.')).toBeInTheDocument()
+    expect(within(dialogo).queryByRole('textbox')).not.toBeInTheDocument()
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Excluir' }))
+    await waitFor(() =>
+      expect(simulado.chamarApi).toHaveBeenLastCalledWith('/api/sessao', { metodo: 'DELETE', corpo: { chamamentoId: 'ch1', sessaoId: 's1' } }),
+    )
   })
 
-  it('admin também vê o reset (os dois perfis fazem tudo)', () => {
+  it('admin também exclui (os dois perfis fazem tudo)', () => {
     simulado.acesso = { perfil: 'admin', ativo: true }
     montar()
-    expect(within(screen.getByRole('region', { name: 'Reset da sessão' })).getByRole('button', { name: 'Resetar sessão' })).toBeInTheDocument()
-  })
-
-  it('sessão reiniciada: selo "Reiniciada", quem resetou, quando e o motivo; sem condução', () => {
-    simulado.documentos['chamamentos/ch1/sessoes/s1'] = {
-      ...SESSAO,
-      status: 'reiniciada',
-      reiniciadaPor: { uid: 'u1', email: 'presidente@goias.gov.br' },
-      reiniciadaEm: { toDate: () => new Date('2026-11-10T17:32:00Z') },
-      motivo: 'Conflito de interesse declarado após a sessão.',
-      resets: 1,
-    }
-    montar()
-    expect(screen.getByText('Reiniciada')).toBeInTheDocument()
-    const aviso = screen.getByRole('status', { name: 'Sessão reiniciada' })
-    expect(aviso).toHaveTextContent('presidente@goias.gov.br')
-    expect(aviso).toHaveTextContent('10/11/2026 14:32')
-    expect(aviso).toHaveTextContent('Conflito de interesse declarado após a sessão.')
-    expect(screen.queryByRole('button', { name: 'Definir foco' })).not.toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: 'Exclusão da sessão' })).getByRole('button', { name: 'Excluir sessão' })).toBeInTheDocument()
   })
 })
 

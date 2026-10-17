@@ -57,20 +57,18 @@ a não ser que a pessoa esteja travada há mais de 2 minutos (aí conta como "pe
 
 ### T2 — Registrar a admissibilidade de uma proposta (relator; tempo-alvo: 4 min)
 
-- **Instrução:** "Registre a admissibilidade da proposta do Instituto Alfa. Todos os requisitos foram atendidos. Os
-  Planos de Ação começam na página 3 e vêm um depois do outro; o PA3 tem 2 páginas a mais do que o limite."
-- **Critério de sucesso:** proposta registrada como **admitida**; o excesso do PA3 notado pela pessoa (ela comenta
-  ou aponta o alerta de atenção).
-- **Observe:** se o alerta de páginas acima do limite é percebido e entendido ("página de corte"), e se a pessoa
-  sabe que o 28.1.VII é marcado sozinho pela tabela.
+- **Instrução:** "Registre a admissibilidade da proposta do Instituto Alfa: ela foi admitida. Os Planos de Ação
+  começam na página 3 e vêm um depois do outro; o PA3 tem 2 páginas a mais do que o limite."
+- **Critério de sucesso:** proposta registrada como **admitida** (sim); o excesso do PA3 notado pela pessoa (ela
+  comenta ou aponta o alerta de atenção).
+- **Observe:** se o alerta de páginas acima do limite é percebido e entendido ("página de corte").
 
 ### T3 — Avaliar um subcritério da D1 e projetá-lo no telão (relator e presidente; tempo-alvo: 3 min)
 
-- **Instrução:** "Na Dimensão 1 da mesma proposta, registre o subcritério 1.1 com nível 3, decidido por maioria,
-  com o voto divergente de um membro que daria nível 2. Cite as páginas 2 e 5. Depois, mostre esse subcritério no
-  telão."
-- **Critério de sucesso:** registro salvo (nível 3, maioria, voto divergente, justificativa com o mínimo de
-  caracteres e páginas 2 e 5) e o telão mostrando o 1.1 com o nível registrado destacado.
+- **Instrução:** "Na Dimensão 1 da mesma proposta, registre o subcritério 1.1 com nível 3 e uma justificativa.
+  Cite as páginas 2 e 5. Depois, mostre esse subcritério no telão."
+- **Critério de sucesso:** registro salvo (nível 3, justificativa com o mínimo de caracteres e páginas 2 e 5) e o
+  telão mostrando o 1.1 com o nível registrado destacado.
 - **Observe:** se o descritor dos níveis é lido, se o botão **Salvar** do rodapé é encontrado, se a pessoa percebe
   que o sistema avançou para o próximo subcritério e se usa **Projetar** ou os atalhos.
 
@@ -84,14 +82,14 @@ a não ser que a pessoa esteja travada há mais de 2 minutos (aí conta como "pe
 - **Observe:** se o painel lateral é entendido, se "comprova execução satisfatória" e "aceito" ficam claros e se a
   linha do tempo e a memória são encontradas.
 
-### T5 — Homologar a proposta e gerar a minuta da ata (presidente; tempo-alvo: 3 min)
+### T5 — Concluir a proposta e gerar a minuta da ata (presidente; tempo-alvo: 3 min)
 
-- **Instrução:** "A Comissão concluiu a avaliação da Associação Beta. Homologue a proposta e gere a minuta da ata
+- **Instrução:** "A Comissão terminou a avaliação da Associação Beta. Conclua a proposta e gere a minuta da ata
   da sessão em PDF."
-- **Critério de sucesso:** proposta **homologada** (selo "Homologada" na classificação) depois de conferir NF e
+- **Critério de sucesso:** proposta **concluída** (selo "Concluída" na classificação) depois de conferir NF e
   status na confirmação, e o PDF da ata baixado.
-- **Observe:** se a pessoa lê a NF e o status antes de confirmar, se entende que a homologação deixa tudo somente
-  leitura e se encontra a ata a partir da sessão.
+- **Observe:** se a pessoa lê a NF e o status antes de confirmar, se entende que a conclusão pode ser desfeita (e
+  que alterar a avaliação a desfaz) e se encontra a ata a partir da sessão.
 
 ## 4. Questionário SUS (System Usability Scale)
 

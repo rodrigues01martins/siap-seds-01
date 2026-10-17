@@ -17,7 +17,7 @@ describe('navegação por domínio (§12: agrupar por domínio; itens conforme o
     expect(mapa(ADMIN)).toEqual([
       ['Início', ['Chamamentos → /']],
       ['Cadastros', ['Novo chamamento → /chamamentos/novo', 'OSCs → /oscs']],
-      ['Administração', ['Usuários → /usuarios', 'Histórico de alterações → /auditoria']],
+      ['Administração', ['Usuários → /usuarios']],
     ])
   })
 
@@ -41,9 +41,12 @@ describe('navegação por domínio (§12: agrupar por domínio; itens conforme o
     expect(mapa(PRESIDENTE, contexto)).toContainEqual(['Sessão', ['Abrir sessão → /chamamentos/ch1/sessoes/nova']])
   })
 
-  it('presidente: tudo, menos Usuários (só o admin gerencia usuários e perfis)', () => {
-    expect(mapa(PRESIDENTE, CONTEXTO)).toEqual(mapa(ADMIN, CONTEXTO).map(([g, itens]) => [g, g === 'Administração' ? (itens as string[]).filter((i) => !i.startsWith('Usuários')) : itens]))
-    expect(mapa(PRESIDENTE)).toContainEqual(['Administração', ['Histórico de alterações → /auditoria']])
+  it('presidente: tudo, menos Usuários (só o admin gerencia usuários e perfis); sem o grupo Administração', () => {
+    expect(mapa(PRESIDENTE, CONTEXTO)).toEqual(mapa(ADMIN, CONTEXTO).filter(([g]) => g !== 'Administração'))
+  })
+
+  it('sem histórico de alterações (a auditoria detalhada saiu)', () => {
+    expect(mapa(ADMIN, CONTEXTO).flatMap(([, itens]) => itens as string[]).some((i) => i.includes('/auditoria'))).toBe(false)
   })
 
   it('sem acesso (sem cadastro, cadastro antigo sem perfil ou desativado): nenhum item', () => {

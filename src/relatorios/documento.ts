@@ -38,9 +38,9 @@ export interface Rodape {
 
 export const MARCA_MINUTA = 'MINUTA'
 
-/** Documento com alguma proposta não homologada leva a marca d'água "MINUTA". */
-export function precisaMinuta(propostas: readonly { bloqueada?: boolean }[]): boolean {
-  return propostas.some((p) => p.bloqueada !== true)
+/** Documento com alguma proposta não concluída leva a marca d'água "MINUTA"; concluída sai como final. */
+export function precisaMinuta(propostas: readonly { concluida?: boolean }[]): boolean {
+  return propostas.some((p) => p.concluida !== true)
 }
 
 const FORMATO_DATA_HORA = new Intl.DateTimeFormat('pt-BR', {

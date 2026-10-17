@@ -47,7 +47,7 @@ export function BotoesQuadro({
   const { gerando, erro, gerar, rodape } = useGeracao()
   // Só os campos que a classificação usa, em ordem fixa: o código de verificação não varia com o resto.
   const ordenadas = propostas
-    .map(({ id, nomeOsc, totais, bloqueada, admissibilidade }) => ({ id, nomeOsc, totais, bloqueada, admissibilidade }))
+    .map(({ id, nomeOsc, totais, concluida, admissibilidade }) => ({ id, nomeOsc, totais, concluida, admissibilidade }))
     .sort((a, b) => a.id.localeCompare(b.id))
   const dadosUsados = () => ({
     cabecalho,

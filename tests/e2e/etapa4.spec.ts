@@ -1,7 +1,7 @@
 // Etapa 4 (telas operacionais): screenshots 1280/768 de cada tela em docs/auditoria-design/etapa-4/<fase>/.
 // FASE_ETAPA4=antes só fotografa (estado anterior à migração); FASE_ETAPA4=depois (padrão) também exige
 // axe (WCAG 2.2 AA) sem violações nas duas larguras e roda o fluxo completo pela interface, gravando pela /api
-// nos emuladores: sessão → admissibilidade → D1 (28 subcritérios) → D2 → classificação → homologação.
+// nos emuladores: sessão → admissibilidade → D1 (28 subcritérios) → D2 → classificação → conclusão.
 // Uso: npm run test:e2e:etapa4 (depois) | FASE_ETAPA4=antes npm run test:e2e:etapa4
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Browser, type Page } from '@playwright/test'
@@ -27,7 +27,6 @@ const TELAS: { slug: string; caminho: string; perfis: string[] }[] = [
   { slug: 'd1', caminho: `${P}/d1`, perfis: ['administrador', 'presidente'] },
   { slug: 'd2', caminho: `${P}/d2`, perfis: ['administrador'] },
   { slug: 'd2-memoria', caminho: `${P}/d2/memoria`, perfis: ['administrador'] },
-  { slug: 'diligencias', caminho: `${P}/diligencias`, perfis: ['administrador'] },
   { slug: 'classificacao', caminho: `${CH}/lotes/L1/classificacao`, perfis: ['administrador'] },
   { slug: 'ata', caminho: `${CH}/sessoes/${SESSAO_ABERTA}/ata`, perfis: ['administrador'] },
   { slug: 'projecao', caminho: `/projecao/${CHAMAMENTO_ENSAIO}/${SESSAO_ABERTA}`, perfis: ['administrador'] },
@@ -100,7 +99,7 @@ async function comoPerfil(navegador: Browser, id: string): Promise<Page> {
   return pagina
 }
 
-test('fluxo completo pela interface: sessão → admissibilidade → D1 → D2 → classificação → homologação', async ({ browser }) => {
+test('fluxo completo pela interface: sessão → admissibilidade → D1 → D2 → classificação → conclusão', async ({ browser }) => {
   test.skip(FASE === 'antes', 'só depois da migração')
   test.setTimeout(10 * 60_000)
   const CHF = `/chamamentos/${CHAMAMENTO_FLUXO}`
@@ -119,20 +118,18 @@ test('fluxo completo pela interface: sessão → admissibilidade → D1 → D2 �
   await admin.getByRole('button', { name: 'Abrir sessão' }).click()
   await expect(admin.getByRole('heading', { level: 1, name: 'Sessão de 10/11/2026' })).toBeVisible({ timeout: 30_000 })
 
-  // 2. Admissibilidade (presidente): requisitos, páginas dentro do limite, admitida.
+  // 2. Admissibilidade (presidente): admitida (sim) e páginas dentro do limite.
   const presidente = await comoPerfil(browser, 'presidente')
   await presidente.goto(`${PF}/admissibilidade`)
   await expect(presidente.getByRole('button', { name: 'Registrar admissibilidade' })).toBeVisible({ timeout: 30_000 })
-  for (const r of MATRIZ_2026.admissibilidade.requisitosEssenciais) {
-    if (r.codigo !== MATRIZ_2026.admissibilidade.requisitoPlanos) await presidente.getByRole('checkbox', { name: `${r.codigo} — ${r.descricao}` }).check()
-  }
+  await presidente.getByRole('radio', { name: 'Sim, admitida' }).check()
   let pagina = 3
   for (const pa of MATRIZ_2026.dimensao1.planos) {
     await presidente.getByLabel(`Página inicial do ${pa.codigo}`).fill(String(pagina))
     await presidente.getByLabel(`Página final do ${pa.codigo}`).fill(String(pagina + pa.limitePaginas - 1))
     pagina += pa.limitePaginas
   }
-  await presidente.getByRole('radio', { name: 'Admitida', exact: true }).check()
+  await semViolacoes(presidente, 'admissibilidade preenchida')
   await presidente.getByRole('button', { name: 'Registrar admissibilidade' }).click()
   await expect(presidente.getByRole('status').filter({ hasText: 'Situação registrada: Admitida' })).toBeVisible({ timeout: 30_000 })
 
@@ -142,7 +139,6 @@ test('fluxo completo pela interface: sessão → admissibilidade → D1 → D2 �
   await expect(resumo).toContainText('Faltam 28', { timeout: 30_000 })
   for (let faltam = 28; faltam > 0; faltam--) {
     await presidente.getByRole('radio', { name: 'Nível 3', exact: true }).check()
-    await presidente.getByRole('radio', { name: 'Unanimidade' }).check()
     await presidente.getByRole('textbox', { name: /^Justificativa/ }).fill('Registro do teste de fluxo completo (E2E), nível 3.')
     await presidente.getByRole('textbox', { name: 'Páginas citadas' }).fill('1')
     if (faltam === 28) await semViolacoes(presidente, 'D1 preenchida')
@@ -173,28 +169,31 @@ test('fluxo completo pela interface: sessão → admissibilidade → D1 → D2 �
   await expect(presidente.getByRole('table', { name: 'Experiências da OSC' })).toContainText('Internação socioeducativa (E2E)')
   await expect(presidente.getByText(/D2 gravada pela \/api: [1-9]/)).toBeVisible({ timeout: 30_000 })
 
-  // 5. Classificação e 6. homologação (administrador): ConfirmDialog com NF e status.
+  // 5. Classificação e 6. conclusão (administrador): ConfirmDialog com NF e status; reversível.
   await admin.goto(`${CHF}/lotes/F1/classificacao`)
   const ranking = admin.getByRole('table', { name: 'Classificação do lote F1' })
   const linha = ranking.getByRole('row').filter({ hasText: 'Instituto Alfa (ENSAIO)' })
   await expect(linha).toContainText('1º', { timeout: 30_000 })
   await expect(linha).toContainText('Apta')
-  await linha.getByRole('button', { name: 'Homologar' }).click()
-  const confirmacao = admin.getByRole('alertdialog', { name: /^Homologar Instituto Alfa/ })
+  await linha.getByRole('button', { name: 'Concluir' }).click()
+  const confirmacao = admin.getByRole('alertdialog', { name: /^Concluir Instituto Alfa/ })
   await expect(confirmacao).toContainText('NF ')
   await expect(confirmacao.getByRole('button', { name: 'Cancelar' })).toBeFocused()
-  await semViolacoes(admin, 'ConfirmDialog de homologação')
-  await confirmacao.getByRole('checkbox', { name: /Conferi a NF e o status/ }).check()
-  await confirmacao.getByRole('button', { name: 'Confirmar homologação' }).click()
+  await semViolacoes(admin, 'ConfirmDialog de conclusão')
+  await confirmacao.getByRole('button', { name: 'Concluir' }).click()
   await expect(confirmacao).toBeHidden({ timeout: 30_000 })
-  await expect(linha).toContainText('Homologada', { timeout: 30_000 })
-  await expect(linha.getByRole('button', { name: 'Reabrir' })).toBeVisible()
-  await admin.screenshot({ path: join(PASTA, FASE, 'fluxo--homologada--1280.jpg'), fullPage: true, type: 'jpeg', quality: 70 })
+  await expect(linha).toContainText('Concluída', { timeout: 30_000 })
+  await expect(linha.getByRole('button', { name: 'Desfazer conclusão' })).toBeVisible()
+  await admin.screenshot({ path: join(PASTA, FASE, 'fluxo--concluida--1280.jpg'), fullPage: true, type: 'jpeg', quality: 70 })
 
-  // A proposta homologada fica somente leitura na D1.
+  // Sem trava: a D1 continua editável e avisa que alterar a avaliação desfaz a conclusão.
   await presidente.goto(`${PF}/d1`)
-  await expect(presidente.getByText('Proposta homologada: somente leitura.')).toBeVisible({ timeout: 30_000 })
-  await expect(presidente.getByRole('button', { name: /^Salvar/ })).toHaveCount(0)
+  await expect(presidente.getByText('Proposta concluída', { exact: true })).toBeVisible({ timeout: 30_000 })
+  await expect(presidente.getByRole('region', { name: 'Resumo da D1' }).getByRole('button', { name: /^Salvar/ })).toBeVisible()
+
+  // Desfazer conclusão, sem justificativa.
+  await linha.getByRole('button', { name: 'Desfazer conclusão' }).click()
+  await expect(linha.getByRole('button', { name: 'Concluir' })).toBeVisible({ timeout: 30_000 })
 })
 
 test.afterAll(() => {

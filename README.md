@@ -160,10 +160,11 @@ passa por uma função `/api`, que:
 2. confere o acesso em `usuarios/{uid}` (perfil admin ou presidente; conta ativa; gestão de usuários só admin) →
    sem acesso: **403** (cadastro antigo, sem perfil: "Seu acesso precisa ser atualizado pelo administrador.");
 3. valida os dados (mensagens em português) → **400** `{ erro, campos }`; método errado → **405**;
-4. grava numa transação junto com um registro em `auditoria/{id}`
-   `{ caminho, acao, antes, depois, uid, email, perfil: 'admin' | 'presidente', dataHora }`;
-5. recusa qualquer escrita em proposta homologada (`bloqueada = true`) ou em suas subcoleções → **409**.
-6. recusa qualquer escrita em registro **em exclusão** (`status: "excluindo"`) ou abaixo dele → **409**.
+4. grava numa transação; cada documento criado ou editado guarda só quem gravou por último e quando:
+   `atualizadoPor: { nome, email }` e `atualizadoEm` (sem auditoria detalhada desde a Simplificação 2/4; os
+   registros antigos de `auditoria/` ficam no Firestore, não são lidos pelo app e continuam no backup).
+5. não há trava de homologação nem de exclusão: a proposta concluída aceita escrita, e alterar a avaliação desfaz
+   a conclusão (`concluida = false`).
 
 ### Endpoints de cadastros e usuários
 
@@ -172,8 +173,8 @@ passa por uma função `/api`, que:
 | `/api/chamamentos` | `POST` criar, `PATCH` editar | `{ numero, titulo, processoSei, dataLimitePropostas, justificativaMinima?, lotes: [{ codigo, descricao }] }` (`PATCH` com `id`) | admin ou presidente |
 | `/api/oscs` | `POST` criar, `PATCH` editar | `{ cnpj, razaoSocial, nomeFantasia? }` — CNPJ numérico ou alfanumérico | admin ou presidente |
 | `/api/propostas` | `POST` criar, `PATCH` editar | `{ chamamentoId, loteCodigo, oscCnpj, protocolo, numeroSEI, observacao? }` (`PATCH` com `propostaId`) | admin ou presidente |
-| `/api/chamamentos`, `/api/oscs`, `/api/propostas` | `DELETE` excluir | `{ id, justificativa }` · `{ cnpj, justificativa }` · `{ chamamentoId, propostaId, justificativa }` (justificativa com 20+ caracteres) | admin ou presidente |
-| `/api/chamamentos`, `/api/oscs`, `/api/propostas` | `GET` prévia da exclusão | `?id=…&simular=true` · `?cnpj=…&simular=true` · `?chamamentoId=…&propostaId=…&simular=true` → `{ existe, emExclusao, subcolecoes: { nome: n }, total, bloqueios: [{ mensagem, itens }] }` | admin ou presidente |
+| `/api/chamamentos`, `/api/oscs`, `/api/propostas` | `DELETE` excluir (em cascata) | `{ id }` (chamamento) · `{ id, lote }` (só o lote) · `{ cnpj }` · `{ chamamentoId, propostaId }` | admin ou presidente |
+| `/api/chamamentos`, `/api/oscs`, `/api/propostas` | `GET` prévia da exclusão | os mesmos campos na URL + `simular=true` → `{ itens, total, resumo }` | admin ou presidente |
 | `/api/usuarios` | `POST` novo usuário | `{ nome, email, perfil: 'admin' \| 'presidente' }` | administrador |
 | `/api/usuarios` | `PATCH` alterar | `{ uid, nome?, perfil?, ativo? }` | administrador |
 | `/api/usuarios` | `PUT` primeiro acesso | — | qualquer conta logada: cria o administrador inicial (seção 4); quem já tem cadastro recebe 200 |
@@ -189,26 +190,28 @@ passa por uma função `/api`, que:
   Enviar `indiceCorrecao` ou `dataBaseCorrecao` dá **400** ("Campo não permitido."). Para apagar esses campos de
   chamamentos antigos: `npm run remover-campos-correcao` (seção 7).
 
-### Exclusão de cadastros (admin ou presidente)
+### Exclusão livre (admin ou presidente)
 
-| Cadastro | Bloqueio (**409**) | O que é apagado |
+Sem justificativa, sem identificador digitado, sem status "excluindo" e sem exigir sessão aberta
+(`api/_lib/cascata.ts`, com `recursiveDelete`):
+
+| O que | Endpoint e corpo | O que mais é apagado |
 |---|---|---|
-| Proposta | homologada: "Reabra a proposta antes de excluir" | a proposta e **todas** as subcoleções (avaliações, experiências e seus documentos, resultado da D2, diligências…) |
-| OSC | há proposta vinculada (a mensagem diz quantas e quais) | a OSC |
-| Chamamento | há propostas ou sessões | o chamamento e seus lotes |
+| Chamamento | `DELETE /api/chamamentos { id }` | lotes, sessões, propostas (e tudo dentro delas) e desempates |
+| Lote | `DELETE /api/chamamentos { id, lote }` | propostas e desempates do lote; o lote sai do chamamento e da pauta das sessões |
+| OSC | `DELETE /api/oscs { cnpj }` | as propostas da OSC em todos os chamamentos |
+| Proposta | `DELETE /api/propostas { chamamentoId, propostaId }` | admissibilidade, avaliações, experiências (com documentos) e resultado da D2 |
+| Sessão | `DELETE /api/sessao { chamamentoId, sessaoId }` | tudo o que foi registrado com o `sessaoId` dela: admissibilidade, níveis, experiências e desempates |
+| Experiência | `DELETE /api/experiencia { chamamentoId, propostaId, id }` | seus documentos |
+| Documento | `DELETE /api/experiencia { chamamentoId, propostaId, id, documento }` (índice na lista) | — |
+| Nível | `DELETE /api/avaliacao { chamamentoId, propostaId, codigo }` | — |
 
-Como o Firestore não apaga subcoleções sozinho e a transação aceita no máximo 500 escritas, a exclusão
-(`api/_lib/exclusao.ts`) tem duas etapas: **(a)** numa transação, confere os bloqueios, marca o documento com
-`status: "excluindo"` e grava na auditoria a ação `excluir` com a **fotografia completa** (campo `antes` = documento,
-`subcolecoes` = todas as subcoleções, recursivamente), a `justificativa`, `uid` e `perfil`; **(b)** apaga com
-`recursiveDelete`. Se (b) falhar, a resposta é **503** ("Repita a operação para concluir"): o registro fica
-"excluindo" (escritas recusadas, selo **Em exclusão** nas telas) e repetir a exclusão termina o serviço, sem nova
-fotografia.
+Os totais (D1, D2, NF e status) das propostas afetadas são recalculados (`recalcular.ts`) e a conclusão é desfeita.
+Prévia: `GET` com os mesmos campos na URL e `simular=true` → `{ itens, total, resumo }`, por exemplo
+`resumo: "1 proposta, 28 avaliações, 4 experiências"`. Repetir uma exclusão interrompida termina o serviço.
 
-Na tela, **Excluir** fica no menu de ações da linha (botão ⋯ nas listas de chamamentos, OSCs e propostas do
-painel), para os dois perfis. O diálogo mostra a prévia (o que será apagado ou o bloqueio, em alerta de erro)
-e só habilita **Excluir definitivamente** com a justificativa e o identificador digitado (nº do chamamento, CNPJ
-da OSC ou protocolo da proposta).
+Na tela, cada item tem o **ícone de lixeira** (chamamentos, lotes, OSCs, propostas e sessões no painel, nível na D1,
+experiência e documento na D2); um único ConfirmDialog destrutivo mostra "Serão apagados: …" e o botão **Excluir**.
 
 ### Endpoint da Etapa 4a (sessão da Comissão)
 
@@ -216,8 +219,8 @@ da OSC ou protocolo da proposta).
 |---|---|---|---|
 | `/api/sessao` | `POST` abrir | `{ chamamentoId, data, lotes: [loteCodigo], presentes: [{ nome, papel: 'presidente' \| 'membro' }] }` | admin ou presidente |
 | `/api/sessao` | `PATCH` com `acao` | `{ chamamentoId, sessaoId, acao: 'presentes' \| 'foco' \| 'encerrar', ... }` | admin ou presidente |
-| `/api/sessao` | `PATCH` resetar | `{ chamamentoId, sessaoId, acao: 'resetar', justificativa }` (20+ caracteres) | admin ou presidente |
-| `/api/sessao` | `GET` prévia do reset | `?chamamentoId=…&sessaoId=…&simular=true` → `{ status, propostas: [{ propostaId, protocolo, reverter, apagar }], desempates, total, bloqueios }` | admin ou presidente |
+| `/api/sessao` | `DELETE` excluir (em cascata) | `{ chamamentoId, sessaoId }` | admin ou presidente |
+| `/api/sessao` | `GET` prévia da exclusão | `?chamamentoId=…&sessaoId=…&simular=true` → `{ itens, total, resumo }` | admin ou presidente |
 
 - Sessão em `chamamentos/{ch}/sessoes/{id}`; **uma sessão aberta por chamamento** (abrir outra → **409**).
 - Pauta = **lote(s)**: as propostas dos lotes em `lotes` (cada lote precisa existir no chamamento → **404**).
@@ -227,45 +230,25 @@ da OSC ou protocolo da proposta).
 - Sessão encerrada não aceita alteração (**409**) e **a avaliação (C2) só é aceita em sessão aberta** (**409**).
 - Os esquemas zod ficam em `src/esquemas/` e são os mesmos na `/api` e nos formulários do app.
 
-### Reset da sessão (admin ou presidente)
-
-Descarta tudo o que a Comissão gravou **com o `sessaoId` da sessão**: admissibilidade, níveis da D1, experiências
-(e documentos) da D2 e decisões de desempate. **Diligências não são afetadas.** Cada documento volta ao estado
-anterior à sessão — o `antes` do primeiro registro de auditoria daquela sessão para ele; se não existia, é apagado.
-
-| Situação | Resposta |
-|---|---|
-| Proposta afetada homologada | **409** "Reabra antes de resetar" (lista os protocolos) |
-| Registro da sessão alterado depois, em outra sessão (não resetada) ou fora de sessão | **409** "Resete primeiro a sessão posterior" (lista as sessões) |
-| Queda no meio | **503** "Repita a operação para concluir"; a sessão fica `reiniciando` |
-
-Etapas (`api/_lib/resetSessao.ts`): marca a sessão `reiniciando` (nenhum registro novo entra) → reverte em lotes de
-até 400 escritas por transação, cada reversão com auditoria `resetar_sessao` (antes/depois, `resetDaSessao`,
-`justificativa`) → recalcula D1, D2, NF e status das propostas pelas regras de `src/domain` → marca `reiniciada`
-com `reiniciadaPor`, `reiniciadaEm`, `motivo`, `resets` e `historicoResets`. Os presentes ficam; o foco do
-telão é limpo. A repetição é idempotente: pula o que já voltou ao estado anterior. A sessão reiniciada não recebe
-registros (para refazer, abra nova sessão) e a ata registra cada reset (data, hora, quem resetou e motivo).
-
-Na tela da sessão, **Resetar sessão** (botão destrutivo) fica numa seção própria no fim da página, para os
-dois perfis. O diálogo mostra a prévia por proposta (o que volta ao valor anterior e o que será
-apagado), os bloqueios em alerta de erro e só habilita com a justificativa e a palavra **RESETAR**.
+O reset da sessão saiu na Simplificação 2/4 (dependia da auditoria detalhada para saber o estado anterior de cada
+registro): para descartar o que foi feito numa sessão, exclua a sessão (apaga tudo o que foi registrado com ela).
 
 ### Endpoints da Etapa 3b (avaliação)
 
 | Endpoint | Métodos | Corpo (JSON) | Permissão |
 |---|---|---|---|
-| `/api/avaliacao` | `PUT` registrar/alterar nível | `{ chamamentoId, propostaId, codigo, nivel, justificativa, paginas?, decisao, votoDivergente?, sessaoId }` | admin ou presidente |
-| `/api/experiencia` | `POST` criar, `PATCH` editar, `DELETE` excluir | `{ chamamentoId, propostaId, sessaoId, descricao, categorias, modalidade, orgaoParceiro?, instrumento?, mrosc?, inicio, fim?, vagas?, unidades?, trabalhadores?, valorAnualCentavos?, documentos?: [{ tipo, numeroSEI, comprovaExecucaoSatisfatoria, aceito }], desconsideracoes?: [{ criterio, justificativa }] }` (`PATCH`/`DELETE` com `id`) | admin ou presidente |
-| `/api/homologar` | `POST` | `{ chamamentoId, propostaId }` | admin ou presidente |
+| `/api/avaliacao` | `PUT` registrar/alterar nível | `{ chamamentoId, propostaId, codigo, nivel, justificativa, paginas?, sessaoId }` | admin ou presidente |
+| `/api/experiencia` | `POST` criar, `PATCH` editar | `{ chamamentoId, propostaId, sessaoId, descricao, categorias, modalidade, orgaoParceiro?, instrumento?, mrosc?, inicio, fim?, vagas?, unidades?, trabalhadores?, valorAnualCentavos?, documentos?: [{ tipo, numeroSEI, comprovaExecucaoSatisfatoria, aceito }], desconsideracoes?: [{ criterio, justificativa }] }` (`PATCH` com `id`) | admin ou presidente |
+| `/api/concluir` | `POST` | `{ chamamentoId, propostaId, acao: 'concluir' \| 'desfazer' }` | admin ou presidente |
 
 > **Sessão obrigatória:** nível da D1, admissibilidade, experiências da D2 e desempate só são aceitos com o
 > `sessaoId` de uma sessão **aberta** do chamamento (e, exceto no desempate, com a proposta de um lote em pauta); senão **409**.
-> O `sessaoId` fica no documento e em cada registro da auditoria da operação (base do reset da sessão).
+> O `sessaoId` fica no documento (base da exclusão da sessão em cascata). Exclusões não exigem sessão.
 
 - **C2 — nível** (`.../propostas/{p}/avaliacoes/{codigo}`): `codigo` precisa existir na matriz; `nivel` inteiro
   de 0 a 4; `paginas` (numeração interna do PA) não podem passar da página de corte do PA (Anexo III, 7.1);
-  `decisao` é `unanimidade` ou `maioria`, e `votoDivergente` só vale com `maioria`. Registrar de novo o mesmo
-  subcritério edita (a auditoria guarda antes e depois). Exige sessão aberta com o lote da proposta em pauta (**409**)
+  sem decisão (unanimidade/maioria) nem voto divergente (campos recusados: **400**). Registrar de novo o mesmo
+  subcritério substitui o registro. Exige sessão aberta com o lote da proposta em pauta (**409**)
   e, na mesma transação, define o subcritério como **foco da sessão**.
 - **C3 — experiências** (`.../propostas/{p}/experiencias/{id}`): categorias A–D, sem A e B juntas
   (Anexo IV, 3.2.1, III); categoria D exige `mrosc` (Lei 13.019/2014); `fim ≥ inicio` (`fim` nulo = em
@@ -281,8 +264,10 @@ apagado), os bloqueios em alerta de erro e só habilita com a justificativa e a 
   `.../resultadoD2/atual`. `status`: `pendente` (faltam subcritérios), `apta`, `inapta` (D1 < 67,2) ou
   `desclassificada` (nível 0 em 1.1 ou 1.2). As regras ficam só em `src/domain`; um teste confere que o
   gravado é idêntico ao resultado do domínio.
-- **C5 — homologação**: só sem status `pendente` (→ **409**). Grava `bloqueada = true`, `homologadaPor`
-  `{ uid, email }` e `homologadaEm`, com auditoria. Depois disso, C2 e C3 nessa proposta → **409**.
+- **C5 — conclusão** ("Homologar" virou "Concluir"): reversível e sem justificativa. Conclui só com a admissibilidade
+  registrada e, se admitida, os 28 níveis e as 28 justificativas (`src/domain/conclusao.ts`); senão **409** com o
+  que falta. Não admitida conclui só com a admissibilidade. Grava `concluida`; qualquer alteração posterior na
+  avaliação (C2, C3, admissibilidade, exclusões) volta a `concluida = false`.
 
 As funções da Vercel rodam como ESM no Node, sem bundler: imports relativos em `api/` e `src/domain/` usam
 a extensão `.js` (`'./d1.js'`, `'./matriz/index.js'`) e o JSON usa `with { type: 'json' }`. O teste
@@ -295,7 +280,7 @@ e `campos` em português.
 
 | Perfil | Pode |
 |---|---|
-| `admin` | tudo: cadastros, avaliação, sessão, resultado, exclusão, reset, histórico **e** gestão de usuários e perfis |
+| `admin` | tudo: cadastros, avaliação, sessão, resultado, exclusão **e** gestão de usuários e perfis |
 | `presidente` | tudo, menos a gestão de usuários e perfis |
 
 Os dois leem os dados (firestore.rules); ninguém escreve direto no Firestore. A fonte única no código é
@@ -306,7 +291,7 @@ Os dois leem os dados (firestore.rules); ninguém escreve direto no Firestore. A
 | Rota | Quem usa | O que faz |
 |---|---|---|
 | `/` | todos com acesso | lista de chamamentos |
-| `/chamamentos/:ch` | todos com acesso | painel: propostas por lote com status (pendente, apta, inapta, desclassificada, homologada) e sessões |
+| `/chamamentos/:ch` | todos com acesso | painel: propostas por lote com status (pendente, apta, inapta, desclassificada, não admitida) e o selo "Concluída", sessões; lixeira em cada item |
 | `/chamamentos/novo`, `/chamamentos/:ch/editar` | admin ou presidente | chamamento e lotes |
 | `/chamamentos/:ch/propostas/nova`, `.../:p/editar` | admin ou presidente | proposta (OSC, lote, protocolo, nº SEI) |
 | `/oscs` | admin ou presidente | OSCs, com máscara e validação de CNPJ |
@@ -318,38 +303,38 @@ Os dois leem os dados (firestore.rules); ninguém escreve direto no Firestore. A
 
 | Endpoint | Método | Corpo (JSON) | Permissão |
 |---|---|---|---|
-| `/api/admissibilidade` | `PUT` | `{ chamamentoId, propostaId, sessaoId, requisitos: { '28.1.I': true, ... }, irregularidadesFormais?: ['28.5.II'], observacaoIrregularidades?, planos: [{ codigo, ausente, paginaInicial, paginaFinal }], resultado: 'admitida' \| 'nao_admitida', motivacao? }` | admin ou presidente |
+| `/api/admissibilidade` | `PUT` | `{ chamamentoId, propostaId, sessaoId, admitida: boolean, motivo?, planos: [{ codigo, paginaInicial, paginaFinal }] }` | admin ou presidente |
 
-- Textos do 28.1 (10 requisitos), 28.2 a 28.5 ficam em `matriz_2026.json` (`admissibilidade`).
-- Página de corte de cada PA = página inicial + limite do PA (Anexo III, 7.1) − 1; a tela alerta quando excede.
-- O 28.1.VII (6 PAs) é apurado pela tabela; **PA ausente → desclassificada** (28.2). Admitida exige todos os
-  requisitos; não admitida exige motivação. Irregularidade meramente formal não desclassifica (28.4).
-- Grava `propostas/{p}.admissibilidade` (com `situacao`, `motivos`, `registradaPor`, `registradaEm`), auditado.
-  Proposta **não admitida ou desclassificada não segue para avaliação**: C2 e C3 → **409**.
+- Simplificada (Simplificação 2/4): sem checklist 28.1 nem de formatação (28.5). **Admitida** (sim/não); **motivo**
+  obrigatório (10+ caracteres) se não admitida; páginas inicial/final de cada PA (obrigatórias se admitida).
+- Página de corte de cada PA = página inicial + limite do PA (Anexo III, 7.1) − 1 (`apurarPlano`, `src/domain`);
+  a tela alerta quando excede.
+- Grava `propostas/{p}.admissibilidade = { admitida, motivo?, planos (com limite, páginas, página de corte e
+  excedente), situacao: 'admitida' | 'nao_admitida', sessaoId }` e desfaz a conclusão.
+  Proposta **não admitida não segue para avaliação**: C2 e C3 → **409**.
 
 ### Telas (Etapa 4b)
 
 | Rota | Escrita | O que faz |
 |---|---|---|
-| `/chamamentos/:ch/propostas/:p/admissibilidade` | admin ou presidente (com sessão aberta) | seções: 1. checklist 28.1 (com contador), 2. páginas por PA com página de corte e alerta de atenção ao exceder, 3. irregularidades formais (28.5), 4. resultado e motivação |
-| `/chamamentos/:ch/propostas/:p/d1` | admin ou presidente (com sessão aberta e o lote da proposta em pauta) | navegação PA1…PA6 com progresso por PA; painel do subcritério em seções (Identificação, Elementos, Escala 0–4 em cartões com o descritor sempre visível, Decisão, Justificativa e páginas); alerta de nível 0 em 1.1/1.2; rodapé fixo com a D1 parcial, a prévia, o status oficial e **Salvar** |
-| `/chamamentos/:ch/propostas/:p/d2` | admin ou presidente (com sessão aberta) | tabela de experiências; painel lateral para criar/editar (com documentos); desconsiderar por critério (3.8.5) em diálogo; excluir com confirmação; linha do tempo A (teal) / B (azul) com rótulos |
+| `/chamamentos/:ch/propostas/:p/admissibilidade` | admin ou presidente (com sessão aberta) | seções: 1. admissão (sim/não) e motivo, 2. páginas por PA com página de corte e alerta de atenção ao exceder |
+| `/chamamentos/:ch/propostas/:p/d1` | admin ou presidente (com sessão aberta e o lote da proposta em pauta) | navegação PA1…PA6 com progresso por PA; painel do subcritério em seções (Identificação, Elementos, Escala 0–4 em cartões com o descritor sempre visível, Justificativa e páginas; lixeira do nível registrado); alerta de nível 0 em 1.1/1.2; rodapé fixo com a D1 parcial, a prévia, o status oficial e **Salvar** |
+| `/chamamentos/:ch/propostas/:p/d2` | admin ou presidente (com sessão aberta) | tabela de experiências; painel lateral para criar/editar (com documentos); desconsiderar por critério (3.8.5) em diálogo; lixeira da experiência e de cada documento; linha do tempo A (teal) / B (azul) com rótulos |
 | `/chamamentos/:ch/propostas/:p/d2/memoria` | — | memória de cálculo da D2 (`resultadoD2/atual`) em abas por critério |
 
-Sem sessão aberta (ou com o lote fora da pauta), a tela fica só para consulta; proposta homologada fica somente
-leitura.
+Sem sessão aberta (ou com o lote fora da pauta), a tela fica só para consulta (as lixeiras continuam: exclusão livre).
+Proposta concluída continua editável; a faixa da proposta avisa que alterar a avaliação desfaz a conclusão.
 
 Leitura em tempo real (`onSnapshot`, `src/lib/firestore.ts`); escrita só por `chamarApi` (`src/lib/api.ts`).
 O componente `FormularioApi` (`src/components/ui`) valida com o mesmo esquema da `/api` e põe os erros 400 da
 `/api` nos mesmos campos.
 
-### Resultado: classificação, homologação, reabertura e diligências (Etapa 6a)
+### Resultado: classificação, desempate e conclusão (Etapa 6a)
 
 | Endpoint | Método | Corpo (JSON) | Permissão |
 |---|---|---|---|
 | `/api/desempate` | `PUT` | `{ chamamentoId, sessaoId, loteCodigo, ordem: [propostaId, ...], justificativa }` | admin ou presidente |
-| `/api/reabrir` | `POST` | `{ chamamentoId, propostaId, motivo }` | admin ou presidente |
-| `/api/diligencias` | `POST` criar; `PATCH` com `acao` | `{ chamamentoId, propostaId, objeto, prazo }`; `{ ..., id, acao: 'responder', resposta }` ou `{ ..., id, acao: 'encerrar', conclusao }` | admin ou presidente |
+| `/api/concluir` | `POST` | `{ chamamentoId, propostaId, acao: 'concluir' \| 'desfazer' }` | admin ou presidente |
 
 - **Classificação** (`/chamamentos/:ch/lotes/:lote/classificacao`): `classificarLote` (src/domain/classificacao.ts)
   aplica `classificar()` aos totais gravados. Ranking por NF entre aptas e completas, com PA1…PA6, D1, D2, NF e
@@ -363,16 +348,12 @@ O componente `FormularioApi` (`src/components/ui`) valida com o mesmo esquema da
 - **Decisão da Comissão**: só quando os seis critérios não resolvem. A Comissão registra a ordem com justificativa
   (mín. 20 caracteres) em `chamamentos/{ch}/desempates/{id}`. A /api confere que as propostas formam exatamente um
   empate **residual** do lote (senão **409**); se o grupo ou a NF mudar depois, a decisão deixa de valer.
-- **Homologação na tela**: botão com confirmação dupla (mostra NF e status e pede "conferi").
-  Proposta com **diligência em aberto** (aberta ou respondida) não é homologada (**409**).
-- **Reabertura (RF-18)**: só proposta homologada (senão **409**); motivo obrigatório (mín. 20); grava
-  `bloqueada = false`, `reabertoPor`, `reabertoEm`, `motivoReabertura` e limpa `homologadaPor/Em` (o histórico fica
-  na auditoria). É a única escrita aceita em proposta homologada.
-- **Diligências (RF-28)** (`/chamamentos/:ch/propostas/:p/diligencias`): aberta → respondida → encerrada; encerrada
-  não muda (**409**); prazo não pode ser anterior a hoje. Aviso fixo: *"Diligência não admite inclusão de conteúdo
-  técnico novo (Anexo III, 29.3)"*.
+- **Concluir / Desfazer conclusão** na tela: "Concluir" abre um ConfirmDialog com NF e status (sem justificativa);
+  o 409 da /api mostra o que falta (admissibilidade, níveis ou justificativas). "Desfazer conclusão" é direto.
+  Concluída aparece com o selo **Concluída**; a reabertura com motivo, a trava de homologação e as diligências
+  saíram na Simplificação 2/4.
 
-### Relatórios e trilha de auditoria (Etapa 6b)
+### Relatórios (Etapa 6b)
 
 Gerados **no navegador** (pdfmake e exceljs, carregados só ao clicar); nada é enviado a servidor e nada é gravado.
 Os dados são lidos uma vez no momento de gerar, e o documento é montado por código puro em `src/relatorios/`.
@@ -382,23 +363,18 @@ Os dados são lidos uma vez no momento de gerar, e o documento é montado por c�
 | Espelho de avaliação da proposta | botão **Espelho (PDF)** no cabeçalho da proposta | PDF |
 | Quadro-resumo do lote (a mesma tabela da classificação) | tela de classificação do lote | PDF e XLSX |
 | Minuta de ata da sessão (texto editável antes de exportar) | **Minuta de ata** na tela da sessão (`/chamamentos/:ch/sessoes/:s/ata`) | PDF |
-| Histórico de alterações (trilha de auditoria) | menu **Histórico de alterações** (`/auditoria`) — admin ou presidente | tela e XLSX |
 
-- **Espelho**: identificação (OSC, CNPJ, lote, nº SEI, protocolo), admissibilidade, os **28 subcritérios** com nível,
-  decisão, voto divergente, justificativa e páginas citadas ("Não avaliado" quando falta), totais por PA, D1,
-  memória da D2, NF e status.
-- **Ata**: data, lote(s) em pauta, presentes com os papéis (presidente ou membro), propostas da pauta, decisões
-  **por maioria** registradas na sessão (com voto divergente), desempates, diligências das propostas da pauta e
-  cada reset; as assinaturas trazem nome e papel de cada presente. Quem gera ajusta o texto; a edição
-  não é gravada.
+- **Espelho**: identificação (OSC, CNPJ, lote, nº SEI, protocolo, situação e se a avaliação está concluída),
+  admissibilidade (admitida, motivo e páginas por PA com página de corte), os **28 subcritérios** com nível,
+  justificativa e páginas citadas ("Não avaliado" quando falta), totais por PA, D1, memória da D2, NF e status.
+- **Ata**: data, lote(s) em pauta, presentes com os papéis (presidente ou membro), propostas da pauta (com a
+  situação e "(concluída)") e desempates; as assinaturas trazem nome e papel de cada presente. Quem gera ajusta o
+  texto; a edição não é gravada.
 - **Rodapé de todos os documentos**: gerado em (data e hora de Brasília), por quem (e-mail), versão da matriz e
   **código de verificação** = SHA-256 da serialização canônica (chaves em ordem alfabética, datas em ISO) dos dados
   usados. Mesmos dados → mesmo código; na ata, o texto final faz parte dos dados.
-- **Marca d'água "MINUTA"**: em todo documento com proposta não homologada (o espelho da proposta, o quadro do lote
-  ou a ata da pauta).
-- **Auditoria**: filtros por proposta, usuário (e-mail ou uid), ação (criar, editar, excluir) e período (padrão:
-  últimos 30 dias; até 2.000 registros por consulta); "Ver antes/depois" mostra os campos alterados. A partir desta
-  etapa o registro de auditoria guarda também o **e-mail** de quem escreveu; registros anteriores mostram o uid.
+- **Marca d'água "MINUTA"**: em todo documento com proposta **não concluída** (o espelho da proposta, o quadro do
+  lote ou a ata da pauta); proposta concluída sai como final.
 
 ### Modo projeção — telão da sala (Etapa 5)
 
@@ -407,8 +383,8 @@ Os dados são lidos uma vez no momento de gerar, e o documento é montado por c�
   nível registrado em azul de ação com o rótulo "Nível registrado"), tipografia display para leitura a 6 m e
   troca de foco com fade curto (desligado em "reduzir movimento"). Tela cheia: **F11** no navegador.
 - Acompanha em tempo real (`onSnapshot`) o **foco da sessão** e mostra, conforme o tipo:
-  `admissibilidade` (checklist 28.1 e páginas por PA com excessos), `subcriterio` (escala com o nível
-  registrado destacado, decisão, justificativa, páginas), `d2` (pontos por critério e memória resumida) ou
+  `admissibilidade` (admitida, motivo e páginas por PA com excessos), `subcriterio` (escala com o nível
+  registrado destacado, justificativa, páginas), `d2` (pontos por critério e memória resumida) ou
   `resumo` (PA1…PA6, D1, D2, NF e status). Sem foco: tela de espera com o nome do chamamento.
 - Foco = `{ tipo: 'admissibilidade' | 'subcriterio' | 'd2' | 'resumo', propostaId, subcriterio? }`, alterado
   por admin ou presidente (`PATCH /api/sessao`, `acao: 'foco'`) e, ao salvar um nível, pela própria avaliação.
@@ -429,7 +405,7 @@ Qualquer usuário com acesso consegue abrir a projeção; ninguém vê controles
 npm run test:api     # sobe Auth + Firestore emulados, roda tests/api/** e derruba tudo
 ```
 Os testes criam usuários com cada combinação de acesso no emulador, chamam as funções como a Vercel faria
-(`Request` → `Response`) e conferem status, documento gravado e registro de auditoria.
+(`Request` → `Response`) e conferem status, documento gravado (com `atualizadoPor`) e a cascata das exclusões.
 Nenhum dado real é tocado: com `FIRESTORE_EMULATOR_HOST` e `FIREBASE_AUTH_EMULATOR_HOST` definidas, o
 Admin SDK usa os emuladores (definir só uma das duas é recusado, para não misturar com produção).
 
@@ -451,8 +427,9 @@ Vercel) ela é ignorada, e a `/api` se recusa a usar emuladores quando roda na V
 ### Backup (sem plano Blaze)
 `scripts/backup-firestore.ts` lê com o Admin SDK, documento a documento (o export gerenciado do Firestore exige o
 plano Blaze). O arquivo `backups/backup-<projeto>-<chamamento|todos>-<data e hora UTC>.json` traz:
-- a árvore completa de cada chamamento (propostas, avaliações, experiências, memória da D2, diligências,
-  sessões, desempates), as OSCs das propostas, a matriz e os registros de auditoria desses documentos;
+- a árvore completa de cada chamamento (propostas, avaliações, experiências, memória da D2, sessões, desempates e,
+  se houver, diligências antigas), as OSCs das propostas, a matriz e os registros antigos de auditoria desses
+  documentos (o app não grava mais auditoria detalhada);
 - Timestamps preservados (`{"__tipo": "timestamp", ...}`), contagem por coleção e **SHA-256** do conteúdo.
 
 **Pelo terminal** (exige a chave do Admin SDK do projeto em `FIREBASE_SERVICE_ACCOUNT`):
@@ -475,7 +452,7 @@ npm run restaurar -- --projeto dev --arquivo backup-....json.cifrado --confirmar
 npm run restaurar -- --projeto dev --arquivo ... --confirmar --substituir            # apaga o chamamento do dev antes
 ```
 O script recusa `--projeto prod`, confere o formato e o SHA-256 e não sobrescreve um chamamento existente sem
-`--substituir`. A restauração entra na auditoria do dev (`backup.restaurado`). Restaurar prod no dev copia dados
+`--substituir`. Restaurar prod no dev copia dados
 reais: apague-os ao terminar o teste.
 
 ### Ensaio (dados fictícios no dev)
@@ -498,7 +475,7 @@ recusa `--projeto prod`.
 ### Limpeza dos campos de correção monetária (Manutenção 1)
 
 O chamamento não tem mais índice de correção nem data-base. Chamamentos gravados antes guardam esses campos;
-eles não aparecem em nenhuma tela, mas podem ser apagados (cada chamamento alterado vai para a auditoria):
+eles não aparecem em nenhuma tela, mas podem ser apagados (os valores antigos são listados no terminal):
 
 ```bash
 FIREBASE_SERVICE_ACCOUNT='{...}' npm run remover-campos-correcao -- --projeto dev --simular   # só lista
@@ -530,17 +507,14 @@ Fonte de verdade: [`docs/DESIGN-SYSTEM-SEDS.md`](docs/DESIGN-SYSTEM-SEDS.md). Co
 | `/chamamentos/:ch/sessoes/nova` | FormPage | abertura da sessão numa página: data, lote(s) e presentes |
 | `/chamamentos/:ch/sessoes/:s` | DetailPage | sessão: foco da projeção, presentes (nome e papel), lotes e pauta, encerrar |
 | `/chamamentos/:ch/sessoes/:s/ata` | FormPage | minuta de ata editável e PDF |
-| `…/propostas/:p/admissibilidade` | FormPage | checklist 28.1, páginas por PA (alerta de excesso), 28.5, resultado |
+| `…/propostas/:p/admissibilidade` | FormPage | admitida (sim/não) e motivo; páginas por PA (alerta de excesso) |
 | `…/propostas/:p/d1` | DetailPage | navegação PA1…PA6 com progresso, subcritério em seções, rodapé fixo com D1 parcial e Salvar |
 | `…/propostas/:p/d2` | ListPage | experiências (tabela + painel lateral), linha do tempo A/B |
 | `…/propostas/:p/d2/memoria` | DetailPage | memória de cálculo da D2 em abas por critério |
-| `…/propostas/:p/diligencias` | ListPage | diligências da proposta |
-| `…/propostas/:p/diligencias/nova`, `…/diligencias/:d` | FormPage | abrir; responder e encerrar |
-| `/chamamentos/:ch/lotes/:lote/classificacao` | ListPage | ranking, empates, homologar e reabrir, quadro-resumo PDF/XLSX |
+| `/chamamentos/:ch/lotes/:lote/classificacao` | ListPage | ranking, empates, concluir e desfazer conclusão, quadro-resumo PDF/XLSX |
 | `/projecao/:ch/:s` | (layout próprio) | telão: alto contraste, sem menu nem ações |
 | `/oscs` | ListPage | OSCs (painel lateral para cadastrar e editar) |
 | `/usuarios` | ListPage | usuários e perfis (admin ou presidente) |
-| `/auditoria` | ListPage | histórico de alterações e exportação XLSX |
 | qualquer outro endereço (ex.: `/ui`) | DetailPage | página "não encontrado", com o endereço pedido e o link para o início |
 
 O catálogo de componentes (`/ui`) foi removido (Manutenção 2): a documentação de componentes fica fora do
@@ -557,15 +531,14 @@ FASE_ETAPA4=antes npm run test:e2e:etapa4   # só screenshots, para comparar ant
 FASE_AUDITORIA=depois npm run test:e2e:baseline   # medição depois + comparativo com o antes (docs/auditoria-design/depois/)
 npm run test:e2e:uso        # testes de uso por perfil (presidente, cadastro antigo, telão), com tempos
 npm run test:e2e:acessibilidade   # teclado, foco visível, zoom 200% e erros anunciados em todas as rotas
-npm run test:e2e:exclusao   # exclusão de cadastros: menu da linha, bloqueios, confirmação e axe (docs/auditoria-design/exclusao/)
-npm run test:e2e:reset      # reset da sessão: prévia, confirmação, sessão reiniciada e ata (docs/auditoria-design/reset-sessao/)
+npm run test:e2e:exclusao   # exclusão livre: lixeira, prévia, cascata (inclusive a sessão) e axe (docs/auditoria-design/exclusao/)
 ```
 
 Resultados e decisões: [`docs/auditoria-design/README.md`](docs/auditoria-design/README.md) (antes × depois),
 [`pendencias.md`](docs/auditoria-design/pendencias.md) (backlog por prioridade) e o roteiro de teste com usuários
 reais em [`docs/TESTE-USABILIDADE.md`](docs/TESTE-USABILIDADE.md) (planilha: `docs/teste-usabilidade-resultados.xlsx`).
 
-O fluxo completo (sessão → admissibilidade → D1 → D2 → classificação → homologação) grava de verdade pela
+O fluxo completo (sessão → admissibilidade → D1 → D2 → classificação → conclusão) grava de verdade pela
 `/api` nos emuladores: só nos testes de navegador, `vite.e2e.config.ts` monta as funções de `api/` no servidor
 do Vite (`tests/e2e/apiNoVite.ts`). Nada disso entra no build nem na Vercel.
 

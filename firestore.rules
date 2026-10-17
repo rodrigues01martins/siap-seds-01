@@ -50,18 +50,13 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Histórico de alterações: admin e presidente (os dois fazem tudo no sistema).
-    match /auditoria/{eventoId} {
-      allow read: if leitor();
-      allow write: if false;
-    }
-
     // Cadastro do usuário: o próprio (o app lê o seu acesso) e os leitores (tela Usuários).
     match /usuarios/{uid} {
       allow read: if logado() && (request.auth.uid == uid || leitor());
       allow write: if false;
     }
 
-    // Qualquer outro caminho: negado por padrão (nenhuma regra o libera).
+    // Qualquer outro caminho: negado por padrão (nenhuma regra o libera). Inclui auditoria/: sem auditoria
+    // detalhada desde a Simplificação 2/4, os registros antigos não são lidos pelo app.
   }
 }

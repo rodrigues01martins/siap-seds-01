@@ -4,7 +4,7 @@
 // docs/auditoria-design/depois/testes-de-uso.md.
 // - presidente (avaliação): abre a sessão (uma página), registra a admissibilidade, avalia os 28 subcritérios e
 //   cadastra 3 experiências;
-// - presidente (resultado): projeta, homologa, reabre com justificativa, gera a ata e o espelho;
+// - presidente (resultado): projeta, conclui a proposta, desfaz a conclusão (sem justificativa), gera a ata e o espelho;
 // - cadastro antigo: vê "Seu acesso precisa ser atualizado pelo administrador"; o admin dá o perfil e libera na hora;
 // - telão: a projeção acompanha o foco sem recarregar a página.
 // Uso: npm run test:e2e:uso
@@ -50,8 +50,7 @@ function cronometro(perfil: string, tarefa: string) {
 async function avaliarSubcriterio(pagina: Page, faltam: number) {
   const resumo = pagina.getByRole('region', { name: 'Resumo da D1' })
   await pagina.getByRole('radio', { name: 'Nível 3', exact: true }).check()
-  await pagina.getByRole('radio', { name: 'Unanimidade' }).check()
-  await pagina.getByRole('textbox', { name: /^Justificativa/ }).fill('Registro do teste de uso (E2E), nível 3 por unanimidade.')
+  await pagina.getByRole('textbox', { name: /^Justificativa/ }).fill('Registro do teste de uso (E2E), nível 3 decidido pela Comissão.')
   await pagina.getByRole('textbox', { name: 'Páginas citadas' }).fill('1')
   await resumo.getByRole('button', { name: /^Salvar avaliação/ }).click()
   await expect(resumo).toContainText(`Faltam ${faltam - 1} de`)
@@ -73,6 +72,8 @@ async function novaExperiencia(pagina: Page, n: number) {
   await painel.getByRole('checkbox', { name: /^Documento 1 aceito/ }).check()
   await painel.getByRole('button', { name: 'Salvar experiência' }).click()
   await expect(painel).toBeHidden()
+  // O aviso "Experiência cadastrada" fica sobre o rodapé do painel lateral: fecha antes da próxima.
+  for (const fechar of await pagina.getByRole('button', { name: 'Fechar notificação' }).all()) await fechar.click({ timeout: 2_000 }).catch(() => {})
 }
 
 test.beforeAll(() => mkdirSync(PASTA, { recursive: true }))
@@ -95,16 +96,13 @@ test('presidente: abre a sessão, registra a admissibilidade, avalia os 28 subcr
 
   await t.etapa('registrar a admissibilidade', async () => {
     await pagina.goto(`${proposta('avaliacao')}/admissibilidade`)
-    for (const r of MATRIZ_2026.admissibilidade.requisitosEssenciais) {
-      if (r.codigo !== MATRIZ_2026.admissibilidade.requisitoPlanos) await pagina.getByRole('checkbox', { name: `${r.codigo} — ${r.descricao}` }).check()
-    }
+    await pagina.getByRole('radio', { name: 'Sim, admitida' }).check()
     let inicio = 3
     for (const pa of MATRIZ_2026.dimensao1.planos) {
       await pagina.getByLabel(`Página inicial do ${pa.codigo}`).fill(String(inicio))
       await pagina.getByLabel(`Página final do ${pa.codigo}`).fill(String(inicio + pa.limitePaginas - 1))
       inicio += pa.limitePaginas
     }
-    await pagina.getByRole('radio', { name: 'Admitida', exact: true }).check()
     await pagina.getByRole('button', { name: 'Registrar admissibilidade' }).click()
     await expect(pagina.getByRole('status').filter({ hasText: 'Situação registrada: Admitida' })).toBeVisible()
   })
@@ -126,10 +124,10 @@ test('presidente: abre a sessão, registra a admissibilidade, avalia os 28 subcr
   t.concluir()
 })
 
-test('presidente: projeta, homologa, reabre com justificativa, gera a ata e o espelho', async ({ browser, baseURL }) => {
+test('presidente: projeta, conclui, desfaz a conclusão, gera a ata e o espelho', async ({ browser, baseURL }) => {
   test.setTimeout(5 * 60_000)
   const pagina = await comoPerfil(browser, 'presidente', baseURL)
-  const t = cronometro('presidente', 'projetar → homologar → reabrir → ata → espelho')
+  const t = cronometro('presidente', 'projetar → concluir → desfazer conclusão → ata → espelho')
 
   await t.etapa('projetar o subcritério 1.1 no telão', async () => {
     await pagina.goto(`${proposta('presidente')}/d1`)
@@ -138,26 +136,20 @@ test('presidente: projeta, homologa, reabre com justificativa, gera a ata e o es
   })
 
   const linha = pagina.getByRole('table', { name: 'Classificação do lote L1' }).getByRole('row').filter({ hasText: OSC })
-  await t.etapa('homologar (confirmação com NF e status)', async () => {
+  await t.etapa('concluir (confirmação com NF e status)', async () => {
     await pagina.goto(`${ch('presidente')}/lotes/L1/classificacao`)
-    await linha.getByRole('button', { name: 'Homologar' }).click()
-    const dialogo = pagina.getByRole('alertdialog', { name: /^Homologar/ })
+    await linha.getByRole('button', { name: 'Concluir' }).click()
+    const dialogo = pagina.getByRole('alertdialog', { name: /^Concluir/ })
     await expect(dialogo).toContainText('NF ')
-    await dialogo.getByRole('checkbox', { name: /Conferi a NF e o status/ }).check()
-    await dialogo.getByRole('button', { name: 'Confirmar homologação' }).click()
-    await expect(linha).toContainText('Homologada')
+    await dialogo.getByRole('button', { name: 'Concluir' }).click()
+    await expect(dialogo).toBeHidden()
+    await expect(linha).toContainText('Concluída')
   })
 
-  await t.etapa('reabrir com justificativa obrigatória', async () => {
-    await linha.getByRole('button', { name: 'Reabrir' }).click()
-    const dialogo = pagina.getByRole('alertdialog', { name: /^Reabrir/ })
-    await dialogo.getByRole('button', { name: 'Confirmar reabertura' }).click()
-    await expect(dialogo).toContainText('Informe o motivo da reabertura')
-    await dialogo.getByRole('textbox', { name: /^Motivo/ }).fill('Erro material no registro do subcritério 3.1 (teste de uso).')
-    await dialogo.getByRole('button', { name: 'Confirmar reabertura' }).click()
-    await expect(dialogo).toBeHidden()
-    await expect(linha).not.toContainText('Homologada')
-    await expect(linha.getByRole('button', { name: 'Homologar' })).toBeVisible()
+  await t.etapa('desfazer a conclusão (sem justificativa)', async () => {
+    await linha.getByRole('button', { name: 'Desfazer conclusão' }).click()
+    await expect(linha).not.toContainText('Concluída')
+    await expect(linha.getByRole('button', { name: 'Concluir' })).toBeVisible()
   })
 
   await t.etapa('gerar a minuta de ata (PDF)', async () => {

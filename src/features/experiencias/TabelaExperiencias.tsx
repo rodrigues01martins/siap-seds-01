@@ -1,12 +1,12 @@
-// Tabela das experiências da D2 (DataTable): por linha, documentos (painel lateral), editar, "desconsiderar"
-// por critério com justificativa obrigatória (Anexo IV, 3.8.5, diálogo) e excluir (confirmação destrutiva).
+// Tabela das experiências da D2 (DataTable): por linha, documentos (painel lateral, com a lixeira de cada
+// documento), editar, "desconsiderar" por critério com justificativa obrigatória (Anexo IV, 3.8.5, diálogo) e a
+// lixeira da experiência. A exclusão (ConfirmDialog com a prévia) fica com quem usa a tabela (acaoExcluir*).
 
-import { Ban, FileText, SquarePen, Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { Ban, FileText, SquarePen } from 'lucide-react'
+import { useState, type ReactNode } from 'react'
 import { Alert } from '../../components/ui/Alert'
 import { Button } from '../../components/ui/Button'
 import { Checkbox } from '../../components/ui/Checkbox'
-import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { DataTable } from '../../components/ui/DataTable'
 import { Dialog } from '../../components/ui/Dialog'
 import { Drawer } from '../../components/ui/Drawer'
@@ -41,8 +41,10 @@ interface Props {
   experiencias: ExperienciaGravada[]
   somenteLeitura: boolean
   onEditar: (id: string) => void
-  /** Chamado depois da confirmação. */
-  onExcluir: (id: string) => Promise<void> | void
+  /** Lixeira da experiência (exclusão livre: aparece mesmo somente leitura). */
+  acaoExcluir?: (experiencia: ExperienciaGravada) => ReactNode
+  /** Lixeira de um documento da experiência (índice na lista). */
+  acaoExcluirDocumento?: (experiencia: ExperienciaGravada, indice: number, documento: DocumentoExperiencia) => ReactNode
   onDesconsiderar: (id: string, desconsideracoes: Desconsideracao[]) => Promise<void>
 }
 
@@ -131,7 +133,15 @@ function DialogoDesconsiderar({
   )
 }
 
-function PainelDocumentos({ experiencia, onFechar }: { experiencia: ExperienciaGravada; onFechar: () => void }) {
+function PainelDocumentos({
+  experiencia,
+  acaoExcluir,
+  onFechar,
+}: {
+  experiencia: ExperienciaGravada
+  acaoExcluir?: Props['acaoExcluirDocumento']
+  onFechar: () => void
+}) {
   const documentos = experiencia.documentos ?? []
   return (
     <Drawer aberto titulo={`Documentos de ${experiencia.descricao}`} descricao="Documentos comprobatórios registrados na experiência." onFechar={onFechar}>
@@ -147,6 +157,11 @@ function PainelDocumentos({ experiencia, onFechar }: { experiencia: ExperienciaG
               <th scope="col" className="h-(--sds-table-header-height) px-3 text-label-md">
                 Situação
               </th>
+              {acaoExcluir && (
+                <th scope="col" className="h-(--sds-table-header-height) px-3 text-label-md">
+                  <span className="sr-only">Ações</span>
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -160,6 +175,7 @@ function PainelDocumentos({ experiencia, onFechar }: { experiencia: ExperienciaG
                   <SimNao rotulo="Comprova execução satisfatória" valor={d.comprovaExecucaoSatisfatoria} />
                   <SimNao rotulo="Aceito" valor={d.aceito} />
                 </td>
+                {acaoExcluir && <td className="px-3 py-3 text-right">{acaoExcluir(experiencia, i, d)}</td>}
               </tr>
             ))}
           </tbody>
@@ -169,11 +185,9 @@ function PainelDocumentos({ experiencia, onFechar }: { experiencia: ExperienciaG
   )
 }
 
-export function TabelaExperiencias({ experiencias, somenteLeitura, onEditar, onExcluir, onDesconsiderar }: Props) {
+export function TabelaExperiencias({ experiencias, somenteLeitura, onEditar, acaoExcluir, acaoExcluirDocumento, onDesconsiderar }: Props) {
   const [documentos, setDocumentos] = useState<string | null>(null)
   const [desconsiderando, setDesconsiderando] = useState<string | null>(null)
-  const [excluindo, setExcluindo] = useState<string | null>(null)
-  const [confirmando, setConfirmando] = useState(false)
   const porId = (id: string | null) => experiencias.find((e) => e.id === id)
 
   return (
@@ -259,16 +273,14 @@ export function TabelaExperiencias({ experiencias, somenteLeitura, onEditar, onE
                 <Button variante="tertiary" tamanho="sm" icone={Ban} aria-label={`Desconsiderar ${e.descricao}`} onClick={() => setDesconsiderando(e.id)}>
                   Desconsiderar
                 </Button>
-                <Button variante="tertiary" tamanho="sm" icone={Trash2} aria-label={`Excluir ${e.descricao}`} onClick={() => setExcluindo(e.id)}>
-                  Excluir
-                </Button>
               </>
             )}
+            {acaoExcluir?.(e)}
           </span>
         )}
       />
 
-      {porId(documentos) && <PainelDocumentos experiencia={porId(documentos)!} onFechar={() => setDocumentos(null)} />}
+      {porId(documentos) && <PainelDocumentos experiencia={porId(documentos)!} acaoExcluir={acaoExcluirDocumento} onFechar={() => setDocumentos(null)} />}
       {porId(desconsiderando) && (
         <DialogoDesconsiderar
           experiencia={porId(desconsiderando)!}
@@ -276,23 +288,6 @@ export function TabelaExperiencias({ experiencias, somenteLeitura, onEditar, onE
           onFechar={() => setDesconsiderando(null)}
         />
       )}
-      <ConfirmDialog
-        aberto={excluindo !== null}
-        titulo="Excluir a experiência?"
-        mensagem={`“${porId(excluindo)?.descricao ?? ''}” sai da proposta e a D2 é recalculada.`}
-        rotuloConfirmar="Excluir"
-        confirmando={confirmando}
-        onCancelar={() => setExcluindo(null)}
-        onConfirmar={async () => {
-          setConfirmando(true)
-          try {
-            await onExcluir(excluindo!)
-          } finally {
-            setConfirmando(false)
-            setExcluindo(null)
-          }
-        }}
-      />
     </>
   )
 }

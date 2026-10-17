@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { calcularAdmissibilidade } from '../domain/admissibilidade'
 import { formatarNumero } from '../domain/formatacao'
 import { MATRIZ_2026 } from '../domain/matriz'
 import { consolidarProposta } from '../domain/proposta'
+import { apurarPlanos } from '../esquemas/admissibilidade'
 import { renderizarPdf } from '../testes/renderizarPdf'
 import { marcaDagua, textoDoPdf, textoDoRodape } from '../testes/textoPdf'
 import type { Rodape } from './documento'
@@ -39,19 +39,18 @@ function dados(ajustes: Partial<DadosEspelho['proposta']> = {}): DadosEspelho {
     chamamento: { numero: '001/2026', titulo: 'Chamamento Público SEDS/GO 2026' },
     lote: { codigo: 'L1', descricao: 'CASE Goiânia' },
     osc: { cnpj: '11222333000181', razaoSocial: 'Instituto Alfa' },
-    proposta: { id: 'p1', numeroSEI: '95570001', protocolo: 'PROT-7', bloqueada: false, status: 'pendente', totais, ...ajustes },
-    admissibilidade: calcularAdmissibilidade({
-      requisitos: Object.fromEntries(MATRIZ_2026.admissibilidade.requisitosEssenciais.map((r) => [r.codigo, true])),
-      irregularidadesFormais: [],
-      planos: PLANOS.map((p, i) => ({ codigo: p.codigo, ausente: false, paginaInicial: i * 20 + 1, paginaFinal: i * 20 + 10 })),
-      resultado: 'admitida',
-    }),
+    proposta: { id: 'p1', numeroSEI: '95570001', protocolo: 'PROT-7', concluida: false, status: 'pendente', totais, ...ajustes },
+    admissibilidade: {
+      admitida: true,
+      situacao: 'admitida',
+      planos: apurarPlanos(PLANOS.map((p, i) => ({ codigo: p.codigo, paginaInicial: i * 20 + 1, paginaFinal: i * 20 + 13 }))),
+    },
     avaliacoes: Object.fromEntries(
       avaliados.map((c) => [
         c,
         c === '1.1'
-          ? { nivel: 3, decisao: 'maioria' as const, votoDivergente: 'Membro B votou pelo nível 2.', justificativa: 'Metodologia coerente com o PIA.', paginas: [2, 4] }
-          : { nivel: 3, decisao: 'unanimidade' as const, justificativa: `Justificativa do subcritério ${c}.`, paginas: [1] },
+          ? { nivel: 3, justificativa: 'Metodologia coerente com o PIA.', paginas: [2, 4] }
+          : { nivel: 3, justificativa: `Justificativa do subcritério ${c}.`, paginas: [1] },
       ]),
     ),
     d2: resultadoD2,
@@ -65,25 +64,26 @@ describe('espelho de avaliação — conteúdo', () => {
     expect(linhas).toHaveLength(28)
     expect(linhas.map((l) => l.codigo)).toEqual(CODIGOS)
     expect(linhas.find((l) => l.codigo === PENDENTE)).toMatchObject({ nivel: null, plano: 'PA6' })
-    expect(linhas.find((l) => l.codigo === '1.1')).toMatchObject({
+    expect(linhas.find((l) => l.codigo === '1.1')).toEqual({
       plano: 'PA1',
+      codigo: '1.1',
+      titulo: SUBCRITERIOS[0]!.titulo,
       nivel: 3,
-      decisao: 'maioria',
-      votoDivergente: 'Membro B votou pelo nível 2.',
       justificativa: 'Metodologia coerente com o PIA.',
       paginas: [2, 4],
     })
   })
 
-  it('o PDF traz todos os 28 subcritérios com nível, decisão, voto divergente, justificativa e páginas', () => {
+  it('o PDF traz todos os 28 subcritérios com nível, justificativa e páginas (sem decisão nem voto divergente)', () => {
     const texto = textoDoPdf(montarEspelho(dados(), RODAPE))
     for (const s of SUBCRITERIOS) {
       expect(texto).toContain(`${s.codigo} ${s.titulo}`)
       if (s.codigo !== PENDENTE && s.codigo !== '1.1') expect(texto).toContain(`Justificativa do subcritério ${s.codigo}.`)
     }
     expect(texto).toContain('Metodologia coerente com o PIA.')
-    expect(texto).toContain('Maioria')
-    expect(texto).toContain('Voto divergente: Membro B votou pelo nível 2.')
+    expect(texto).not.toContain('Maioria')
+    expect(texto).not.toContain('Unanimidade')
+    expect(texto).not.toContain('Voto divergente')
     expect(texto).toContain('Páginas citadas: 2, 4')
     expect(texto).toContain('Não avaliado')
   })
@@ -98,10 +98,23 @@ describe('espelho de avaliação — conteúdo', () => {
     expect(texto).toContain('Chamamento Público nº 001/2026')
   })
 
-  it('admissibilidade, totais por PA, D1, memória da D2 com o nome da experiência, NF e status', () => {
+  it('admissibilidade simplificada: admitida, páginas por PA com a página de corte; sem checklist 28.1', () => {
+    const texto = textoDoPdf(montarEspelho(dados(), RODAPE))
+    expect(texto).toContain('Admitida: Sim')
+    // PA1: páginas 1 a 13, limite 12 → corte na 12, excede 1.
+    expect(texto).toContain('1 a 13')
+    expect(texto).toContain('1 pág.')
+    expect(texto).not.toContain('Requisitos essenciais')
+    expect(texto).not.toContain('28.5')
+    const naoAdmitida = { ...dados(), admissibilidade: { admitida: false, situacao: 'nao_admitida' as const, motivo: 'Caderno entregue fora do prazo.', planos: [] } }
+    const textoNao = textoDoPdf(montarEspelho(naoAdmitida, RODAPE))
+    expect(textoNao).toContain('Admitida: Não')
+    expect(textoNao).toContain('Motivo: Caderno entregue fora do prazo.')
+  })
+
+  it('totais por PA, D1, memória da D2 com o nome da experiência, NF e status', () => {
     const d = dados()
     const texto = textoDoPdf(montarEspelho(d, RODAPE))
-    expect(texto).toContain('Admitida')
     for (const pa of PLANOS) expect(texto).toContain(pa.codigo)
     expect(texto).toContain(MATRIZ_2026.dimensao2.criterios['C2.1'].titulo)
     expect(texto).toContain('Categoria A: comprovada por “Contrato 12/2019 — CASE Anápolis” → 4 pt')
@@ -123,12 +136,14 @@ describe('espelho de avaliação — conteúdo', () => {
 })
 
 describe('espelho — marca "MINUTA"', () => {
-  it('proposta não homologada leva a marca d’água MINUTA', () => {
-    expect(marcaDagua(montarEspelho(dados({ bloqueada: false }), RODAPE))).toBe('MINUTA')
+  it('proposta não concluída leva a marca d’água MINUTA', () => {
+    expect(marcaDagua(montarEspelho(dados({ concluida: false }), RODAPE))).toBe('MINUTA')
   })
 
-  it('proposta homologada sai sem a marca', () => {
-    expect(marcaDagua(montarEspelho(dados({ bloqueada: true, status: 'homologada' }), RODAPE))).toBeNull()
+  it('proposta concluída sai como final, sem a marca', () => {
+    const texto = textoDoPdf(montarEspelho(dados({ concluida: true }), RODAPE))
+    expect(marcaDagua(montarEspelho(dados({ concluida: true }), RODAPE))).toBeNull()
+    expect(texto).toContain('Avaliação concluída')
   })
 })
 

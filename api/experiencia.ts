@@ -1,27 +1,26 @@
 // /api/experiencia (C3): experiências da OSC (D2) e seus documentos comprobatórios.
-// POST cria, PATCH edita, DELETE exclui. Perfis: admin e presidente.
+// POST cria, PATCH edita. Perfis: admin e presidente.
 // Documento em .../propostas/{p}/experiencias/{id}. Regras (categorias A–D, A+B, D com MROSC, datas,
 // porte, desconsideração por critério) vêm de src/domain; esquema em src/esquemas/experiencia.ts.
 // Internação vem da modalidade e execução satisfatória, dos documentos aceitos (Etapa 4b).
-// A D2 e os totais são recalculados na mesma transação (C4).
-// Só em sessão aberta com a proposta na pauta; o sessaoId vai para o documento e para a auditoria.
+// A D2 e os totais são recalculados na mesma transação (C4) e a conclusão da proposta é desfeita.
+// Criar e editar só em sessão aberta com a proposta na pauta; o sessaoId vai para o documento.
+// DELETE { chamamentoId, propostaId, id } apaga a experiência; com `documento` (índice), só aquele documento.
+// Exclusão livre (sem exigir sessão), com recálculo; GET ?simular=true: prévia. Ver _lib/cascata.ts.
 
 import { problemasDaExperiencia } from '../src/domain/d2.js'
 import type { TotaisProposta } from '../src/domain/proposta.js'
-import {
-  esquemaCriarExperiencia,
-  esquemaEditarExperiencia,
-  esquemaExcluirExperiencia,
-  paraExperiencia,
-} from '../src/esquemas/experiencia.js'
+import { esquemaExcluirExperiencia, esquemaPreviaExperiencia } from '../src/esquemas/exclusao.js'
+import { esquemaCriarExperiencia, esquemaEditarExperiencia, paraExperiencia } from '../src/esquemas/experiencia.js'
 import { obterAdmin } from './_lib/admin.js'
+import { alvoDocumento, alvoExperiencia, excluir, previaExclusao, type AlvoExclusao } from './_lib/cascata.js'
 import { ErroApi, MENSAGENS } from './_lib/erros.js'
 import { gravar, type Autor, type Operacao } from './_lib/gravar.js'
 import { criarRota, json } from './_lib/http.js'
 import { autenticar } from './_lib/porteiro.js'
 import { exigirPropostaEditavel, recalcular, type Mudanca } from './_lib/recalcular.js'
 import { exigirSessaoAberta } from './_lib/sessaoAberta.js'
-import { exigirSemProblemas, lerCorpo } from './_lib/validacao.js'
+import { exigirSemProblemas, lerConsulta, lerCorpo } from './_lib/validacao.js'
 
 /**
  * Executa a operação sobre a experiência e o recálculo na mesma transação.
@@ -49,8 +48,13 @@ async function alterar(
     const recalculo = await recalcular(transacao, chamamentoId, propostaId, mudanca)
     totais = recalculo.totais
     return [operacao, ...recalculo.operacoes]
-  }, { sessaoId })
+  })
   return totais!
+}
+
+function alvo(dados: { chamamentoId: string; propostaId: string; id: string; documento?: number }): AlvoExclusao {
+  const { chamamentoId, propostaId, id, documento } = dados
+  return documento === undefined ? alvoExperiencia(chamamentoId, propostaId, id) : alvoDocumento(chamamentoId, propostaId, id, documento)
 }
 
 function exigirExistente(atual: Record<string, unknown> | null): Record<string, unknown> {
@@ -59,6 +63,11 @@ function exigirExistente(atual: Record<string, unknown> | null): Record<string, 
 }
 
 export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
+  GET: async (requisicao) => {
+    await autenticar(requisicao)
+    return json(200, await previaExclusao(alvo(lerConsulta(requisicao, esquemaPreviaExperiencia))))
+  },
+
   POST: async (requisicao) => {
     const autor = await autenticar(requisicao)
     const { chamamentoId, propostaId, sessaoId, ...campos } = await lerCorpo(requisicao, esquemaCriarExperiencia)
@@ -87,12 +96,6 @@ export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
 
   DELETE: async (requisicao) => {
     const autor = await autenticar(requisicao)
-    const { chamamentoId, propostaId, sessaoId, id } = await lerCorpo(requisicao, esquemaExcluirExperiencia)
-    const caminho = `chamamentos/${chamamentoId}/propostas/${propostaId}/experiencias/${id}`
-    const totais = await alterar(autor, chamamentoId, propostaId, sessaoId, id, (atual) => {
-      exigirExistente(atual)
-      return { operacao: { caminho, acao: 'excluir' }, final: null }
-    })
-    return json(200, { id, totais })
+    return json(200, await excluir(autor, alvo(await lerCorpo(requisicao, esquemaExcluirExperiencia))))
   },
 })

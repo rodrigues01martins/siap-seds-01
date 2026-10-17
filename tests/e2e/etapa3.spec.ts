@@ -26,7 +26,6 @@ const TELAS: { slug: string; caminho: string; perfis: string[] }[] = [
   { slug: 'proposta-editar', caminho: `${CH}/propostas/${PROPOSTA}/editar`, perfis: ['administrador'] },
   { slug: 'oscs', caminho: '/oscs', perfis: ['administrador'] },
   { slug: 'usuarios', caminho: '/usuarios', perfis: ['administrador'] },
-  { slug: 'auditoria', caminho: '/auditoria', perfis: ['administrador'] },
   { slug: 'sem-permissao', caminho: '/usuarios', perfis: ['presidente'] },
 ]
 

@@ -96,7 +96,7 @@ describe('AppShell', () => {
     const nav = screen.getAllByRole('navigation', { name: 'Menu principal' })[0]!
     expect(within(nav).getByRole('list', { name: 'Cadastros' })).toBeInTheDocument()
     expect(within(nav).queryByRole('link', { name: 'Usuários' })).toBeNull()
-    expect(within(nav).getByRole('link', { name: 'Histórico de alterações' })).toBeInTheDocument()
+    expect(within(nav).queryByRole('link', { name: 'Histórico de alterações' })).toBeNull()
     expect(screen.getByRole('banner')).toHaveTextContent('Presidente')
   })
 

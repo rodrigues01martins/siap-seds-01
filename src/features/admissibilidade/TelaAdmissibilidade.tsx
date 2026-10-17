@@ -1,5 +1,5 @@
-// /chamamentos/:ch/propostas/:p/admissibilidade (FormPage) — registro da admissibilidade (quem tem a
-// permissão); os demais perfis consultam. Grava por PUT /api/admissibilidade, na sessão aberta (sessaoId).
+// /chamamentos/:ch/propostas/:p/admissibilidade (FormPage) — registro da admissibilidade simplificada (admitida,
+// motivo e páginas por PA). Grava por PUT /api/admissibilidade, na sessão aberta (sessaoId); sem sessão, consulta.
 
 import { useParams } from 'react-router'
 import { FormPage } from '../../components/templates/paginas'
@@ -7,15 +7,13 @@ import { Alert } from '../../components/ui/Alert'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { ErrorState } from '../../components/ui/ErrorState'
 import { Skeleton } from '../../components/ui/Skeleton'
-import type { Admissibilidade } from '../../domain/admissibilidade'
 import { chamarApi } from '../../lib/api'
-import { dataBr } from '../../lib/datas'
+import { dataHoraBr } from '../../lib/datas'
+import type { AdmissibilidadeGravada } from '../../lib/tipos'
 import { cabecalhoDaProposta, ContextoProposta, motivoSemSessao, useDadosProposta } from '../avaliacao/CabecalhoProposta'
 import { FormAdmissibilidade } from './FormAdmissibilidade'
 
 const ROTULO_SITUACAO = { admitida: 'Admitida', nao_admitida: 'Não admitida', desclassificada: 'Desclassificada (28.2)' }
-
-type Gravada = Admissibilidade & { registradaPor?: { email: string | null }; registradaEm?: { toDate(): Date } }
 
 export function TelaAdmissibilidade() {
   const { ch = '', p = '' } = useParams()
@@ -25,13 +23,12 @@ export function TelaAdmissibilidade() {
   if (!leitura.dados) return <EmptyState titulo="Proposta não encontrada" descricao="Confira o endereço ou volte ao painel do chamamento." />
 
   const { proposta, sessaoAberta } = leitura.dados
-  const gravada = (proposta as { admissibilidade?: Gravada }).admissibilidade ?? null
-  const motivo = proposta.bloqueada
-    ? 'Proposta homologada.'
-    : motivoSemSessao(leitura.dados, 'a admissibilidade')
-  const autoria = gravada?.registradaPor
-    ? ` Registrada por ${gravada.registradaPor.email ?? 'usuário'}${gravada.registradaEm ? ` em ${dataBr(gravada.registradaEm.toDate().toISOString().slice(0, 10))}` : ''}.`
-    : ''
+  const gravada: AdmissibilidadeGravada | null = proposta.admissibilidade ?? null
+  const motivo = motivoSemSessao(leitura.dados, 'a admissibilidade')
+  const por = proposta.atualizadoPor
+  const em = (proposta as { atualizadoEm?: { toDate(): Date } }).atualizadoEm
+  const autoria = por ? `Última alteração da proposta por ${por.nome ?? por.email ?? 'usuário'}${em ? ` em ${dataHoraBr(em.toDate())}` : ''}.` : ''
+  const motivos = [...((gravada as { motivos?: string[] } | null)?.motivos ?? []), ...(gravada?.motivo ? [gravada.motivo] : [])]
 
   return (
     <FormPage cabecalho={cabecalhoDaProposta(leitura.dados, ch, 'admissibilidade')}>
@@ -39,12 +36,12 @@ export function TelaAdmissibilidade() {
       {gravada && (
         <Alert
           tom={gravada.situacao === 'admitida' ? 'success' : 'error'}
-          titulo={`Situação registrada: ${ROTULO_SITUACAO[gravada.situacao]}`}
+          titulo={`Situação registrada: ${ROTULO_SITUACAO[gravada.situacao ?? 'admitida']}`}
         >
-          {autoria && <p>{autoria.trim()}</p>}
-          {gravada.motivos.length > 0 && (
+          {autoria && <p>{autoria}</p>}
+          {motivos.length > 0 && (
             <ul className="mt-1 list-inside list-disc">
-              {gravada.motivos.map((m) => (
+              {motivos.map((m) => (
                 <li key={m}>{m}</li>
               ))}
             </ul>
@@ -52,7 +49,7 @@ export function TelaAdmissibilidade() {
         </Alert>
       )}
       <FormAdmissibilidade
-        key={gravada ? JSON.stringify(gravada.planos) + gravada.resultado : 'nova'}
+        key={gravada ? JSON.stringify(gravada.planos) + String(gravada.admitida) + (gravada.motivo ?? '') : 'nova'}
         valor={gravada}
         somenteLeitura={motivo !== null}
         motivoSomenteLeitura={motivo ?? undefined}

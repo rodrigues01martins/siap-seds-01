@@ -1,6 +1,7 @@
-// Contexto das telas de avaliação (admissibilidade, D1, D2, memória e diligências): PageHeader com a trilha,
-// a OSC no título e o espelho (PDF) como ação; abaixo, faixa com nº SEI do Caderno (copiável), status e
-// sessão aberta, e as abas da proposta (links com aria-current).
+// Contexto das telas de avaliação (admissibilidade, D1, D2 e memória): PageHeader com a trilha, a OSC no título
+// e o espelho (PDF) como ação; abaixo, faixa com nº SEI do Caderno (copiável), status, conclusão e sessão
+// aberta, e as abas da proposta (links com aria-current). Proposta concluída continua editável: alterar a
+// avaliação desfaz a conclusão (aviso na faixa).
 // O Caderno não é carregado no app: a Comissão o consulta no SEI pelo nº (decisão no CLAUDE.md).
 
 import { collection, query, where } from 'firebase/firestore'
@@ -13,7 +14,7 @@ import { cx } from '../../components/ui/cx'
 import type { PropsPageHeader } from '../../components/ui/PageHeader'
 import { Badge, StatusBadge } from '../../components/ui/StatusBadge'
 import { formatarCnpj } from '../../domain/cnpj'
-import { statusDaProposta } from '../../domain/statusProposta'
+import { situacaoDaProposta } from '../../domain/situacaoProposta'
 import { dataBr } from '../../lib/datas'
 import { useConsulta, useDocumento, type ComId, type Leitura } from '../../lib/firestore'
 import type { Chamamento, Osc, Proposta, Sessao } from '../../lib/tipos'
@@ -53,14 +54,13 @@ export function motivoSemSessao(dados: DadosProposta, oQue: string): string | nu
   return null
 }
 
-export type AbaProposta = 'admissibilidade' | 'd1' | 'd2' | 'memoria' | 'diligencias'
+export type AbaProposta = 'admissibilidade' | 'd1' | 'd2' | 'memoria'
 
 const ABAS: { id: AbaProposta; rotulo: string; caminho: string }[] = [
   { id: 'admissibilidade', rotulo: 'Admissibilidade', caminho: 'admissibilidade' },
   { id: 'd1', rotulo: 'Dimensão 1', caminho: 'd1' },
   { id: 'd2', rotulo: 'Dimensão 2', caminho: 'd2' },
   { id: 'memoria', rotulo: 'Memória da D2', caminho: 'd2/memoria' },
-  { id: 'diligencias', rotulo: 'Diligências', caminho: 'diligencias' },
 ]
 
 /** Cabeçalho da página (PageHeader) de uma tela de avaliação da proposta. */
@@ -121,8 +121,9 @@ export function ContextoProposta({ dados, ch, aba }: { dados: DadosProposta; ch:
         </div>
         <div className="flex items-center gap-2">
           <dt className="text-label-md text-text-secondary">Status</dt>
-          <dd>
-            <StatusBadge status={statusDaProposta(proposta)} />
+          <dd className="flex flex-wrap gap-2">
+            <StatusBadge status={situacaoDaProposta(proposta)} />
+            {proposta.concluida && <StatusBadge status="concluida" />}
           </dd>
         </div>
         <div className="flex items-center gap-2">
@@ -132,6 +133,11 @@ export function ContextoProposta({ dados, ch, aba }: { dados: DadosProposta; ch:
           </dd>
         </div>
       </dl>
+      {proposta.concluida && (
+        <Alert tom="info" titulo="Proposta concluída">
+          Os relatórios desta proposta saem como finais. Alterar a avaliação desfaz a conclusão (volta a sair como MINUTA).
+        </Alert>
+      )}
       <nav aria-label="Abas da proposta" className="overflow-x-auto border-b border-border-default">
         <ul className="flex gap-1">
           {ABAS.map((a) => {

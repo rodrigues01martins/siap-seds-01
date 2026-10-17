@@ -4,7 +4,6 @@ import { AppShell } from './components/templates/AppShell'
 import { ToastProvider } from './components/ui/Toast'
 import type { Exigencia } from './domain/permissoes'
 import { TelaAdmissibilidade } from './features/admissibilidade/TelaAdmissibilidade'
-import { TelaAuditoria } from './features/auditoria/TelaAuditoria'
 import { Login } from './features/auth/Login'
 import { TelaD1 } from './features/avaliacao/TelaD1'
 import { RotaProtegida } from './features/auth/RotaProtegida'
@@ -17,7 +16,6 @@ import { TelaD2 } from './features/experiencias/TelaD2'
 import { TelaMemoriaD2 } from './features/experiencias/TelaMemoriaD2'
 import { TelaOscs } from './features/oscs/TelaOscs'
 import { NaoEncontrado } from './features/erros/NaoEncontrado'
-import { TelaDiligencia, TelaDiligencias, TelaNovaDiligencia } from './features/diligencias/TelaDiligencias'
 import { TelaProjecao } from './features/projecao/TelaProjecao'
 import { TelaAta } from './features/relatorios/TelaAta'
 import { TelaClassificacao } from './features/resultado/TelaClassificacao'
@@ -58,13 +56,9 @@ export default function App() {
             <Route path="chamamentos/:ch/propostas/:p/d1" element={so(null, <TelaD1 />)} />
             <Route path="chamamentos/:ch/propostas/:p/d2" element={so(null, <TelaD2 />)} />
             <Route path="chamamentos/:ch/propostas/:p/d2/memoria" element={so(null, <TelaMemoriaD2 />)} />
-            <Route path="chamamentos/:ch/propostas/:p/diligencias" element={so(null, <TelaDiligencias />)} />
-            <Route path="chamamentos/:ch/propostas/:p/diligencias/nova" element={so(null, <TelaNovaDiligencia />)} />
-            <Route path="chamamentos/:ch/propostas/:p/diligencias/:d" element={so(null, <TelaDiligencia />)} />
             <Route path="chamamentos/:ch/lotes/:lote/classificacao" element={so(null, <TelaClassificacao />)} />
             <Route path="oscs" element={so(null, <TelaOscs />)} />
             <Route path="usuarios" element={so('admin', <TelaUsuarios />)} />
-            <Route path="auditoria" element={so(null, <TelaAuditoria />)} />
             {/* Qualquer outro endereço (ex.: o antigo /ui): página "não encontrado", dentro do app. */}
             <Route path="*" element={<NaoEncontrado />} />
           </Route>

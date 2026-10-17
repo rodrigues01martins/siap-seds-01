@@ -1,7 +1,8 @@
 // /chamamentos/:ch/propostas/:p/d1 — avaliação da D1 (formulário longo): navegação lateral PA1…PA6 com
 // progresso por PA e estado de cada subcritério, painel do subcritério em seções e rodapé fixo com a D1
 // parcial (prévia de src/domain), o status oficial (/api) e a ação primária "Salvar".
-// Quem conduz a sessão controla o telão daqui (ControleProjecao).
+// Quem conduz a sessão controla o telão daqui (ControleProjecao). Lixeira do nível registrado (exclusão livre,
+// sem exigir sessão; a /api recalcula os totais e desfaz a conclusão).
 
 import { Circle, CircleCheck, Save } from 'lucide-react'
 import { useState } from 'react'
@@ -19,10 +20,11 @@ import { StatusBadge } from '../../components/ui/StatusBadge'
 import { calcularD1, type TotalPA } from '../../domain/d1'
 import { formatarNumero } from '../../domain/formatacao'
 import { MATRIZ_2026 } from '../../domain/matriz'
-import { statusDaProposta } from '../../domain/statusProposta'
+import { situacaoDaProposta } from '../../domain/situacaoProposta'
 import { chamarApi } from '../../lib/api'
 import { useColecao } from '../../lib/firestore'
 import type { Avaliacao } from '../../lib/tipos'
+import { useExclusao } from '../exclusao/useExclusao'
 import { cabecalhoDaProposta, ContextoProposta, useDadosProposta, motivoSemSessao, type DadosProposta } from './CabecalhoProposta'
 import { ControleProjecao, type PedidoProjecao } from './ControleProjecao'
 import { PainelSubcriterio } from './PainelSubcriterio'
@@ -33,7 +35,6 @@ const ID_FORMULARIO = 'form-subcriterio-d1'
 
 /** Por que a tela está só para leitura (null = pode registrar). */
 export function motivoSomenteLeituraD1(dados: DadosProposta): string | null {
-  if (dados.proposta.bloqueada) return 'Proposta homologada: somente leitura.'
   const admissao = dados.proposta.admissibilidade?.situacao
   if (admissao === 'nao_admitida' || admissao === 'desclassificada') {
     return 'Proposta não admitida (Anexo III, item 28): não segue para avaliação.'
@@ -76,6 +77,7 @@ export function TelaD1() {
   const [escolhido, setEscolhido] = useState<string | null>(null)
   const [erroProjecao, setErroProjecao] = useState<unknown>(null)
   const [salvando, setSalvando] = useState(false)
+  const exclusao = useExclusao()
 
   const carregando = leitura.carregando || avaliacoes.carregando
   const erro = leitura.erro ?? avaliacoes.erro
@@ -182,6 +184,7 @@ export function TelaD1() {
             justificativaMinima={dados.chamamento.justificativaMinima}
             somenteLeitura={motivo !== null}
             motivoSomenteLeitura={motivo ?? undefined}
+            acaoExcluir={exclusao.botao({ rota: '/api/avaliacao', ids: { chamamentoId: ch, propostaId: p, codigo: atual }, nome: `nível do ${atual}` })}
             onSalvar={async (registro) => {
               setSalvando(true)
               try {
@@ -213,7 +216,7 @@ export function TelaD1() {
           Prévia: <StatusBadge status={previa.status} />
         </p>
         <p className="flex items-center gap-2 text-body-sm text-text-secondary">
-          Oficial (gravado pela /api): <StatusBadge status={statusDaProposta(dados.proposta)} />
+          Oficial (gravado pela /api): <StatusBadge status={situacaoDaProposta(dados.proposta)} />
         </p>
         {motivo === null && (
           <Button type="submit" form={ID_FORMULARIO} icone={Save} carregando={salvando} className="ml-auto" aria-label={`Salvar avaliação do ${atual}`}>
@@ -221,6 +224,7 @@ export function TelaD1() {
           </Button>
         )}
       </section>
+      {exclusao.dialogo}
     </DetailPage>
   )
 }

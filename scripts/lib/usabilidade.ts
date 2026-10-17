@@ -13,7 +13,7 @@ export const TAREFAS_USABILIDADE: TarefaUsabilidade[] = [
   { codigo: 'T2', titulo: 'Registrar a admissibilidade de uma proposta', perfil: 'relator', tempoAlvoMin: 4 },
   { codigo: 'T3', titulo: 'Avaliar um subcritério da D1 e projetá-lo no telão', perfil: 'relator e presidente', tempoAlvoMin: 3 },
   { codigo: 'T4', titulo: 'Cadastrar uma experiência da D2 e conferir a memória de cálculo', perfil: 'relator', tempoAlvoMin: 5 },
-  { codigo: 'T5', titulo: 'Homologar a proposta e gerar a minuta da ata', perfil: 'presidente', tempoAlvoMin: 3 },
+  { codigo: 'T5', titulo: 'Concluir a proposta e gerar a minuta da ata', perfil: 'presidente', tempoAlvoMin: 3 },
 ]
 
 export const PERGUNTAS_SUS = [

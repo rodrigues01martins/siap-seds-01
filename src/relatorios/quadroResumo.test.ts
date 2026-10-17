@@ -22,29 +22,29 @@ const linha = (id: string, nome: string, dados: Partial<PropostaQuadro> = {}): P
   id,
   nomeOsc: nome,
   totais: totais(3),
-  bloqueada: false,
+  concluida: false,
   ...dados,
 })
 
 const PROPOSTAS: PropostaQuadro[] = [
-  linha('a', 'Instituto Alfa', { totais: totais(4), bloqueada: true }),
+  linha('a', 'Instituto Alfa', { totais: totais(4), concluida: true }),
   linha('b', 'Associação Beta'),
   linha('c', 'Centro Gama'),
   linha('d', 'Fundação Delta', { totais: totais(3, ['6.4']) }),
   linha('e', 'Obra Épsilon', { totais: totais(2) }),
-  linha('f', 'Grupo Zeta', { totais: undefined, admissibilidade: { situacao: 'nao_admitida', motivos: ['Requisito 28.1.IV não atendido.'] } }),
+  linha('f', 'Grupo Zeta', { totais: undefined, admissibilidade: { situacao: 'nao_admitida', motivo: 'Caderno entregue fora do prazo.' } }),
 ]
 
 describe('quadro-resumo do lote — a mesma tabela da classificação', () => {
   it('ranking com empate sinalizado e propostas fora da classificação com o motivo', () => {
     const q = montarQuadro(PROPOSTAS, [])
     expect(q.linhas.map((l) => [l.posicao, l.nomeOsc, l.situacao, l.observacao])).toEqual([
-      [1, 'Instituto Alfa', 'Homologada', ''],
+      [1, 'Instituto Alfa', 'Apta (concluída)', ''],
       [2, 'Associação Beta', 'Apta', 'Empatada'],
       [2, 'Centro Gama', 'Apta', 'Empatada'],
       [null, 'Fundação Delta', 'Pendente', 'Falta 1 subcritério'],
       [null, 'Obra Épsilon', 'Inapta', expect.stringContaining('inferior ao corte de 67,2 pontos')],
-      [null, 'Grupo Zeta', 'Não admitida', 'Requisito 28.1.IV não atendido.'],
+      [null, 'Grupo Zeta', 'Não admitida', 'Caderno entregue fora do prazo.'],
     ])
     expect(q.definitiva).toBe(false)
     expect(q.aviso).toBe('Classificação não definitiva: 1 proposta pendente; 1 empate sem decisão.')

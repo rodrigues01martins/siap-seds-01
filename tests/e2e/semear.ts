@@ -4,7 +4,7 @@ import { initializeApp } from 'firebase-admin/app'
 import { getAuth } from 'firebase-admin/auth'
 import { getFirestore } from 'firebase-admin/firestore'
 import { CHAMAMENTO_ENSAIO, montarEnsaio } from '../../scripts/lib/ensaio'
-import { CHAMAMENTO_EXCLUIR, CHAMAMENTO_EXCLUIR_PROPOSTA, CHAMAMENTO_RESET, PROPOSTA_RESET, SESSAO_RESET, CHAMAMENTO_FLUXO, CHAMAMENTOS_USO, PROPOSTA_EXCLUIR, PERFIS_E2E, PRESENTES_E2E, PROPOSTA_FLUXO, PROPOSTA_USO, SENHA_E2E, SESSAO_ABERTA, propostaE2E } from './perfis'
+import { CHAMAMENTO_EXCLUIR, CHAMAMENTO_EXCLUIR_PROPOSTA, CHAMAMENTO_PAUTA, PROPOSTA_PAUTA, SESSAO_PAUTA, CHAMAMENTO_FLUXO, CHAMAMENTOS_USO, PROPOSTA_EXCLUIR, PERFIS_E2E, PRESENTES_E2E, PROPOSTA_FLUXO, PROPOSTA_USO, SENHA_E2E, SESSAO_ABERTA, propostaE2E } from './perfis'
 
 export default async function semear(): Promise<void> {
   if (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_AUTH_EMULATOR_HOST) {
@@ -37,12 +37,11 @@ export default async function semear(): Promise<void> {
     lotes: lotesDoEnsaio,
     presentes: PRESENTES_E2E,
     foco: { tipo: 'resumo', propostaId: propostaE2E(ensaio.propostas) },
-    abertaPor: { uid: 'e2e', email: null },
   })
   // Fluxo completo (etapa4.spec.ts): chamamento próprio, sem sessão, com uma proposta a avaliar do zero.
   lote.set(db.doc(`chamamentos/${CHAMAMENTO_FLUXO}`), {
     numero: 'E2E-FLUXO/2026',
-    titulo: 'E2E — fluxo completo da sessão à homologação',
+    titulo: 'E2E — fluxo completo da sessão à conclusão',
     processoSei: '00000.000099/2026-00',
     dataLimitePropostas: '2026-10-31',
     lotes: [{ codigo: 'F1', descricao: 'Lote do fluxo (E2E)' }],
@@ -53,7 +52,7 @@ export default async function semear(): Promise<void> {
     oscCnpj: ensaio.oscs[0],
     protocolo: 'E2E-FLUXO-001',
     numeroSEI: '00000099',
-    bloqueada: false,
+    concluida: false,
     ensaio: true,
   })
   // Testes de uso (uso.spec.ts): a proposta apta e completa do ensaio copiada para um chamamento por fluxo.
@@ -80,7 +79,6 @@ export default async function semear(): Promise<void> {
         lotes: [proposta.loteCodigo as string],
         presentes: PRESENTES_E2E,
         foco: null,
-        abertaPor: { uid: 'e2e', email: null },
       })
     }
   }
@@ -90,24 +88,23 @@ export default async function semear(): Promise<void> {
   lote.set(db.doc(`chamamentos/${CHAMAMENTO_EXCLUIR}`), { ...chamamentoEnsaio, numero: 'E2E-EXCLUIR/2026', titulo: 'E2E — chamamento cadastrado por engano' })
   lote.set(db.doc(`chamamentos/${CHAMAMENTO_EXCLUIR_PROPOSTA}`), { ...chamamentoEnsaio, numero: 'E2E-EXCLUIR-PROP/2026', titulo: 'E2E — proposta cadastrada por engano' })
   const excluir = `chamamentos/${CHAMAMENTO_EXCLUIR_PROPOSTA}/propostas/${PROPOSTA_EXCLUIR}`
-  lote.set(db.doc(excluir), { ...ensaio.documentos[origem]!, protocolo: 'E2E-EXCLUIR-001', bloqueada: false })
+  lote.set(db.doc(excluir), { ...ensaio.documentos[origem]!, protocolo: 'E2E-EXCLUIR-001', concluida: false })
   for (const [caminho, dados] of Object.entries(ensaio.documentos)) {
     if (caminho.startsWith(`${origem}/`)) lote.set(db.doc(`${excluir}/${caminho.slice(origem.length + 1)}`), dados)
   }
-  // Reset da sessão (resetSessao.spec.ts) e erros anunciados da admissibilidade (acessibilidade.spec.ts):
+  // Exclusão da sessão (exclusao.spec.ts) e erros anunciados da admissibilidade (acessibilidade.spec.ts):
   // proposta sem admissibilidade e sem níveis, numa sessão aberta só dela.
-  lote.set(db.doc(`chamamentos/${CHAMAMENTO_RESET}`), { ...chamamentoEnsaio, numero: 'E2E-RESET/2026', titulo: 'E2E — reset da sessão' })
-  const propostaReset: Record<string, unknown> = { ...ensaio.documentos[origem]!, protocolo: 'E2E-RESET-001', bloqueada: false }
-  delete propostaReset.totais
-  delete propostaReset.admissibilidade // também serve ao teste de erros anunciados da admissibilidade
-  lote.set(db.doc(`chamamentos/${CHAMAMENTO_RESET}/propostas/${PROPOSTA_RESET}`), propostaReset)
-  lote.set(db.doc(`chamamentos/${CHAMAMENTO_RESET}/sessoes/${SESSAO_RESET}`), {
+  lote.set(db.doc(`chamamentos/${CHAMAMENTO_PAUTA}`), { ...chamamentoEnsaio, numero: 'E2E-PAUTA/2026', titulo: 'E2E — sessão para excluir' })
+  const propostaPauta: Record<string, unknown> = { ...ensaio.documentos[origem]!, protocolo: 'E2E-PAUTA-001', concluida: false }
+  delete propostaPauta.totais
+  delete propostaPauta.admissibilidade // também serve ao teste de erros anunciados da admissibilidade
+  lote.set(db.doc(`chamamentos/${CHAMAMENTO_PAUTA}/propostas/${PROPOSTA_PAUTA}`), propostaPauta)
+  lote.set(db.doc(`chamamentos/${CHAMAMENTO_PAUTA}/sessoes/${SESSAO_PAUTA}`), {
     data: '2026-11-10',
     status: 'aberta',
-    lotes: [propostaReset.loteCodigo as string],
+    lotes: [propostaPauta.loteCodigo as string],
     presentes: PRESENTES_E2E,
     foco: null,
-    abertaPor: { uid: 'e2e', email: null },
   })
   await lote.commit()
 }

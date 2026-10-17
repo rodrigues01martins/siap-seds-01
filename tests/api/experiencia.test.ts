@@ -61,7 +61,7 @@ async function criar(dados: Record<string, unknown> = {}): Promise<string> {
 
 describe('/api/experiencia — acesso', () => {
   it('405, 401 e 403 (cadastro antigo não edita experiências)', async () => {
-    const r405 = await chamar(rota, 'GET', undefined, presidente.token)
+    const r405 = await chamar(rota, 'PUT', undefined, presidente.token)
     expect(r405).toMatchObject({ status: 405 })
     expect(r405.headers.get('Allow')).toBe('GET, POST, PATCH, DELETE')
     expect((await chamar(rota, 'POST', corpo(), null)).status).toBe(401)

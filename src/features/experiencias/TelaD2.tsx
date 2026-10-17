@@ -1,14 +1,13 @@
 // /chamamentos/:ch/propostas/:p/d2 (ListPage) — experiências da OSC (D2): tabela editável (DataTable),
 // painel lateral para criar/editar a experiência e seus documentos, desconsiderar por critério
-// (Anexo IV, 3.8.5) e linha do tempo A/B. Escrita: quem tem a permissão "Experiências da D2", na sessão
-// aberta com a proposta na pauta (o sessaoId vai em cada gravação).
+// (Anexo IV, 3.8.5) e linha do tempo A/B. Criar e editar: na sessão aberta com a proposta na pauta (o sessaoId
+// vai em cada gravação). Lixeira da experiência e de cada documento: exclusão livre (sem exigir sessão).
 
 import { Calculator, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { useParams } from 'react-router'
 import { ListPage } from '../../components/templates/paginas'
 import { Alert } from '../../components/ui/Alert'
-import { AlertaErroApi } from '../../components/ui/AlertaErroApi'
 import { Button } from '../../components/ui/Button'
 import { ButtonLink } from '../../components/ui/ButtonLink'
 import { Card } from '../../components/ui/Card'
@@ -24,6 +23,7 @@ import type { CamposExperiencia } from '../../esquemas/experiencia'
 import { chamarApi } from '../../lib/api'
 import { useColecao } from '../../lib/firestore'
 import { AvisoSomenteLeitura, cabecalhoDaProposta, ContextoProposta, motivoSemSessao, useDadosProposta } from '../avaliacao/CabecalhoProposta'
+import { useExclusao } from '../exclusao/useExclusao'
 import { FormExperiencia } from './FormExperiencia'
 import { GraficoLinhaDoTempo } from './GraficoLinhaDoTempo'
 import { TabelaExperiencias, type ExperienciaGravada } from './TabelaExperiencias'
@@ -34,7 +34,7 @@ export function TelaD2() {
   const leitura = useDadosProposta(ch, p)
   const experiencias = useColecao<Omit<ExperienciaGravada, 'id'>>(`chamamentos/${ch}/propostas/${p}/experiencias`)
   const [editando, setEditando] = useState<string | 'nova' | null>(null)
-  const [erro, setErro] = useState<unknown>(null)
+  const exclusao = useExclusao()
 
   const carregando = leitura.carregando || experiencias.carregando
   const erroLeitura = leitura.erro ?? experiencias.erro
@@ -45,9 +45,8 @@ export function TelaD2() {
   const { proposta, chamamento } = leitura.dados
   const lista = [...experiencias.dados].sort((a, b) => a.inicio.localeCompare(b.inicio) || a.id.localeCompare(b.id))
   const admissao = proposta.admissibilidade?.situacao
-  const motivo = proposta.bloqueada
-    ? 'Proposta homologada.'
-    : admissao === 'nao_admitida' || admissao === 'desclassificada'
+  const motivo =
+    admissao === 'nao_admitida' || admissao === 'desclassificada'
       ? 'Proposta não admitida (Anexo III, item 28): não segue para avaliação.'
       : motivoSemSessao(leitura.dados, 'experiências')
   const alvo = { chamamentoId: ch, propostaId: p, sessaoId: leitura.dados.sessaoAberta?.id }
@@ -78,7 +77,6 @@ export function TelaD2() {
     >
       <ContextoProposta dados={leitura.dados} ch={ch} aba="d2" />
       <AvisoSomenteLeitura motivo={motivo} />
-      <AlertaErroApi erro={erro} />
 
       <Card
         titulo="Experiências da OSC"
@@ -88,15 +86,10 @@ export function TelaD2() {
           experiencias={lista}
           somenteLeitura={motivo !== null}
           onEditar={(id) => setEditando(id)}
-          onExcluir={async (id) => {
-            setErro(null)
-            try {
-              await chamarApi('/api/experiencia', { metodo: 'DELETE', corpo: { ...alvo, id } })
-              mostrar({ tom: 'success', titulo: 'Experiência excluída', mensagem: 'A D2 foi recalculada.' })
-            } catch (e) {
-              setErro(e)
-            }
-          }}
+          acaoExcluir={(e) => exclusao.botao({ rota: '/api/experiencia', ids: { chamamentoId: ch, propostaId: p, id: e.id }, nome: `experiência ${e.descricao}` })}
+          acaoExcluirDocumento={(e, documento, d) =>
+            exclusao.botao({ rota: '/api/experiencia', ids: { chamamentoId: ch, propostaId: p, id: e.id, documento }, nome: `documento ${d.tipo} (${e.descricao})` })
+          }
           onDesconsiderar={(id, desconsideracoes: Desconsideracao[]) =>
             chamarApi('/api/experiencia', { metodo: 'PATCH', corpo: { ...alvo, id, desconsideracoes } }).then(() => undefined)
           }
@@ -134,6 +127,7 @@ export function TelaD2() {
           }
         />
       </Drawer>
+      {exclusao.dialogo}
     </ListPage>
   )
 }

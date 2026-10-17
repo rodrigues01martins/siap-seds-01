@@ -53,6 +53,13 @@ describe('DataTable', () => {
     expect(screen.getByRole('columnheader', { name: 'Ações' })).toBeInTheDocument()
   })
 
+  it('contêiner com rolagem posicionado: texto sr-only (absoluto) das células não escapa e não cria rolagem na página', () => {
+    montar()
+    const conteiner = screen.getByRole('table', { name: 'Propostas' }).parentElement!
+    expect(conteiner).toHaveClass('overflow-x-auto')
+    expect(conteiner).toHaveClass('relative')
+  })
+
   it('ordenação pelo cabeçalho (aria-sort), crescente e decrescente, também pelo teclado', async () => {
     montar()
     const nf = screen.getByRole('columnheader', { name: /NF/ })

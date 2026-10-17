@@ -47,7 +47,7 @@ function semear(foco: Record<string, unknown> | null) {
       atualizadoEm: quando('2026-11-10T13:07:41Z'),
     },
     'oscs/11222333000181': { cnpj: '11222333000181', razaoSocial: 'Instituto Esperança' },
-    [`${P}/avaliacoes/3.1`]: { nivel: 2, justificativa: 'Lacunas nos fluxos.', paginas: [2], decisao: 'unanimidade', sessaoId: 's1' },
+    [`${P}/avaliacoes/3.1`]: { nivel: 2, justificativa: 'Lacunas nos fluxos.', paginas: [2], sessaoId: 's1' },
     [`${P}/resultadoD2/atual`]: resultadoD2Exemplo(),
   }
   estado.colecoes = { [`${P}/experiencias`]: [{ id: 'e1', descricao: 'Gestão do CASE Goiânia' }] }
