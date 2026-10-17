@@ -1,6 +1,8 @@
 // Formato dos documentos lidos do Firestore pelas telas (gravados pela /api).
 
 import type { StatusD1 } from '../domain/d1'
+import type { Desconsideracao } from '../domain/d2'
+import type { DocumentoExperiencia, Modalidade } from '../esquemas/experiencia'
 import type { PapelSessao } from '../domain/comissao'
 import type { Perfil } from '../domain/permissoes'
 
@@ -81,7 +83,8 @@ export interface Sessao {
 }
 
 export interface Avaliacao {
-  nivel: number
+  /** null: rascunho do salvamento automático só com justificativa ou páginas (subcritério ainda pendente). */
+  nivel: number | null
   justificativa: string
   paginas: number[]
   sessaoId: string
@@ -97,4 +100,23 @@ export interface UsuarioCadastro {
   /** Só no cadastro do modelo anterior (o administrador antigo continua admin). */
   admin?: boolean
   ativo?: boolean
+}
+
+/** Experiência da OSC (D2), em .../propostas/{p}/experiencias/{id}. */
+export interface ExperienciaGravada {
+  id: string
+  descricao: string
+  categorias: string[]
+  modalidade?: Modalidade
+  orgaoParceiro?: string
+  instrumento?: string
+  mrosc?: boolean
+  inicio: string
+  fim: string | null
+  vagas?: number | null
+  unidades?: number | null
+  trabalhadores?: number | null
+  valorAnualCentavos?: number | null
+  documentos?: DocumentoExperiencia[]
+  desconsideracoes?: Desconsideracao[]
 }

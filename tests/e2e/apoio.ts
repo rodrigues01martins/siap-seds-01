@@ -24,6 +24,11 @@ export async function comoPerfil(navegador: Browser, id: string, baseURL: string
   return pagina
 }
 
+/** Salvamento automático (/avaliar): espera o indicador voltar a "Tudo salvo". */
+export async function esperarSalvo(pagina: Page) {
+  await expect(pagina.getByRole('status', { name: 'Salvamento' })).toHaveText(/Tudo salvo/, { timeout: 30_000 })
+}
+
 export async function esperarTela(pagina: Page) {
   await expect(pagina.getByText('Carregando…', { exact: true })).toHaveCount(0, { timeout: 30_000 })
   await expect(pagina.locator('[role="status"][aria-label^="Carregando"]')).toHaveCount(0, { timeout: 30_000 })

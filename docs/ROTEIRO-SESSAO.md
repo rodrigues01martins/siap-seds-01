@@ -31,31 +31,35 @@ gerencia usuários): quem conduz e quem registra entram com uma conta de perfil 
   o perfil em **Usuários**: a tela da pessoa atualiza sozinha, sem sair e entrar.
 
 ### 2. Abrir a sessão — [presidente]
-1. Painel do chamamento → **Abrir sessão**: numa página só, a **data**, o(s) **lote(s) em pauta** (as propostas
+1. **Início** → **Abrir sessão** (ou painel do chamamento → **Abrir sessão**): numa página só, a **data**, o(s) **lote(s) em pauta** (as propostas
    desses lotes são as analisadas hoje) e os **presentes**: nome e papel (presidente ou membro) de cada pessoa,
    com **Adicionar pessoa** e **Remover**. Exatamente um presidente e sem nomes repetidos.
-2. Chegou ou saiu alguém: tela da sessão → **Alterar presentes**.
+2. Chegou ou saiu alguém: tela da sessão → **Alterar presentes**. Voltou ao app depois? O **Início** mostra a
+   sessão aberta em destaque: **Continuar**.
 3. Impedimento de membro não é registrado no app: se houver, conste no texto da ata (passo 6).
 
 ### 3. Ligar o telão — [telão]
 1. No computador do projetor, entre com o **usuário do telão** (perfil presidente; a projeção não tem nenhum
    controle de escrita).
 2. Na tela da sessão, clique em **Abrir projeção (telão)** e depois em **Tela cheia** (F11 também serve).
-3. O telão mostra o que o presidente ou o relator projetam. Sem foco, mostra a tela de espera.
+3. O telão mostra o que o relator projeta: na tela de avaliação, ligue o interruptor **Projetar** (cabeçalho) e o
+   telão acompanha a aba e o subcritério em que a Comissão está. Sem foco, mostra a tela de espera.
 4. **Nunca** use o computador do telão para registrar avaliações.
 
-### 4. Ordem das telas para cada proposta — [relator] registra, [presidente] conduz
-Siga as abas da proposta (cabeçalho com OSC, lote e **nº SEI com botão Copiar** para abrir o Caderno no SEI):
+### 4. Cada proposta numa tela só — [relator] registra, [presidente] conduz
+Na tela da sessão, a **pauta** mostra cada proposta com o progresso ("D1 18/28 · D2 ok") e o status: clique em
+**Avaliar**. A proposta inteira fica numa tela, com um cabeçalho fixo (OSC, lote, **nº SEI com botão Copiar** para
+abrir o Caderno no SEI, "x de 28", D1 e NF parciais, status e o alerta de eliminatória) e **Proposta anterior /
+próxima** para seguir a pauta. **Não há botão Salvar:** tudo grava sozinho; confira o indicador no cabeçalho
+("Salvando…" → **"Tudo salvo"**).
 
-| # | Tela | O que fazer | Projetar no telão (botões e atalhos na tela da D1) |
+| # | Aba | O que fazer | Telão (com **Projetar** ligado) |
 |---|---|---|---|
-| 1 | **Admissibilidade** | Admitida (sim/não), motivo se não, e páginas inicial e final de cada PA (a tela mostra a página de corte). Não admitida para aqui. | **Projetar admissibilidade** |
-| 2 | **Dimensão 1** | Para cada subcritério: nível 0–4, justificativa e páginas citadas (numeração interna do PA). Salvar leva ao próximo pendente. Registrou errado? A lixeira do nível apaga o registro. | Cada subcritério; **Alt+→ / Alt+←** navega, **Alt+R** mostra o resumo |
-| 3 | **Dimensão 2** | Experiências da OSC: categorias, modalidade, período, porte, documentos (aceitos e se comprovam execução satisfatória), desconsiderações por critério com justificativa. | **Projetar D2** |
-| 4 | **Memória da D2** | Conferir o cálculo passo a passo com a Comissão. | (já projetada no passo 3) |
-| 5 | **Resumo** | PA1…PA6, D1, D2, NF e status. Conferir antes de passar para a próxima proposta. | **Alt+R** |
+| 1 | **Admissão** | Admitida (sim/não), motivo se não, e páginas inicial e final de cada PA, uma linha por PA (a tela mostra a página de corte). Não admitida para aqui. | admissibilidade |
+| 2 | **D1** | Uma página, com os PAs em seções. Em cada linha: nível 0–4 (clique ou tecla 0–4), justificativa e páginas citadas (numeração interna do PA). A linha diz o que falta; **Ir para o próximo pendente** leva ao seguinte. Registrou errado? A lixeira do nível apaga o registro. | o subcritério em que a Comissão está |
+| 3 | **D2** | Experiências direto na tabela (**Adicionar experiência**): categorias, modalidade, MROSC, período, vagas; em **Documentos**, os demais campos e os documentos (aceitos e se comprovam execução satisfatória); **Desconsiderar** por critério com justificativa. | D2 |
+| 4 | **Resultado** | PA1…PA6, D1, critérios da D2 com a memória, NF, status e eliminatórias. **Concluir** (mostra o que falta) e **Gerar espelho**. | resumo |
 
-Rodapé da tela da D1: **D1 parcial**, quantos subcritérios **faltam** e os status prévio e oficial.
 O status oficial é o calculado pelo servidor.
 
 ### 5. Fechar o lote — [presidente]
@@ -83,12 +87,12 @@ O status oficial é o calculado pelo servidor.
 ## Se algo der errado
 
 ### Caiu a internet
-- **O que acontece:** as telas continuam mostrando os últimos dados carregados, mas **nada é gravado**.
-  Ao salvar, aparece **"Sem conexão com o servidor"**. O texto digitado continua no formulário.
+- **O que acontece:** a tela continua mostrando o que foi digitado, mas **nada é gravado**. O app tenta de novo
+  sozinho; se não conseguir, o indicador do cabeçalho mostra **"Erro ao salvar: Sem conexão com o servidor"**.
 - **O que fazer:**
-  1. Não feche a aba nem recarregue a página (você perderia o que digitou).
-  2. Anote em papel o subcritério, o nível, a decisão e a justificativa combinados.
-  3. Quando a conexão voltar, clique em **Salvar** de novo e confira que o item ficou **preenchido** (●).
+  1. Não feche a aba nem recarregue a página (o navegador avisa: há gravação pendente).
+  2. Anote em papel o subcritério, o nível e a justificativa combinados.
+  3. Quando a conexão voltar, clique em **Tentar de novo** no cabeçalho e espere **"Tudo salvo"**.
   4. Recarregue a página (F5) para ter certeza de que a tela mostra o que está gravado no servidor.
 - **Plano B:** roteador do celular (hotspot) no computador do relator. O telão pode ficar parado:
   o que vale é o registro do relator.

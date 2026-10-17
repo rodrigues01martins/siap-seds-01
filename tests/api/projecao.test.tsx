@@ -10,6 +10,7 @@ import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import * as avaliacao from '../../api/avaliacao'
+import * as sessao from '../../api/sessao'
 import { TelaProjecao } from '../../src/features/projecao/TelaProjecao'
 import { CAMINHO_PROPOSTA, CH, PROP, SESSAO, chamar, criarUsuario, limparAuth, limparFirestore, semearProposta, type Usuario } from './apoio'
 import { obterAdmin } from '../../api/_lib/admin'
@@ -55,7 +56,7 @@ describe('projeção em tempo real (emuladores)', () => {
     expect(await screen.findByRole('heading', { name: /^3\.1 — / }, { timeout: 15_000 })).toBeInTheDocument()
     expect(await screen.findByText('Aguardando registro da Comissão')).toBeInTheDocument()
 
-    // A Comissão registra o 2.1 pela /api: a avaliação é gravada e o foco muda na mesma transação.
+    // A Comissão registra o 2.1 pela /api e a tela (interruptor "Projetar" ligado) move o foco do telão.
     const r = await chamar(
       avaliacao,
       'PUT',
@@ -71,6 +72,8 @@ describe('projeção em tempo real (emuladores)', () => {
       presidente.token,
     )
     expect(r.status).toBe(200)
+    const foco = { tipo: 'subcriterio', propostaId: PROP, subcriterio: '2.1' }
+    expect((await chamar(sessao, 'PATCH', { chamamentoId: CH, sessaoId: SESSAO, acao: 'foco', foco }, presidente.token)).status).toBe(200)
 
     expect(await screen.findByRole('heading', { name: /^2\.1 — / }, { timeout: 15_000 })).toBeInTheDocument()
     expect(await screen.findByText('Educação integrada ao PIA com metas e responsáveis definidos.', {}, { timeout: 15_000 })).toBeInTheDocument()

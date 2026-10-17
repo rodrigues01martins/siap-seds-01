@@ -14,7 +14,8 @@ import { montarPdf, precisaMinuta, tabela, type Rodape } from './documento.js'
 import { criteriosDaMemoria, legivel, memoriaExibida } from './memoriaD2.js'
 
 export interface AvaliacaoEspelho {
-  nivel: number
+  /** null: rascunho do salvamento automático, sem nível ainda. */
+  nivel: number | null
   justificativa: string
   paginas: number[]
 }

@@ -26,7 +26,7 @@ Eliminatórias: D1 < 67,2 → inapta; nível 0 em 1.1 ou 1.2 → desclassificada
    (testes de cada componente ao lado); ícones só de lucide-react (componente Icone, 16/20/24).
    Telas usam os templates de src/components/templates (AppShell, AuthPage, ListPage, FormPage, DetailPage,
    WizardPage, DashboardPage), PageHeader com no máximo UMA ação primária por área, e FormularioApi nos
-   formulários ligados à /api. Marcas: só arquivos oficiais em public/brand/ (Brand.tsx); sem eles, texto.
+   formulários ligados à /api — exceto a avaliação (/avaliar), que usa o salvamento automático (sem botão Salvar). Marcas: só arquivos oficiais em public/brand/ (Brand.tsx); sem eles, texto.
    Telão (/projecao): tokens --sds-projecao-*. Relatórios: CORES_DOCUMENTO (documento.ts) lidas do tokens.css.
    Nenhum HEX fora de src/styles/tokens.css (tests/design/hex.test.ts). Mensagens de erro em região aria-live
    (MensagensCampo/MensagemErro em Field.tsx).
@@ -50,12 +50,13 @@ Eliminatórias: D1 < 67,2 → inapta; nível 0 em 1.1 ou 1.2 → desclassificada
   sessaoId de sessão aberta do chamamento (proposta de um lote em pauta, exceto no desempate); o sessaoId vai para o
   documento (base da exclusão da sessão em cascata). Exclusões não dependem de sessão.
 - "Homologar" virou "Concluir" (POST /api/concluir { acao: 'concluir' | 'desfazer' }): reversível, sem
-  justificativa e sem trava. Só conclui com a admissibilidade registrada e, se admitida, os 28 níveis e as 28
-  justificativas da D1 (src/domain/conclusao.ts; não admitida conclui só com a admissibilidade). Alterar a avaliação
+  justificativa e sem trava. Só conclui com a admissibilidade completa (motivo ≥ 10, se não admitida; páginas dos 6
+  PAs, se admitida) e, se admitida, os 28 níveis e as 28 justificativas da D1 com o mínimo do chamamento
+  (src/domain/conclusao.ts; não admitida conclui só com a admissibilidade). Alterar a avaliação
   (nível, experiência, documento, admissibilidade ou exclusão em cascata) grava concluida=false. Relatórios: não
   concluída leva MINUTA; concluída sai como final.
-- Admissibilidade: admitida (sim/não), motivo (obrigatório se não) e páginas inicial/final por PA com página de corte
-  (apurarPlano). D1: nível, justificativa e páginas (sem decisão nem voto divergente). As regras antigas de
+- Admissibilidade: admitida (sim/não), motivo (exigido ao concluir, se não) e páginas inicial/final por PA com página
+  de corte (apurarPlano). D1: nível, justificativa e páginas (sem decisão nem voto divergente). As regras antigas de
   src/domain (calcularAdmissibilidade, decisão em problemasDoRegistro, status "homologada") não foram alteradas e
   ficam sem uso; a /api passa "unanimidade" ao domínio (esquemas/avaliacao.ts, problemasDoNivel).
 - Sessão: data, chamamento, lote(s) em pauta (lotes), status (aberta | encerrada) e presentes como lista de
@@ -69,6 +70,21 @@ Eliminatórias: D1 < 67,2 → inapta; nível 0 em 1.1 ou 1.2 → desclassificada
   os registros antigos ficam no Firestore, sem leitura pelo app, e entram no backup), as diligências, a reabertura
   e a trava de homologação (bloqueada), o reset da sessão (dependia da auditoria; substituído pela exclusão da sessão
   em cascata), decisão/voto divergente da D1, o checklist 28.1 e o de formatação (28.5) e a exclusão antiga.
+- Jornada fluida de avaliação (Simplificação 3/4, 17/10/2026): Início com a sessão aberta em destaque ("Continuar")
+  ou "Abrir sessão"; /sessao/:id?ch= com presentes e a pauta (progresso "D1 18/28 · D2 ok", status, "Avaliar");
+  /avaliar/:propostaId?ch=&aba= com a proposta inteira numa tela (abas Admissão | D1 | D2 | Resultado) e cabeçalho fixo
+  (OSC, lote, nº SEI, "x de 28", D1 e NF parciais, status, eliminatória, anterior/próxima da pauta). O chamamento vai
+  na consulta (?ch=) porque o Firestore lê pelo caminho completo; os endereços antigos redirecionam (Redirecionar.tsx).
+  D1 numa página: seções por PA recolhíveis, linha por subcritério (escala 0–4 em botões, teclas 0–4, descritor,
+  "Ver elementos", justificativa que cresce, páginas), pendência por linha e "Ir para o próximo pendente". D2 com
+  edição na linha (documentos na linha expansível) e linha do tempo. Salvamento automático (src/lib/salvamento.ts,
+  features/avaliar/salvamento.tsx): sem botão Salvar; a tela muda na hora (rascunho otimista) e grava em seguida
+  (debounce de 800 ms para textos, imediato para níveis e caixas), uma gravação por vez, com nova tentativa
+  automática (rede/5xx), indicador "Salvando… / Tudo salvo / Erro ao salvar — tentar de novo", rascunho incompleto
+  guardado sem enviar ("Não salvo: …") e aviso ao sair com gravação pendente. Para isso a /api aceita rascunhos:
+  PUT /api/avaliacao mescla nível (null desmarca), justificativa e páginas; a admissibilidade grava motivo e páginas
+  em branco; os mínimos são conferidos ao concluir. Salvar não move o telão: o interruptor "Projetar" (cabeçalho da
+  avaliação) leva o foco ao subcritério tocado e à aba (admissão, D1, D2 = d2, Resultado = resumo).
 - O catálogo de componentes não faz parte do sistema; a documentação de componentes é mantida fora do
   repositório. Decisão de 15/10/2026. (Rota inexistente, como /ui, mostra a página "não encontrado".)
 

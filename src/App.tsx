@@ -3,17 +3,15 @@ import { BrowserRouter, Route, Routes } from 'react-router'
 import { AppShell } from './components/templates/AppShell'
 import { ToastProvider } from './components/ui/Toast'
 import type { Exigencia } from './domain/permissoes'
-import { TelaAdmissibilidade } from './features/admissibilidade/TelaAdmissibilidade'
 import { Login } from './features/auth/Login'
-import { TelaD1 } from './features/avaliacao/TelaD1'
+import { RedirecionarAvaliacao, RedirecionarSessao } from './features/avaliar/Redirecionar'
+import { TelaAvaliar } from './features/avaliar/TelaAvaliar'
 import { RotaProtegida } from './features/auth/RotaProtegida'
 import { UsuarioProvider } from './features/auth/useUsuario'
 import { FormChamamento } from './features/chamamentos/FormChamamento'
 import { FormProposta } from './features/chamamentos/FormProposta'
 import { Inicio } from './features/chamamentos/ListaChamamentos'
 import { PainelChamamento } from './features/chamamentos/PainelChamamento'
-import { TelaD2 } from './features/experiencias/TelaD2'
-import { TelaMemoriaD2 } from './features/experiencias/TelaMemoriaD2'
 import { TelaOscs } from './features/oscs/TelaOscs'
 import { NaoEncontrado } from './features/erros/NaoEncontrado'
 import { TelaProjecao } from './features/projecao/TelaProjecao'
@@ -50,12 +48,16 @@ export default function App() {
             <Route path="chamamentos/:ch/propostas/nova" element={so(null, <FormProposta />)} />
             <Route path="chamamentos/:ch/propostas/:p/editar" element={so(null, <FormProposta />)} />
             <Route path="chamamentos/:ch/sessoes/nova" element={so(null, <NovaSessao />)} />
-            <Route path="chamamentos/:ch/sessoes/:s" element={so(null, <ConduzirSessao />)} />
             <Route path="chamamentos/:ch/sessoes/:s/ata" element={so(null, <TelaAta />)} />
-            <Route path="chamamentos/:ch/propostas/:p/admissibilidade" element={so(null, <TelaAdmissibilidade />)} />
-            <Route path="chamamentos/:ch/propostas/:p/d1" element={so(null, <TelaD1 />)} />
-            <Route path="chamamentos/:ch/propostas/:p/d2" element={so(null, <TelaD2 />)} />
-            <Route path="chamamentos/:ch/propostas/:p/d2/memoria" element={so(null, <TelaMemoriaD2 />)} />
+            {/* Jornada de avaliação (Simplificação 3/4): a sessão e a proposta inteira numa tela só. */}
+            <Route path="sessao/:id" element={so(null, <ConduzirSessao />)} />
+            <Route path="avaliar/:propostaId" element={so(null, <TelaAvaliar />)} />
+            {/* Endereços antigos levam às telas novas. */}
+            <Route path="chamamentos/:ch/sessoes/:s" element={<RedirecionarSessao />} />
+            <Route path="chamamentos/:ch/propostas/:p/admissibilidade" element={<RedirecionarAvaliacao aba="admissao" />} />
+            <Route path="chamamentos/:ch/propostas/:p/d1" element={<RedirecionarAvaliacao aba="d1" />} />
+            <Route path="chamamentos/:ch/propostas/:p/d2" element={<RedirecionarAvaliacao aba="d2" />} />
+            <Route path="chamamentos/:ch/propostas/:p/d2/memoria" element={<RedirecionarAvaliacao aba="resultado" />} />
             <Route path="chamamentos/:ch/lotes/:lote/classificacao" element={so(null, <TelaClassificacao />)} />
             <Route path="oscs" element={so(null, <TelaOscs />)} />
             <Route path="usuarios" element={so('admin', <TelaUsuarios />)} />

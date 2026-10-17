@@ -55,6 +55,7 @@ export interface RotaE2E {
 export function rotasE2E(proposta: string): RotaE2E[] {
   const ch = `/chamamentos/${CHAMAMENTO_ENSAIO}`
   const p = `${ch}/propostas/${proposta}`
+  const avaliar = `/avaliar/${proposta}?ch=${CHAMAMENTO_ENSAIO}`
   return [
     { slug: 'inicio', caminho: '/', exige: null },
     { slug: 'painel-chamamento', caminho: ch, exige: null },
@@ -63,12 +64,13 @@ export function rotasE2E(proposta: string): RotaE2E[] {
     { slug: 'proposta-nova', caminho: `${ch}/propostas/nova`, exige: null },
     { slug: 'proposta-editar', caminho: `${p}/editar`, exige: null },
     { slug: 'sessao-nova', caminho: `${ch}/sessoes/nova`, exige: null },
-    { slug: 'sessao', caminho: `${ch}/sessoes/${SESSAO_ABERTA}`, exige: null },
+    { slug: 'sessao', caminho: `/sessao/${SESSAO_ABERTA}?ch=${CHAMAMENTO_ENSAIO}`, exige: null },
     { slug: 'ata', caminho: `${ch}/sessoes/${SESSAO_ABERTA}/ata`, exige: null },
-    { slug: 'admissibilidade', caminho: `${p}/admissibilidade`, exige: null },
-    { slug: 'd1', caminho: `${p}/d1`, exige: null },
-    { slug: 'd2', caminho: `${p}/d2`, exige: null },
-    { slug: 'd2-memoria', caminho: `${p}/d2/memoria`, exige: null },
+    // Simplificação 3/4: a proposta inteira em /avaliar, uma aba por etapa.
+    { slug: 'admissibilidade', caminho: `${avaliar}&aba=admissao`, exige: null },
+    { slug: 'd1', caminho: `${avaliar}&aba=d1`, exige: null },
+    { slug: 'd2', caminho: `${avaliar}&aba=d2`, exige: null },
+    { slug: 'resultado', caminho: `${avaliar}&aba=resultado`, exige: null },
     { slug: 'classificacao', caminho: `${ch}/lotes/L1/classificacao`, exige: null },
     { slug: 'oscs', caminho: '/oscs', exige: null },
     { slug: 'usuarios', caminho: '/usuarios', exige: 'admin' },

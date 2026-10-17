@@ -122,14 +122,10 @@ test('mensagens de erro anunciadas (aria-live) nos formulários', async ({ brows
 
   const p = await comoPerfil(browser, 'administrador', baseURL)
   const CH = '/chamamentos/ensaio-2026'
-  const P = `${CH}/propostas/${PROPOSTA}`
   const casos: [string, string, () => Promise<void>][] = [
     ['novo chamamento vazio', '/chamamentos/novo', () => p.getByRole('button', { name: 'Cadastrar chamamento' }).click()],
     ['nova proposta vazia', `${CH}/propostas/nova`, () => p.getByRole('button', { name: 'Cadastrar proposta' }).click()],
     ['abertura de sessão sem data', `${CH}/sessoes/nova`, () => p.getByRole('button', { name: 'Abrir sessão' }).click()],
-    // Admissibilidade só se registra em sessão aberta: proposta da sessão aberta do E2E de pauta.
-    ['admissibilidade sem resultado', `/chamamentos/${CHAMAMENTO_PAUTA}/propostas/${PROPOSTA_PAUTA}/admissibilidade`, () => p.getByRole('button', { name: 'Registrar admissibilidade' }).click()],
-    ['D1 sem nível', `/chamamentos/${CHAMAMENTO_PAUTA}/propostas/${PROPOSTA_PAUTA}/d1`, () => p.getByRole('region', { name: 'Resumo da D1' }).getByRole('button', { name: /^Salvar/ }).click()],
   ]
   for (const [nome, caminho, enviar] of casos) {
     await p.goto(caminho)
@@ -137,11 +133,23 @@ test('mensagens de erro anunciadas (aria-live) nos formulários', async ({ brows
     await erroAnunciado(p, nome, enviar)
   }
 
-  await p.goto(`${P}/d2`)
+  // Avaliação (/avaliar, salvamento automático, sem botão Salvar): o erro aparece ao digitar, numa região
+  // aria-live. Só em sessão aberta: proposta da sessão aberta do E2E de pauta.
+  const AV = `/avaliar/${PROPOSTA_PAUTA}?ch=${CHAMAMENTO_PAUTA}`
+  await p.goto(`${AV}&aba=admissao`)
   await esperarTela(p)
-  await p.getByRole('button', { name: 'Nova experiência' }).click()
-  await erroAnunciado(p, 'nova experiência vazia (painel lateral)', () => p.getByRole('button', { name: 'Salvar experiência' }).click())
-  await p.keyboard.press('Escape')
+  await p.getByRole('radio', { name: 'Sim, admitida' }).check()
+  await p.getByLabel('Página inicial do PA1').fill('10')
+  await erroAnunciado(p, 'admissão: página final antes da inicial', () => p.getByLabel('Página final do PA1').fill('5'))
+
+  await p.goto(`${AV}&aba=d1`)
+  await esperarTela(p)
+  await erroAnunciado(p, 'D1: página acima do corte do PA', () => p.getByRole('textbox', { name: /^Páginas citadas do 1\.1/ }).fill('99'))
+
+  await p.goto(`${AV}&aba=d2`)
+  await esperarTela(p)
+  await p.getByRole('button', { name: 'Adicionar experiência' }).click()
+  await erroAnunciado(p, 'D2: experiência nova incompleta (na linha)', () => p.getByRole('textbox', { name: 'Descrição da experiência 1' }).fill('Sem os demais campos'))
 
   await p.goto('/oscs')
   await esperarTela(p)

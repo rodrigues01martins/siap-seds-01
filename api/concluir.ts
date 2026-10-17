@@ -1,11 +1,11 @@
 // POST /api/concluir — "Homologar" virou "Concluir" (Simplificação 2/4). Perfis: admin e presidente.
 // { chamamentoId, propostaId, acao: 'concluir' | 'desfazer' }: ação reversível, sem justificativa e sem trava.
-// Conclui só com a admissibilidade registrada e, se a proposta foi admitida, os níveis e as justificativas de
-// todos os subcritérios da D1 (src/domain/conclusao.ts); senão 409 com o que falta. Grava concluida (true ou
+// Conclui só com a admissibilidade completa e, se a proposta foi admitida, os níveis e as justificativas (com o
+// mínimo do chamamento) de todos os subcritérios da D1 (src/domain/conclusao.ts); senão 409 com o que falta. Grava concluida (true ou
 // false). Qualquer alteração posterior na avaliação desfaz a conclusão (recalcular.ts e admissibilidade).
 // Relatórios: proposta não concluída sai com a marca MINUTA; concluída sai como final.
 
-import { problemasParaConcluir } from '../src/domain/conclusao.js'
+import { problemasParaConcluir, type EntradaConclusao } from '../src/domain/conclusao.js'
 import { idDocumento, z } from '../src/esquemas/base.js'
 import { obterAdmin } from './_lib/admin.js'
 import { ErroApi, MENSAGENS } from './_lib/erros.js'
@@ -32,11 +32,17 @@ export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
       const proposta = await transacao.get(db.doc(caminho))
       if (!proposta.exists) throw new ErroApi(404, MENSAGENS.propostaNaoEncontrada)
       if (concluida) {
-        const avaliacoes = await transacao.get(db.collection(`${caminho}/avaliacoes`))
-        const problemas = problemasParaConcluir({
-          admissibilidade: proposta.get('admissibilidade') as { situacao?: string } | undefined,
-          avaliacoes: avaliacoes.docs.map((d) => ({ codigo: d.id, nivel: d.get('nivel'), justificativa: d.get('justificativa') })),
-        })
+        const [avaliacoes, chamamento] = await Promise.all([
+          transacao.get(db.collection(`${caminho}/avaliacoes`)),
+          transacao.get(db.doc(`chamamentos/${chamamentoId}`)),
+        ])
+        const problemas = problemasParaConcluir(
+          {
+            admissibilidade: proposta.get('admissibilidade') as EntradaConclusao['admissibilidade'],
+            avaliacoes: avaliacoes.docs.map((d) => ({ codigo: d.id, nivel: d.get('nivel'), justificativa: d.get('justificativa') })),
+          },
+          { justificativaMinima: chamamento.get('justificativaMinima') as number | undefined },
+        )
         if (problemas.length > 0) throw new ErroApi(409, `Não é possível concluir: ${problemas.join('; ')}.`)
       }
       return [{ caminho, acao: 'editar', dados: { concluida } }]

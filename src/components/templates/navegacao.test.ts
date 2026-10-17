@@ -23,7 +23,7 @@ describe('navegação por domínio (§12: agrupar por domínio; itens conforme o
 
   it('dentro de um chamamento: Sessão, Avaliação e Resultado aparecem, na ordem do domínio', () => {
     expect(mapa(ADMIN, CONTEXTO).map(([g]) => g)).toEqual(['Início', 'Sessão', 'Avaliação', 'Resultado', 'Cadastros', 'Administração'])
-    expect(mapa(ADMIN, CONTEXTO)).toContainEqual(['Sessão', ['Sessão em andamento → /chamamentos/ch1/sessoes/s9']])
+    expect(mapa(ADMIN, CONTEXTO)).toContainEqual(['Sessão', ['Sessão em andamento → /sessao/s9?ch=ch1']])
     expect(mapa(ADMIN, CONTEXTO)).toContainEqual(['Avaliação', ['Propostas do chamamento → /chamamentos/ch1']])
     expect(mapa(ADMIN, CONTEXTO)).toContainEqual([
       'Resultado',

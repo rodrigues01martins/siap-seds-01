@@ -1,5 +1,6 @@
 // PUT /api/admissibilidade — admissibilidade do Caderno (Anexo III, item 28), simplificada: admitida (sim/não),
-// motivo (obrigatório se "não") e páginas inicial/final por PA com página de corte (src/domain). Perfis: admin
+// motivo e páginas inicial/final por PA com página de corte (src/domain). Salvamento automático (Simplificação
+// 3/4): motivo e páginas em branco são gravados; a conclusão da proposta os exige (src/domain/conclusao.ts). Perfis: admin
 // e presidente. Grava propostas/{p}.admissibilidade { admitida, motivo?, planos, situacao, sessaoId } e desfaz
 // a conclusão da proposta. Não admitida não segue para C2/C3 (recalcular.ts).
 // Só em sessão aberta com a proposta na pauta; o sessaoId vai para admissibilidade.sessaoId.

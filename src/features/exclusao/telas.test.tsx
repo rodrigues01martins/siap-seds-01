@@ -23,6 +23,7 @@ vi.mock('../auth/useUsuario', () => ({
 vi.mock('../../lib/firestore', () => ({
   useColecao: (caminho: string) => ({ carregando: false, erro: null, dados: simulado.colecoes[caminho] ?? [] }),
   useDocumento: (caminho: string) => ({ carregando: false, erro: null, dados: simulado.documentos[caminho] ?? null }),
+  useConsultas: () => ({}),
 }))
 vi.mock('../../lib/api', async (original) => ({ ...(await original<object>()), chamarApi: simulado.chamarApi }))
 

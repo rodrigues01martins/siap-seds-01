@@ -1,7 +1,7 @@
 // /chamamentos/:ch (DetailPage): dados do chamamento, propostas por lote com status (e "Concluída") e sessões.
 // Lixeira em cada item (lote, proposta, sessão): exclusão livre em cascata com a prévia (DialogoExclusao).
 
-import { FilePlus2, Presentation, SquarePen, Trophy } from 'lucide-react'
+import { ClipboardCheck, FilePlus2, Presentation, SquarePen, Trophy } from 'lucide-react'
 import { useParams } from 'react-router'
 import { DetailPage } from '../../components/templates/paginas'
 import { ButtonLink } from '../../components/ui/ButtonLink'
@@ -16,6 +16,7 @@ import { formatarCnpj } from '../../domain/cnpj'
 import { podeFazer } from '../../domain/permissoes'
 import { situacaoDaProposta } from '../../domain/situacaoProposta'
 import { useColecao, useDocumento, type ComId } from '../../lib/firestore'
+import { rotaAvaliar, rotaSessao } from '../../lib/rotas'
 import type { Chamamento, Osc, Proposta, Sessao } from '../../lib/tipos'
 import { useUsuario } from '../auth/useUsuario'
 import { useExclusao } from '../exclusao/useExclusao'
@@ -119,17 +120,9 @@ export function PainelChamamento() {
               const base = `${caminho}/propostas/${p.id}`
               return (
                 <span className="flex flex-wrap justify-end gap-1">
-                  {(
-                    [
-                      ['admissibilidade', 'Admissibilidade'],
-                      ['d1', 'D1'],
-                      ['d2', 'D2'],
-                    ] as const
-                  ).map(([rota, rotulo]) => (
-                    <ButtonLink key={rota} para={`${base}/${rota}`} variante="tertiary" tamanho="sm" aria-label={`${rotulo} — ${nome}`}>
-                      {rotulo}
-                    </ButtonLink>
-                  ))}
+                  <ButtonLink para={rotaAvaliar(ch ?? '', p.id)} variante="tertiary" tamanho="sm" icone={ClipboardCheck} aria-label={`Avaliar — ${nome}`}>
+                    Avaliar
+                  </ButtonLink>
                   {podeGravar && (
                     <ButtonLink para={`${base}/editar`} variante="tertiary" tamanho="sm" aria-label={`Editar proposta — ${nome}`}>
                       Editar
@@ -167,7 +160,7 @@ export function PainelChamamento() {
           ]}
           acoes={(s) => (
             <span className="flex justify-end gap-1">
-              <ButtonLink para={`${caminho}/sessoes/${s.id}`} variante="tertiary" tamanho="sm" aria-label={`Abrir sessão de ${dataBr(s.data)}`}>
+              <ButtonLink para={rotaSessao(ch ?? '', s.id)} variante="tertiary" tamanho="sm" aria-label={`Abrir sessão de ${dataBr(s.data)}`}>
                 Abrir
               </ButtonLink>
               {podeGravar && exclusao.botao({ rota: '/api/sessao', ids: { chamamentoId: ch ?? '', sessaoId: s.id }, nome: `sessão de ${dataBr(s.data)}` })}

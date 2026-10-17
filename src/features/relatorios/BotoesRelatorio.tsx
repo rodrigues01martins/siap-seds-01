@@ -10,7 +10,7 @@ import { montarQuadro, quadroPdf, type CabecalhoQuadro, type DecisaoComJustifica
 import { carregarEspelho } from './carregar'
 import { useGeracao } from './useGeracao'
 
-export function BotaoEspelho({ ch, p }: { ch: string; p: string }) {
+export function BotaoEspelho({ ch, p, rotulo = 'Espelho (PDF)' }: { ch: string; p: string; rotulo?: string }) {
   const { gerando, erro, gerar, rodape } = useGeracao()
   return (
     <>
@@ -28,7 +28,7 @@ export function BotaoEspelho({ ch, p }: { ch: string; p: string }) {
           })
         }
       >
-        {gerando ? 'Gerando…' : 'Espelho (PDF)'}
+        {gerando ? 'Gerando…' : rotulo}
       </Button>
       <AlertaErroApi erro={erro} />
     </>

@@ -4,6 +4,7 @@
 // o documento final só sai de proposta concluída com os dados que estão gravados.
 
 import type { Transaction } from 'firebase-admin/firestore'
+import type { NiveisD1 } from '../../src/domain/d1.js'
 import { consolidarProposta, type TotaisProposta } from '../../src/domain/proposta.js'
 import { paraExperiencia } from '../../src/esquemas/experiencia.js'
 import { obterAdmin } from './admin.js'
@@ -41,13 +42,14 @@ export async function recalcular(
     throw new ErroApi(409, 'Chamamento sem data limite das propostas: cadastre-a antes de avaliar.')
   }
 
-  const niveis: Record<string, number> = Object.fromEntries(avaliacoes.docs.map((d) => [d.id, d.get('nivel') as number]))
+  // Nível null (rascunho do salvamento automático, só com justificativa) = subcritério ainda pendente.
+  const niveis: NiveisD1 = Object.fromEntries(avaliacoes.docs.map((d) => [d.id, d.get('nivel') as number | null]))
   const porId = new Map(experiencias.docs.map((d) => [d.id, paraExperiencia(d.id, d.data())]))
 
   if (!mudanca) {
     // Só recalcula com o que está gravado (ex.: depois da exclusão de uma sessão).
   } else if (mudanca.colecao === 'avaliacoes') {
-    if (mudanca.dados) niveis[mudanca.id] = mudanca.dados.nivel as number
+    if (mudanca.dados) niveis[mudanca.id] = mudanca.dados.nivel as number | null
     else delete niveis[mudanca.id]
   } else if (mudanca.dados) {
     porId.set(mudanca.id, paraExperiencia(mudanca.id, mudanca.dados))

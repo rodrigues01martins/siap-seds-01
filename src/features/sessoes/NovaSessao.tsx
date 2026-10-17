@@ -2,6 +2,7 @@
 // presentes por nome (POST /api/sessao). Ao abrir, vai para a tela da sessão.
 
 import { useNavigate, useParams } from 'react-router'
+import { rotaSessao } from '../../lib/rotas'
 import { FormPage } from '../../components/templates/paginas'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { ErrorState } from '../../components/ui/ErrorState'
@@ -33,7 +34,7 @@ export function NovaSessao() {
         lotes={chamamento.dados.lotes}
         onAbrir={async (corpo) => {
           const { id } = await chamarApi<{ id: string }>('/api/sessao', { metodo: 'POST', corpo: { chamamentoId: ch, ...corpo } })
-          navegar(`/chamamentos/${ch}/sessoes/${id}`)
+          navegar(rotaSessao(ch ?? '', id))
         }}
       />
     </FormPage>

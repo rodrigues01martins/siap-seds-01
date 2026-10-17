@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { motivoSemSessao, type DadosProposta } from './CabecalhoProposta'
+import { motivoSemAvaliacao, motivoSemSessao, type DadosProposta } from './dados'
 
 const dados = (sessaoAberta: DadosProposta['sessaoAberta']): DadosProposta => ({
   chamamento: { id: 'ch1', numero: '001/2026', titulo: 'C', lotes: [] },
@@ -18,5 +18,10 @@ describe('motivoSemSessao: a Comissão só registra em sessão aberta, com o lot
   })
   it('lote da proposta na pauta da sessão aberta: pode registrar', () => {
     expect(motivoSemSessao(dados(sessao(['L1'])), 'níveis')).toBeNull()
+  })
+  it('D1 e D2: proposta não admitida não segue para avaliação, mesmo com sessão', () => {
+    const naoAdmitida = { ...dados(sessao(['L1'])), proposta: { id: 'p1', loteCodigo: 'L1', oscCnpj: '1', admissibilidade: { situacao: 'nao_admitida' as const } } }
+    expect(motivoSemAvaliacao(naoAdmitida, 'níveis')).toBe('Proposta não admitida (Anexo III, item 28): não segue para avaliação.')
+    expect(motivoSemAvaliacao(dados(sessao(['L1'])), 'níveis')).toBeNull()
   })
 })

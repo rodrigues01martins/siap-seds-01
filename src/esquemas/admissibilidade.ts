@@ -1,8 +1,8 @@
-// Admissibilidade simplificada (Simplificação 2/4): admitida (sim/não), motivo (obrigatório se "não") e
+// Admissibilidade simplificada (Simplificação 2/4): admitida (sim/não), motivo (exigido ao concluir, se "não") e
 // páginas inicial/final de cada PA, com a página de corte calculada pelo domínio (apurarPlano, Anexo III, 7.1).
 // Sem checklist 28.1 nem de formatação (28.5). Esquema da /api e do formulário da tela.
 
-import { apurarPlano, MOTIVACAO_MINIMA, type PlanoApurado } from '../domain/admissibilidade.js'
+import { apurarPlano, type PlanoApurado } from '../domain/admissibilidade.js'
 import { MATRIZ_2026, type Matriz } from '../domain/matriz/index.js'
 import { idDocumento, opcional, z } from './base.js'
 
@@ -31,12 +31,13 @@ export const esquemaAdmissibilidade = esquemaCamposAdmissibilidade.extend({
 
 const paginaValida = (valor: number | null) => valor !== null && Number.isInteger(valor) && valor >= 1
 
-/** Problemas por campo: motivo da não admissão, os 6 PAs e as páginas (obrigatórias se admitida). */
+/**
+ * Problemas por campo do que foi preenchido: os 6 PAs e as páginas informadas (inteiro ≥ 1, final ≥ inicial).
+ * Salvamento automático (Simplificação 3/4): motivo e páginas em branco são gravados como rascunho; a conclusão
+ * da proposta é que os exige (src/domain/conclusao.ts).
+ */
 export function problemasDaAdmissao(dados: CamposAdmissibilidade, matriz: Matriz = MATRIZ_2026): Record<string, string> {
   const problemas: Record<string, string> = {}
-  if (!dados.admitida && (dados.motivo?.trim().length ?? 0) < MOTIVACAO_MINIMA) {
-    problemas.motivo = `Informe o motivo da não admissão (ao menos ${MOTIVACAO_MINIMA} caracteres).`
-  }
   const esperados = matriz.dimensao1.planos.map((p) => p.codigo)
   const informados = dados.planos.map((p) => p.codigo)
   if (informados.length !== esperados.length || esperados.some((c) => !informados.includes(c))) {
@@ -44,11 +45,9 @@ export function problemasDaAdmissao(dados: CamposAdmissibilidade, matriz: Matriz
     return problemas
   }
   dados.planos.forEach((p, i) => {
-    const exigir = dados.admitida || p.paginaInicial !== null || p.paginaFinal !== null
-    if (!exigir) return
-    if (!paginaValida(p.paginaInicial)) problemas[`planos.${i}.paginaInicial`] = 'Informe a página inicial (inteiro a partir de 1).'
-    if (!paginaValida(p.paginaFinal)) problemas[`planos.${i}.paginaFinal`] = 'Informe a página final (inteiro a partir de 1).'
-    else if (paginaValida(p.paginaInicial) && p.paginaFinal! < p.paginaInicial!) {
+    if (p.paginaInicial !== null && !paginaValida(p.paginaInicial)) problemas[`planos.${i}.paginaInicial`] = 'Informe a página inicial (inteiro a partir de 1).'
+    if (p.paginaFinal !== null && !paginaValida(p.paginaFinal)) problemas[`planos.${i}.paginaFinal`] = 'Informe a página final (inteiro a partir de 1).'
+    else if (paginaValida(p.paginaInicial) && paginaValida(p.paginaFinal) && p.paginaFinal! < p.paginaInicial!) {
       problemas[`planos.${i}.paginaFinal`] = 'A página final não pode ser anterior à inicial.'
     }
   })

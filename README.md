@@ -237,7 +237,7 @@ registro): para descartar o que foi feito numa sessão, exclua a sessão (apaga 
 
 | Endpoint | Métodos | Corpo (JSON) | Permissão |
 |---|---|---|---|
-| `/api/avaliacao` | `PUT` registrar/alterar nível | `{ chamamentoId, propostaId, codigo, nivel, justificativa, paginas?, sessaoId }` | admin ou presidente |
+| `/api/avaliacao` | `PUT` registrar/alterar (salvamento automático: só o que mudou) | `{ chamamentoId, propostaId, sessaoId, codigo, nivel?: 0–4 \| null, justificativa?, paginas? }` | admin ou presidente |
 | `/api/experiencia` | `POST` criar, `PATCH` editar | `{ chamamentoId, propostaId, sessaoId, descricao, categorias, modalidade, orgaoParceiro?, instrumento?, mrosc?, inicio, fim?, vagas?, unidades?, trabalhadores?, valorAnualCentavos?, documentos?: [{ tipo, numeroSEI, comprovaExecucaoSatisfatoria, aceito }], desconsideracoes?: [{ criterio, justificativa }] }` (`PATCH` com `id`) | admin ou presidente |
 | `/api/concluir` | `POST` | `{ chamamentoId, propostaId, acao: 'concluir' \| 'desfazer' }` | admin ou presidente |
 
@@ -246,10 +246,11 @@ registro): para descartar o que foi feito numa sessão, exclua a sessão (apaga 
 > O `sessaoId` fica no documento (base da exclusão da sessão em cascata). Exclusões não exigem sessão.
 
 - **C2 — nível** (`.../propostas/{p}/avaliacoes/{codigo}`): `codigo` precisa existir na matriz; `nivel` inteiro
-  de 0 a 4; `paginas` (numeração interna do PA) não podem passar da página de corte do PA (Anexo III, 7.1);
-  sem decisão (unanimidade/maioria) nem voto divergente (campos recusados: **400**). Registrar de novo o mesmo
-  subcritério substitui o registro. Exige sessão aberta com o lote da proposta em pauta (**409**)
-  e, na mesma transação, define o subcritério como **foco da sessão**.
+  de 0 a 4 (`null` desmarca); `paginas` (numeração interna do PA) não podem passar da página de corte do PA
+  (Anexo III, 7.1); sem decisão (unanimidade/maioria) nem voto divergente (campos recusados: **400**).
+  **Salvamento automático (Simplificação 3/4):** o `PUT` grava só o que vier (nível, justificativa e/ou páginas),
+  mesclado ao que já está gravado; rascunho vale (justificativa curta é pendência, conferida ao concluir).
+  Exige sessão aberta com o lote da proposta em pauta (**409**). Salvar **não** mexe no foco do telão.
 - **C3 — experiências** (`.../propostas/{p}/experiencias/{id}`): categorias A–D, sem A e B juntas
   (Anexo IV, 3.2.1, III); categoria D exige `mrosc` (Lei 13.019/2014); `fim ≥ inicio` (`fim` nulo = em
   execução); campos de porte inteiros não negativos (`valorAnualCentavos` em centavos). O `PATCH` valida o
@@ -265,8 +266,8 @@ registro): para descartar o que foi feito numa sessão, exclua a sessão (apaga 
   `desclassificada` (nível 0 em 1.1 ou 1.2). As regras ficam só em `src/domain`; um teste confere que o
   gravado é idêntico ao resultado do domínio.
 - **C5 — conclusão** ("Homologar" virou "Concluir"): reversível e sem justificativa. Conclui só com a admissibilidade
-  registrada e, se admitida, os 28 níveis e as 28 justificativas (`src/domain/conclusao.ts`); senão **409** com o
-  que falta. Não admitida conclui só com a admissibilidade. Grava `concluida`; qualquer alteração posterior na
+  completa (motivo de 10+ caracteres, se não admitida; páginas dos 6 PAs, se admitida) e, se admitida, os 28 níveis
+  e as 28 justificativas com o mínimo do chamamento (`src/domain/conclusao.ts`); senão **409** com o que falta. Não admitida conclui só com a admissibilidade. Grava `concluida`; qualquer alteração posterior na
   avaliação (C2, C3, admissibilidade, exclusões) volta a `concluida = false`.
 
 As funções da Vercel rodam como ESM no Node, sem bundler: imports relativos em `api/` e `src/domain/` usam
@@ -290,14 +291,14 @@ Os dois leem os dados (firestore.rules); ninguém escreve direto no Firestore. A
 
 | Rota | Quem usa | O que faz |
 |---|---|---|
-| `/` | todos com acesso | lista de chamamentos |
+| `/` | todos com acesso | sessão aberta em destaque (**Continuar**) ou **Abrir sessão**; abaixo, os chamamentos |
 | `/chamamentos/:ch` | todos com acesso | painel: propostas por lote com status (pendente, apta, inapta, desclassificada, não admitida) e o selo "Concluída", sessões; lixeira em cada item |
 | `/chamamentos/novo`, `/chamamentos/:ch/editar` | admin ou presidente | chamamento e lotes |
 | `/chamamentos/:ch/propostas/nova`, `.../:p/editar` | admin ou presidente | proposta (OSC, lote, protocolo, nº SEI) |
 | `/oscs` | admin ou presidente | OSCs, com máscara e validação de CNPJ |
 | `/usuarios` | administrador | usuários, perfil (admin ou presidente), e-mail de senha e desativação |
 | `/chamamentos/:ch/sessoes/nova` | admin ou presidente | abertura numa página só: data, lote(s) em pauta e presentes (nome e papel, "Adicionar pessoa", remoção com um clique) |
-| `/chamamentos/:ch/sessoes/:s` | admin ou presidente | foco, presentes (alterar), lotes e propostas da pauta, encerrar (com confirmação) |
+| `/sessao/:id?ch=` | admin ou presidente | presentes (alterar), pauta com o progresso de cada proposta ("D1 18/28 · D2 ok"), status e **Avaliar**; encerrar (com confirmação); o antigo `/chamamentos/:ch/sessoes/:s` redireciona |
 
 ### Admissibilidade (Anexo III, item 28)
 
@@ -306,28 +307,42 @@ Os dois leem os dados (firestore.rules); ninguém escreve direto no Firestore. A
 | `/api/admissibilidade` | `PUT` | `{ chamamentoId, propostaId, sessaoId, admitida: boolean, motivo?, planos: [{ codigo, paginaInicial, paginaFinal }] }` | admin ou presidente |
 
 - Simplificada (Simplificação 2/4): sem checklist 28.1 nem de formatação (28.5). **Admitida** (sim/não); **motivo**
-  obrigatório (10+ caracteres) se não admitida; páginas inicial/final de cada PA (obrigatórias se admitida).
+  (10+ caracteres) se não admitida; páginas inicial/final de cada PA (se admitida). Com o salvamento automático
+  (Simplificação 3/4) motivo e páginas em branco são gravados; a **conclusão** é que os exige.
 - Página de corte de cada PA = página inicial + limite do PA (Anexo III, 7.1) − 1 (`apurarPlano`, `src/domain`);
   a tela alerta quando excede.
 - Grava `propostas/{p}.admissibilidade = { admitida, motivo?, planos (com limite, páginas, página de corte e
   excedente), situacao: 'admitida' | 'nao_admitida', sessaoId }` e desfaz a conclusão.
   Proposta **não admitida não segue para avaliação**: C2 e C3 → **409**.
 
-### Telas (Etapa 4b)
+### Avaliação numa tela só (Simplificação 3/4)
 
 | Rota | Escrita | O que faz |
 |---|---|---|
-| `/chamamentos/:ch/propostas/:p/admissibilidade` | admin ou presidente (com sessão aberta) | seções: 1. admissão (sim/não) e motivo, 2. páginas por PA com página de corte e alerta de atenção ao exceder |
-| `/chamamentos/:ch/propostas/:p/d1` | admin ou presidente (com sessão aberta e o lote da proposta em pauta) | navegação PA1…PA6 com progresso por PA; painel do subcritério em seções (Identificação, Elementos, Escala 0–4 em cartões com o descritor sempre visível, Justificativa e páginas; lixeira do nível registrado); alerta de nível 0 em 1.1/1.2; rodapé fixo com a D1 parcial, a prévia, o status oficial e **Salvar** |
-| `/chamamentos/:ch/propostas/:p/d2` | admin ou presidente (com sessão aberta) | tabela de experiências; painel lateral para criar/editar (com documentos); desconsiderar por critério (3.8.5) em diálogo; lixeira da experiência e de cada documento; linha do tempo A (teal) / B (azul) com rótulos |
-| `/chamamentos/:ch/propostas/:p/d2/memoria` | — | memória de cálculo da D2 (`resultadoD2/atual`) em abas por critério |
+| `/avaliar/:propostaId?ch=&aba=` | admin ou presidente (com sessão aberta e o lote da proposta em pauta) | a proposta inteira: abas **Admissão** \| **D1** \| **D2** \| **Resultado**; cabeçalho fixo com OSC, lote, nº SEI, progresso "x de 28", D1 e NF parciais, status, alerta de eliminatória, **Proposta anterior / próxima** da pauta e o interruptor **Projetar** |
+
+- **Admissão:** admitida sim/não, motivo e uma linha por PA (página inicial e final, páginas, página de corte e excesso).
+- **D1 (uma página):** seções recolhíveis PA1…PA6 com subtotal e progresso; cada subcritério numa linha — escala
+  0–4 em botões (teclas **0–4** com o foco na escala), descritor do nível escolhido, **Ver elementos**, justificativa
+  que cresce e páginas citadas; pendência por linha (nível ou justificativa) e **Ir para o próximo pendente**;
+  lixeira do nível registrado.
+- **D2:** tabela com edição direta na linha (adicionar, editar, excluir, desconsiderar por critério), documentos e
+  demais campos na linha expansível; linha do tempo A/B.
+- **Resultado:** totais por PA, D1, critérios da D2 com a memória resumida, NF, status, eliminatórias,
+  **Concluir / Desfazer conclusão** (com o que falta) e **Gerar espelho**.
+- **Salvamento automático:** sem botão Salvar. A tela muda na hora e grava em seguida (textos 800 ms depois da última
+  tecla; níveis e caixas na hora), uma gravação por vez, com nova tentativa automática em falha de rede. Indicador
+  no cabeçalho: "Salvando…", "Tudo salvo", "Erro ao salvar — Tentar de novo" ou "Não salvo: …" (campo incompleto,
+  como experiência sem início ou página acima do corte). Aviso do navegador ao sair com gravação pendente.
+- O chamamento vai na consulta (`?ch=`): o Firestore lê pelo caminho completo. Os endereços antigos
+  (`…/propostas/:p/admissibilidade`, `/d1`, `/d2`, `/d2/memoria`) redirecionam para a aba correspondente.
 
 Sem sessão aberta (ou com o lote fora da pauta), a tela fica só para consulta (as lixeiras continuam: exclusão livre).
 Proposta concluída continua editável; a faixa da proposta avisa que alterar a avaliação desfaz a conclusão.
 
 Leitura em tempo real (`onSnapshot`, `src/lib/firestore.ts`); escrita só por `chamarApi` (`src/lib/api.ts`).
 O componente `FormularioApi` (`src/components/ui`) valida com o mesmo esquema da `/api` e põe os erros 400 da
-`/api` nos mesmos campos.
+`/api` nos mesmos campos (cadastros e sessão); a avaliação usa o salvamento automático.
 
 ### Resultado: classificação, desempate e conclusão (Etapa 6a)
 
@@ -378,7 +393,7 @@ Os dados são lidos uma vez no momento de gerar, e o documento é montado por c�
 
 ### Modo projeção — telão da sala (Etapa 5)
 
-- Rota **`/projecao/:ch/:sessaoId`** (o link "Abrir telão" aparece na tela da D1 e na tela da sessão).
+- Rota **`/projecao/:ch/:sessaoId`** (o link "Abrir projeção (telão)" fica na tela da sessão).
   Somente leitura, sem menu e sem nenhuma ação; tema próprio de alto contraste (fundo branco, texto quase preto,
   nível registrado em azul de ação com o rótulo "Nível registrado"), tipografia display para leitura a 6 m e
   troca de foco com fade curto (desligado em "reduzir movimento"). Tela cheia: **F11** no navegador.
@@ -387,10 +402,10 @@ Os dados são lidos uma vez no momento de gerar, e o documento é montado por c�
   registrado destacado, justificativa, páginas), `d2` (pontos por critério e memória resumida) ou
   `resumo` (PA1…PA6, D1, D2, NF e status). Sem foco: tela de espera com o nome do chamamento.
 - Foco = `{ tipo: 'admissibilidade' | 'subcriterio' | 'd2' | 'resumo', propostaId, subcriterio? }`, alterado
-  por admin ou presidente (`PATCH /api/sessao`, `acao: 'foco'`) e, ao salvar um nível, pela própria avaliação.
-- Na tela da D1, com sessão aberta, admin ou presidente controla o telão: **Projetar** (subcritério, admissibilidade, D2,
-  resumo) e atalhos **Alt+→** / **Alt+←** (próximo/anterior subcritério) e **Alt+R** (resumo). O indicador
-  "No telão" mostra o que está sendo projetado.
+  por admin ou presidente (`PATCH /api/sessao`, `acao: 'foco'`).
+- Na tela de avaliação, com sessão aberta, o interruptor **Projetar** (cabeçalho) faz o telão acompanhar: o
+  subcritério em que a Comissão mexe e a aba (Admissão → admissibilidade, D1 → subcritério, D2 → D2, Resultado →
+  resumo). Desligado, nada muda no telão. A tela da sessão mostra "No telão".
 
 **Login do telão.** O computador ligado ao projetor usa um usuário próprio, só para isso:
 1. Na tela **Usuários → Novo usuário**, cadastre um usuário só para isso, por exemplo `telao@seds.go.gov.br`.
@@ -500,17 +515,14 @@ Fonte de verdade: [`docs/DESIGN-SYSTEM-SEDS.md`](docs/DESIGN-SYSTEM-SEDS.md). Co
 | Rota | Template | Tela |
 |---|---|---|
 | `/login` | AuthPage | entrada (e-mail e senha) |
-| `/` | ListPage | chamamentos (busca e ordenação) |
+| `/` | ListPage | início: sessão aberta em destaque (Continuar) ou Abrir sessão; chamamentos (busca e ordenação) |
 | `/chamamentos/novo`, `/chamamentos/:ch/editar` | FormPage | chamamento e lotes |
 | `/chamamentos/:ch` | DetailPage | painel: resumo, propostas por lote com status, sessões |
 | `/chamamentos/:ch/propostas/nova`, `…/:p/editar` | FormPage | proposta (OSC, lote, protocolo, nº SEI) |
 | `/chamamentos/:ch/sessoes/nova` | FormPage | abertura da sessão numa página: data, lote(s) e presentes |
-| `/chamamentos/:ch/sessoes/:s` | DetailPage | sessão: foco da projeção, presentes (nome e papel), lotes e pauta, encerrar |
+| `/sessao/:id?ch=` | DetailPage | sessão: presentes (nome e papel), pauta com progresso, status e Avaliar, encerrar |
 | `/chamamentos/:ch/sessoes/:s/ata` | FormPage | minuta de ata editável e PDF |
-| `…/propostas/:p/admissibilidade` | FormPage | admitida (sim/não) e motivo; páginas por PA (alerta de excesso) |
-| `…/propostas/:p/d1` | DetailPage | navegação PA1…PA6 com progresso, subcritério em seções, rodapé fixo com D1 parcial e Salvar |
-| `…/propostas/:p/d2` | ListPage | experiências (tabela + painel lateral), linha do tempo A/B |
-| `…/propostas/:p/d2/memoria` | DetailPage | memória de cálculo da D2 em abas por critério |
+| `/avaliar/:propostaId?ch=&aba=` | DetailPage | proposta inteira: abas Admissão, D1 (uma página), D2 (edição na linha), Resultado; cabeçalho fixo; salvamento automático |
 | `/chamamentos/:ch/lotes/:lote/classificacao` | ListPage | ranking, empates, concluir e desfazer conclusão, quadro-resumo PDF/XLSX |
 | `/projecao/:ch/:s` | (layout próprio) | telão: alto contraste, sem menu nem ações |
 | `/oscs` | ListPage | OSCs (painel lateral para cadastrar e editar) |

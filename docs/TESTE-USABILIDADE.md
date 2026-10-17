@@ -61,7 +61,8 @@ a não ser que a pessoa esteja travada há mais de 2 minutos (aí conta como "pe
   começam na página 3 e vêm um depois do outro; o PA3 tem 2 páginas a mais do que o limite."
 - **Critério de sucesso:** proposta registrada como **admitida** (sim); o excesso do PA3 notado pela pessoa (ela
   comenta ou aponta o alerta de atenção).
-- **Observe:** se o alerta de páginas acima do limite é percebido e entendido ("página de corte").
+- **Observe:** se o alerta de páginas acima do limite é percebido e entendido ("página de corte") e se a pessoa
+  confia no salvamento automático (indicador "Tudo salvo" no cabeçalho, sem botão Salvar).
 
 ### T3 — Avaliar um subcritério da D1 e projetá-lo no telão (relator e presidente; tempo-alvo: 3 min)
 
@@ -69,25 +70,25 @@ a não ser que a pessoa esteja travada há mais de 2 minutos (aí conta como "pe
   Cite as páginas 2 e 5. Depois, mostre esse subcritério no telão."
 - **Critério de sucesso:** registro salvo (nível 3, justificativa com o mínimo de caracteres e páginas 2 e 5) e o
   telão mostrando o 1.1 com o nível registrado destacado.
-- **Observe:** se o descritor dos níveis é lido, se o botão **Salvar** do rodapé é encontrado, se a pessoa percebe
-  que o sistema avançou para o próximo subcritério e se usa **Projetar** ou os atalhos.
+- **Observe:** se o descritor do nível escolhido é lido, se a pessoa percebe que não há botão Salvar (grava
+  sozinho), se usa as teclas 0–4, "Ir para o próximo pendente" e o interruptor **Projetar**.
 
 ### T4 — Cadastrar uma experiência da D2 e conferir a memória de cálculo (relator; tempo-alvo: 5 min)
 
 - **Instrução:** "A OSC comprovou uma experiência de internação socioeducativa (categoria A), em parceria pelo
   MROSC, desde janeiro de 2019, com 60 vagas e um atestado de capacidade técnica aceito pela Comissão. Cadastre a
   experiência e diga quantos pontos ela rendeu no critério C2.1."
-- **Critério de sucesso:** experiência cadastrada com o documento aceito, e a pessoa encontra na **Memória da D2**
-  os pontos do C2.1.
-- **Observe:** se o painel lateral é entendido, se "comprova execução satisfatória" e "aceito" ficam claros e se a
-  linha do tempo e a memória são encontradas.
+- **Critério de sucesso:** experiência cadastrada na tabela com o documento aceito, e a pessoa encontra na aba
+  **Resultado** os pontos do C2.1.
+- **Observe:** se a edição direta na linha é entendida (e a linha expansível dos documentos), se "comprova execução
+  satisfatória" e "aceito" ficam claros e se a linha do tempo e a memória são encontradas.
 
 ### T5 — Concluir a proposta e gerar a minuta da ata (presidente; tempo-alvo: 3 min)
 
 - **Instrução:** "A Comissão terminou a avaliação da Associação Beta. Conclua a proposta e gere a minuta da ata
   da sessão em PDF."
-- **Critério de sucesso:** proposta **concluída** (selo "Concluída" na classificação) depois de conferir NF e
-  status na confirmação, e o PDF da ata baixado.
+- **Critério de sucesso:** proposta **concluída** (selo "Concluída" no cabeçalho da avaliação ou na classificação)
+  depois de conferir NF e status, e o PDF da ata baixado.
 - **Observe:** se a pessoa lê a NF e o status antes de confirmar, se entende que a conclusão pode ser desfeita (e
   que alterar a avaliação a desfaz) e se encontra a ata a partir da sessão.
 

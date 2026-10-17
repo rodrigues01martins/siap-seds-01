@@ -7,14 +7,14 @@ import { expect, test, type Page } from '@playwright/test'
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { CHAMAMENTO_ENSAIO, montarEnsaio } from '../../scripts/lib/ensaio'
-import { comoPerfil, esperarTela, violacoesAxe } from './apoio'
+import { comoPerfil, esperarSalvo, esperarTela, violacoesAxe } from './apoio'
 import { CHAMAMENTO_EXCLUIR_PROPOSTA, CHAMAMENTO_PAUTA, PROPOSTA_PAUTA } from './perfis'
 
 const PASTA = join('docs', 'auditoria-design', 'exclusao')
 const ENSAIO = montarEnsaio('2026-11-10')
 const NUMERO_ENSAIO = String(ENSAIO.documentos[`chamamentos/${CHAMAMENTO_ENSAIO}`]!.numero)
 const OSC_COM_PROPOSTAS = ENSAIO.documentos[`oscs/${ENSAIO.oscs[0]}`]!.razaoSocial as string
-const D1_PAUTA = `/chamamentos/${CHAMAMENTO_PAUTA}/propostas/${PROPOSTA_PAUTA}/d1`
+const D1_PAUTA = `/avaliar/${PROPOSTA_PAUTA}?ch=${CHAMAMENTO_PAUTA}&aba=d1`
 
 async function foto(pagina: Page, nome: string) {
   mkdirSync(PASTA, { recursive: true })
@@ -81,21 +81,20 @@ test('exclusão livre: lixeira, prévia com a contagem e cascata pela /api', asy
   // 5. Nível da D1 registrado na sessão aberta: lixeira do nível, recálculo.
   await pagina.goto(D1_PAUTA)
   await esperarTela(pagina)
-  const resumo = pagina.getByRole('region', { name: 'Resumo da D1' })
-  for (const faltam of [28, 27]) {
-    await pagina.getByRole('radio', { name: 'Nível 3', exact: true }).check()
-    await pagina.getByRole('textbox', { name: /^Justificativa/ }).fill('Registro do teste de exclusão (E2E), nível 3.')
-    await pagina.getByRole('textbox', { name: 'Páginas citadas' }).fill('1')
-    await resumo.getByRole('button', { name: /^Salvar avaliação/ }).click()
-    await expect(resumo).toContainText(`Faltam ${faltam - 1} de`)
+  const resumo = pagina.getByRole('region', { name: 'Resumo da proposta' })
+  for (const codigo of ['1.1', '1.2']) {
+    const linha = pagina.getByRole('listitem', { name: new RegExp(`^${codigo.replace('.', '\\.')} — `) })
+    await linha.getByRole('radio', { name: 'Nível 3', exact: true }).click()
+    await linha.getByRole('textbox', { name: /^Justificativa do/ }).fill('Registro do teste de exclusão (E2E), nível 3.')
   }
-  await pagina.getByRole('button', { name: /^1\.1 / }).first().click()
+  await esperarSalvo(pagina)
+  await expect(resumo).toContainText('D1 6 / 112')
   dialogo = await abrirLixeira(pagina, 'nível do 1.1')
   await expect(dialogo).toContainText('Serão apagados: 1 avaliação.')
   await foto(pagina, '5-previa-nivel')
   expect(await violacoesAxe(pagina)).toEqual([])
   await confirmar(pagina, dialogo)
-  await expect(resumo).toContainText('Faltam 27 de')
+  await expect(resumo).toContainText('D1 3 / 112')
 
   // 6. Sessão: apaga a sessão e o que foi registrado com ela (o nível que sobrou); totais recalculados.
   await pagina.goto(`/chamamentos/${CHAMAMENTO_PAUTA}`)
@@ -108,7 +107,7 @@ test('exclusão livre: lixeira, prévia com a contagem e cascata pela /api', asy
   await expect(pagina.getByRole('table', { name: 'Sessões' })).toContainText('Nenhuma sessão registrada')
   await pagina.goto(D1_PAUTA)
   await esperarTela(pagina)
-  await expect(pagina.getByRole('region', { name: 'Resumo da D1' })).toContainText('Faltam 28 de')
+  await expect(pagina.getByRole('region', { name: 'Resumo da proposta' })).toContainText('D1 0 / 112')
   await foto(pagina, '7-d1-depois-da-sessao-excluida')
 
   // 7. Diálogo em tela estreita (768).

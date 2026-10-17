@@ -15,6 +15,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { podeFazer, podeLer, type Acesso, type Exigencia } from '../../domain/permissoes'
+import { rotaSessao } from '../../lib/rotas'
 
 export interface ItemNavegacao {
   rotulo: string
@@ -51,7 +52,7 @@ export function gruposDeNavegacao(acesso: Acesso | null, { chamamento, sessaoAbe
       itens: !ch
         ? []
         : sessaoAberta
-          ? [{ rotulo: 'Sessão em andamento', caminho: `${ch}/sessoes/${sessaoAberta}`, icone: Presentation }]
+          ? [{ rotulo: 'Sessão em andamento', caminho: rotaSessao(chamamento!.id, sessaoAberta), icone: Presentation }]
           : [{ rotulo: 'Abrir sessão', caminho: `${ch}/sessoes/nova`, icone: Presentation }],
     },
     {

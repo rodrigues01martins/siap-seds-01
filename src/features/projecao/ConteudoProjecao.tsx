@@ -84,7 +84,8 @@ export function ProjecaoAdmissibilidade({ admissibilidade }: { admissibilidade: 
 // ---------- Subcritério da D1 ----------
 
 export interface RegistroProjetado {
-  nivel: number
+  /** null: rascunho do salvamento automático, sem nível ainda. */
+  nivel: number | null
   justificativa: string
   paginas: number[]
 }
