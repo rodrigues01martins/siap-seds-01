@@ -5,6 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Button } from '../ui/Button'
 import { AppShell } from './AppShell'
+import { LOGO_CABECALHO } from '../ui/Brand'
 import { AuthPage } from './AuthPage'
 import { DashboardPage, DetailPage, FormPage, ListPage, WizardPage } from './paginas'
 
@@ -61,7 +62,10 @@ describe('AppShell', () => {
   it('header: marca (variante para fundo claro), nome do sistema, perfil e sair', async () => {
     montarShell()
     const cabecalho = screen.getByRole('banner')
-    expect(within(cabecalho).getByRole('img', { name: /Governo de Goiás/ })).toHaveClass('text-text-primary')
+    // Com src/public/logo-seds-goias.png, o logotipo (imagem); sem ele, a marca em texto (variante para fundo claro).
+    const marca = within(cabecalho).getByRole('img', { name: /Governo de Goiás/ })
+    if (LOGO_CABECALHO) expect(marca).toHaveAttribute('alt', 'SEDS - Governo de Goiás')
+    else expect(marca).toHaveClass('text-text-primary')
     expect(cabecalho).toHaveTextContent('Avaliação de Planos de Ação')
     expect(cabecalho).toHaveTextContent('Ana Lima')
     expect(cabecalho).toHaveTextContent('Administrador')
