@@ -98,3 +98,17 @@ describe('níveis', () => {
     expect(v.get('sds-sidebar-width-collapsed')).toBe('72px')
   })
 })
+
+describe('identidade visual pontual: botão Entrar e linhas entre seções (#007770, teal 500 do DS)', () => {
+  it('botão Entrar do login: fundo #007770; hover e pressionado nos tons seguintes da escala teal', () => {
+    expect(cor('sds-button-login-bg')).toBe('#007770')
+    expect(cor('sds-button-login-bg-hover')).toBe('#00615B')
+    expect(cor('sds-button-login-bg-active')).toBe('#004D49')
+  })
+
+  it('linhas que separam as seções (cabeçalho e rodapé): #007770; bordas comuns continuam neutras', () => {
+    expect(cor('sds-border-secao')).toBe('#007770')
+    expect(cor('sds-border-default')).not.toBe('#007770')
+  })
+})
+

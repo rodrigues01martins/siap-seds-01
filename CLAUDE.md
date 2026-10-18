@@ -26,7 +26,8 @@ Eliminatórias: D1 < 67,2 → inapta; nível 0 em 1.1 ou 1.2 → desclassificada
    (testes de cada componente ao lado); ícones só de lucide-react (componente Icone, 16/20/24).
    Telas usam os templates de src/components/templates (AppShell, AuthPage, ListPage, FormPage, DetailPage,
    WizardPage, DashboardPage), PageHeader com no máximo UMA ação primária por área, e FormularioApi nos
-   formulários ligados à /api — exceto a avaliação (/avaliar), que usa o salvamento automático (sem botão Salvar). Marcas: só arquivos oficiais em public/brand/ (Brand.tsx); sem eles, texto.
+   formulários ligados à /api — exceto a avaliação (/avaliar), que usa o salvamento automático (sem botão Salvar). Marcas: só arquivos oficiais em public/brand/ (Brand.tsx); sem eles, texto. Logotipo do cabeçalho:
+   src/public/logo-seds-goias.png (Brand.tsx, import.meta.glob; sem o arquivo, texto).
    Telão (/projecao): tokens --sds-projecao-*. Relatórios: CORES_DOCUMENTO (documento.ts) lidas do tokens.css.
    Nenhum HEX fora de src/styles/tokens.css (tests/design/hex.test.ts). Mensagens de erro em região aria-live
    (MensagensCampo/MensagemErro em Field.tsx).

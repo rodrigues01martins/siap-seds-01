@@ -10,7 +10,7 @@ export function AuthPage({ titulo, subtitulo, children }: { titulo: string; subt
   return (
     <div data-template="AuthPage" className="flex min-h-screen flex-col bg-background-default text-text-primary">
       <LinkPularConteudo />
-      <header className="flex h-16 items-center border-b border-border-default bg-background-surface px-4 md:px-6">
+      <header className="flex h-16 items-center border-b border-border-secao bg-background-surface px-4 md:px-6">
         <Brand variante="light" />
       </header>
       <main id="conteudo" tabIndex={-1} className="flex flex-1 items-start justify-center px-4 py-10 focus:outline-none md:py-16">

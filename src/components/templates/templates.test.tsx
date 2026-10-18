@@ -5,6 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Button } from '../ui/Button'
 import { AppShell } from './AppShell'
+import { LOGO_CABECALHO } from '../ui/Brand'
 import { AuthPage } from './AuthPage'
 import { DashboardPage, DetailPage, FormPage, ListPage, WizardPage } from './paginas'
 
@@ -61,11 +62,17 @@ describe('AppShell', () => {
   it('header: marca (variante para fundo claro), nome do sistema, perfil e sair', async () => {
     montarShell()
     const cabecalho = screen.getByRole('banner')
-    expect(within(cabecalho).getByRole('img', { name: /Governo de Goiás/ })).toHaveClass('text-text-primary')
+    // Com src/public/logo-seds-goias.png, o logotipo (imagem); sem ele, a marca em texto (variante para fundo claro).
+    const marca = within(cabecalho).getByRole('img', { name: /Governo de Goiás/ })
+    if (LOGO_CABECALHO) expect(marca).toHaveAttribute('alt', 'SEDS - Governo de Goiás')
+    else expect(marca).toHaveClass('text-text-primary')
     expect(cabecalho).toHaveTextContent('Avaliação de Planos de Ação')
     expect(cabecalho).toHaveTextContent('Ana Lima')
     expect(cabecalho).toHaveTextContent('Administrador')
     expect(cabecalho).toHaveClass('h-16')
+    // Linhas que separam as seções (cabeçalho | conteúdo | rodapé): cor de seção (#007770), mesma espessura.
+    expect(cabecalho).toHaveClass('border-b', 'border-border-secao')
+    expect(screen.getByRole('contentinfo')).toHaveClass('border-t', 'border-border-secao')
     await userEvent.click(within(cabecalho).getByRole('button', { name: 'Sair' }))
     expect(simulado.sair).toHaveBeenCalled()
   })
@@ -137,6 +144,8 @@ describe('AuthPage', () => {
     expect(screen.getByRole('main')).toHaveTextContent('formulário')
     expect(screen.getByRole('heading', { level: 1, name: 'Entrar' })).toBeInTheDocument()
     expect(screen.getByRole('contentinfo')).toHaveTextContent('Secretaria de Estado de Desenvolvimento Social')
+    expect(screen.getByRole('banner')).toHaveClass('border-b', 'border-border-secao')
+    expect(screen.getByRole('contentinfo')).toHaveClass('border-t', 'border-border-secao')
   })
 })
 
