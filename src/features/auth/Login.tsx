@@ -72,7 +72,14 @@ export function Login() {
             {aviso}
           </Alert>
         )}
-        <Button type="submit" tamanho="lg" icone={LogIn} carregando={enviando} className="w-full">
+        {/* Cor da identidade visual (teal da marca) só neste botão: troca os tokens do primário nesta instância. */}
+        <Button
+          type="submit"
+          tamanho="lg"
+          icone={LogIn}
+          carregando={enviando}
+          className="w-full [--sds-button-primary-bg:var(--sds-button-login-bg)] [--sds-button-primary-bg-hover:var(--sds-button-login-bg-hover)] [--sds-button-primary-bg-active:var(--sds-button-login-bg-active)]"
+        >
           Entrar
         </Button>
         <Button variante="tertiary" icone={KeyRound} onClick={() => void pedirSenha()} className="w-full">

@@ -83,6 +83,7 @@
   --color-text-positive: var(--sds-text-positive);
   --color-border-default: var(--sds-border-default);
   --color-border-strong: var(--sds-border-strong);
+  --color-border-secao: var(--sds-border-secao);
   --color-border-focus: var(--sds-border-focus);
   --color-border-input: var(--sds-border-input);
   --color-border-input-hover: var(--sds-border-input-hover);

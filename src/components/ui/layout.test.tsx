@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { Plus } from 'lucide-react'
 import { MemoryRouter } from 'react-router'
 import { describe, expect, it } from 'vitest'
-import { Brand, MARCAS } from './Brand'
+import { Brand, LOGO_CABECALHO, MARCAS, logoDoCabecalho } from './Brand'
 import { Button } from './Button'
 import { ButtonLink } from './ButtonLink'
 import { Card } from './Card'
@@ -15,9 +15,29 @@ import { PageHeader } from './PageHeader'
 const comRotas = (no: React.ReactNode) => render(<MemoryRouter>{no}</MemoryRouter>)
 
 describe('Brand (marcas SEDS e Governo de Goiás)', () => {
-  it('sem arquivos em public/brand: nome em texto, na hierarquia do Kit (Secretaria → Governo de Goiás)', () => {
+  it('logotipo do cabeçalho: o arquivo src/public/logo-seds-goias.png, se existir (senão, texto)', () => {
+    expect(logoDoCabecalho({ '../../public/logo-seds-goias.png': '/assets/logo-seds-goias-abc.png' })).toBe('/assets/logo-seds-goias-abc.png')
+    expect(logoDoCabecalho({})).toBeNull()
+  })
+
+  it('cabeçalho com o logotipo: imagem (alt "SEDS - Governo de Goiás", contain, proporção mantida) sem repetir o texto', () => {
+    render(<Brand variante="light" logo="/assets/logo-seds-goias.png" />)
+    const logo = screen.getByRole('img', { name: 'SEDS - Governo de Goiás' })
+    expect(logo.tagName).toBe('IMG')
+    expect(logo).toHaveAttribute('src', '/assets/logo-seds-goias.png')
+    expect(logo).toHaveClass('object-contain', 'w-auto', 'h-10')
+    expect(screen.queryByText('SEDS')).not.toBeInTheDocument()
+    expect(screen.queryByText('Governo de Goiás')).not.toBeInTheDocument()
+  })
+
+  it('rodapé (completa) e outras variantes continuam em texto, mesmo com o logotipo', () => {
+    render(<Brand variante="light" completa logo="/assets/logo-seds-goias.png" />)
+    expect(screen.getByText('Secretaria de Estado de Desenvolvimento Social')).toBeInTheDocument()
+  })
+
+  it('sem arquivos em public/brand nem logotipo: nome em texto, na hierarquia do Kit (Secretaria → Governo de Goiás)', () => {
     expect(MARCAS).toEqual({ light: null, dark: null, monochrome: null })
-    render(<Brand variante="light" />)
+    render(<Brand variante="light" logo={null} />)
     const marca = screen.getByRole('img', { name: 'Secretaria de Estado de Desenvolvimento Social — Governo de Goiás' })
     const textos = [...marca.querySelectorAll('[data-nivel]')].map((n) => n.textContent)
     expect(textos).toEqual(['SEDS', 'Governo de Goiás'])
@@ -28,13 +48,17 @@ describe('Brand (marcas SEDS e Governo de Goiás)', () => {
     ['dark', 'text-text-inverse'],
     ['monochrome', 'text-current'],
   ] as const)('variante %s', (variante, classe) => {
-    render(<Brand variante={variante} />)
+    render(<Brand variante={variante} logo={null} />)
     expect(screen.getByRole('img')).toHaveClass(classe)
   })
 
   it('versão completa (login e rodapé): nome da Secretaria por extenso', () => {
     render(<Brand variante="light" completa />)
     expect(screen.getByText('Secretaria de Estado de Desenvolvimento Social')).toBeInTheDocument()
+  })
+
+  it('padrão do cabeçalho: o logotipo encontrado no build (ou null, enquanto o arquivo não for adicionado)', () => {
+    expect(LOGO_CABECALHO === null || typeof LOGO_CABECALHO === 'string').toBe(true)
   })
 })
 

@@ -4,6 +4,8 @@
 //
 // Só usamos arquivos oficiais colocados em public/brand/. Enquanto não houver, a marca é escrita em texto.
 // TODO (README, "Marcas"): ao receber os arquivos, preencher MARCAS com os caminhos (ex.: '/brand/seds-governo-light.svg').
+// Cabeçalho (variante light, não completa): logotipo institucional src/public/logo-seds-goias.png, importado pelo Vite
+// (import.meta.glob: com o arquivo, URL com hash no build; sem ele, a marca continua em texto e o build não quebra).
 
 import { cx } from './cx'
 
@@ -16,6 +18,16 @@ export const MARCAS: Record<VarianteMarca, string | null> = {
   monochrome: null,
 }
 
+/** URL do logotipo do cabeçalho entre os arquivos encontrados pelo Vite (vazio = ainda não adicionado). */
+export function logoDoCabecalho(arquivos: Record<string, string>): string | null {
+  return arquivos['../../public/logo-seds-goias.png'] ?? null
+}
+
+export const LOGO_CABECALHO = logoDoCabecalho(
+  import.meta.glob<string>('../../public/logo-seds-goias.png', { eager: true, query: '?url', import: 'default' }),
+)
+const ALT_LOGO = 'SEDS - Governo de Goiás'
+
 export { GOVERNO, SECRETARIA } from '../../lib/marca'
 import { GOVERNO, SECRETARIA } from '../../lib/marca'
 const NOME_ACESSIVEL = `${SECRETARIA} — ${GOVERNO}`
@@ -26,7 +38,21 @@ const CORES: Record<VarianteMarca, { base: string; secundaria: string; divisor: 
   monochrome: { base: 'text-current', secundaria: 'text-current', divisor: 'bg-current' },
 }
 
-export function Brand({ variante = 'light', completa = false, className }: { variante?: VarianteMarca; completa?: boolean; className?: string }) {
+export function Brand({
+  variante = 'light',
+  completa = false,
+  logo = LOGO_CABECALHO,
+  className,
+}: {
+  variante?: VarianteMarca
+  completa?: boolean
+  /** Logotipo do cabeçalho (padrão: src/public/logo-seds-goias.png, se existir). */
+  logo?: string | null
+  className?: string
+}) {
+  if (logo && variante === 'light' && !completa) {
+    return <img src={logo} alt={ALT_LOGO} className={cx('h-10 w-auto max-w-40 object-contain sm:max-w-56', className)} />
+  }
   const arquivo = MARCAS[variante]
   if (arquivo) return <img src={arquivo} alt={NOME_ACESSIVEL} className={cx('h-10 w-auto', className)} />
   const cores = CORES[variante]

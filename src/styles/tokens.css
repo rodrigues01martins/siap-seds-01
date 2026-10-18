@@ -120,6 +120,12 @@
      o campo; #E2E2E2 e #CCCCCC ficam abaixo disso), por isso Neutral 500. */
   --sds-border-default: var(--sds-neutral-200);
   --sds-border-strong: var(--sds-neutral-300);
+  /* Identidade visual (teal da marca): linhas que separam as seções da página (cabeçalho | conteúdo | rodapé) e o
+     botão "Entrar" do login, com hover e pressionado nos tons seguintes da escala. */
+  --sds-border-secao: var(--sds-teal-500);
+  --sds-action-identidade: var(--sds-teal-500);
+  --sds-action-identidade-hover: var(--sds-teal-600);
+  --sds-action-identidade-active: var(--sds-teal-700);
   --sds-border-focus: var(--sds-primary-600);
   --sds-border-input: var(--sds-neutral-500);
   --sds-border-input-hover: var(--sds-neutral-700);
@@ -196,6 +202,10 @@
   --sds-button-primary-bg-hover: var(--sds-action-primary-hover);
   --sds-button-primary-bg-active: var(--sds-action-primary-active);
   --sds-button-primary-fg: var(--sds-text-inverse);
+  /* Botão "Entrar" do login (só essa instância): teal da identidade visual; hover e pressionado nos tons seguintes. */
+  --sds-button-login-bg: var(--sds-action-identidade);
+  --sds-button-login-bg-hover: var(--sds-action-identidade-hover);
+  --sds-button-login-bg-active: var(--sds-action-identidade-active);
   --sds-button-secondary-bg: var(--sds-background-surface);
   --sds-button-secondary-bg-hover: var(--sds-action-subtle);
   --sds-button-secondary-fg: var(--sds-action-primary);

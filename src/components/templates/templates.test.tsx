@@ -66,6 +66,9 @@ describe('AppShell', () => {
     expect(cabecalho).toHaveTextContent('Ana Lima')
     expect(cabecalho).toHaveTextContent('Administrador')
     expect(cabecalho).toHaveClass('h-16')
+    // Linhas que separam as seções (cabeçalho | conteúdo | rodapé): cor de seção (#007770), mesma espessura.
+    expect(cabecalho).toHaveClass('border-b', 'border-border-secao')
+    expect(screen.getByRole('contentinfo')).toHaveClass('border-t', 'border-border-secao')
     await userEvent.click(within(cabecalho).getByRole('button', { name: 'Sair' }))
     expect(simulado.sair).toHaveBeenCalled()
   })
@@ -137,6 +140,8 @@ describe('AuthPage', () => {
     expect(screen.getByRole('main')).toHaveTextContent('formulário')
     expect(screen.getByRole('heading', { level: 1, name: 'Entrar' })).toBeInTheDocument()
     expect(screen.getByRole('contentinfo')).toHaveTextContent('Secretaria de Estado de Desenvolvimento Social')
+    expect(screen.getByRole('banner')).toHaveClass('border-b', 'border-border-secao')
+    expect(screen.getByRole('contentinfo')).toHaveClass('border-t', 'border-border-secao')
   })
 })
 
