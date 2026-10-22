@@ -254,6 +254,7 @@ registro): para descartar o que foi feito numa sessão, exclua a sessão (apaga 
 |---|---|---|---|
 | `/api/avaliacao` | `PUT` registrar/alterar (salvamento automático: só o que mudou) | `{ chamamentoId, propostaId, sessaoId, codigo, nivel?: 0–4 \| null, justificativa?, paginas? }` | admin ou presidente |
 | `/api/experiencia` | `POST` criar, `PATCH` editar | `{ chamamentoId, propostaId, sessaoId, descricao, categorias, modalidade, orgaoParceiro?, instrumento?, mrosc?, inicio, fim?, vagas?, unidades?, trabalhadores?, valorAnualCentavos?, documentos?: [{ tipo, numeroSEI, comprovaExecucaoSatisfatoria, aceito }], desconsideracoes?: [{ criterio, justificativa }] }` (`PATCH` com `id`) | admin ou presidente |
+| `/api/experiencia` | `GET ?replicar=true` prévia da replicação (não grava); `POST { acao: 'replicar' }` replica para o outro lote | `?chamamentoId&propostaId&propostaDestinoId?` / `{ acao: 'replicar', chamamentoId, propostaId, sessaoId, propostaDestinoId? }` | admin ou presidente |
 | `/api/concluir` | `POST` | `{ chamamentoId, propostaId, acao: 'concluir' \| 'desfazer' }` | admin ou presidente |
 
 > **Sessão obrigatória:** nível da D1, admissibilidade, experiências da D2 e desempate só são aceitos com o
@@ -342,7 +343,9 @@ Os dois leem os dados (firestore.rules); ninguém escreve direto no Firestore. A
   que cresce e páginas citadas; pendência por linha (nível ou justificativa) e **Ir para o próximo pendente**;
   lixeira do nível registrado.
 - **D2:** tabela com edição direta na linha (adicionar, editar, excluir, desconsiderar por critério), documentos e
-  demais campos na linha expansível; linha do tempo A/B.
+  demais campos na linha expansível; linha do tempo A/B. **Replicar para outro lote** (botão secundário): copia as
+  experiências desta proposta para a proposta da mesma OSC no outro lote do chamamento, com prévia e confirmação; a
+  origem não muda, os documentos chegam com aceito = não e não se duplicam experiências equivalentes.
 - **Resultado:** totais por PA, D1, critérios da D2 com a memória resumida, NF, status, eliminatórias,
   **Concluir / Desfazer conclusão** (com o que falta) e **Gerar espelho**.
 - **Salvamento automático:** sem botão Salvar. A tela muda na hora e grava em seguida (textos 800 ms depois da última

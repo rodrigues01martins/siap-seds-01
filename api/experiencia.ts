@@ -7,11 +7,20 @@
 // Criar e editar só em sessão aberta com a proposta na pauta; o sessaoId vai para o documento.
 // DELETE { chamamentoId, propostaId, id } apaga a experiência; com `documento` (índice), só aquele documento.
 // Exclusão livre (sem exigir sessão), com recálculo; GET ?simular=true: prévia. Ver _lib/cascata.ts.
+// Replicar para outro lote: POST { acao: 'replicar', chamamentoId, propostaId, sessaoId, propostaDestinoId? } copia
+// as experiências para a proposta da mesma OSC no outro lote (sessão aberta com o lote de destino em pauta);
+// GET ?replicar=true&chamamentoId&propostaId[&propostaDestinoId]: prévia, sem gravar. Ver _lib/replicacao.ts.
 
 import { problemasDaExperiencia } from '../src/domain/d2.js'
 import type { TotaisProposta } from '../src/domain/proposta.js'
 import { esquemaExcluirExperiencia, esquemaPreviaExperiencia } from '../src/esquemas/exclusao.js'
-import { esquemaCriarExperiencia, esquemaEditarExperiencia, paraExperiencia } from '../src/esquemas/experiencia.js'
+import {
+  esquemaCriarExperiencia,
+  esquemaEditarExperiencia,
+  esquemaPreviaReplicacao,
+  esquemaReplicarExperiencias,
+  paraExperiencia,
+} from '../src/esquemas/experiencia.js'
 import { obterAdmin } from './_lib/admin.js'
 import { alvoDocumento, alvoExperiencia, excluir, previaExclusao, type AlvoExclusao } from './_lib/cascata.js'
 import { ErroApi, MENSAGENS } from './_lib/erros.js'
@@ -19,6 +28,7 @@ import { gravar, type Autor, type Operacao } from './_lib/gravar.js'
 import { criarRota, json } from './_lib/http.js'
 import { autenticar } from './_lib/porteiro.js'
 import { exigirPropostaEditavel, recalcular, type Mudanca } from './_lib/recalcular.js'
+import { previaReplicacao, replicarExperiencias } from './_lib/replicacao.js'
 import { exigirSessaoAberta } from './_lib/sessaoAberta.js'
 import { exigirSemProblemas, lerConsulta, lerCorpo } from './_lib/validacao.js'
 
@@ -65,11 +75,20 @@ function exigirExistente(atual: Record<string, unknown> | null): Record<string, 
 export const { GET, POST, PUT, PATCH, DELETE } = criarRota({
   GET: async (requisicao) => {
     await autenticar(requisicao)
+    if (new URL(requisicao.url).searchParams.has('replicar')) {
+      const { chamamentoId, propostaId, propostaDestinoId } = lerConsulta(requisicao, esquemaPreviaReplicacao)
+      return json(200, await previaReplicacao(chamamentoId, propostaId, propostaDestinoId))
+    }
     return json(200, await previaExclusao(alvo(lerConsulta(requisicao, esquemaPreviaExperiencia))))
   },
 
   POST: async (requisicao) => {
     const autor = await autenticar(requisicao)
+    const pedido = (await requisicao.clone().json().catch(() => null)) as { acao?: unknown } | null
+    if (pedido?.acao === 'replicar') {
+      const { acao: _acao, ...dados } = await lerCorpo(requisicao, esquemaReplicarExperiencias)
+      return json(200, await replicarExperiencias(autor, dados))
+    }
     const { chamamentoId, propostaId, sessaoId, ...campos } = await lerCorpo(requisicao, esquemaCriarExperiencia)
     const dados = { ...campos, sessaoId }
     const id = obterAdmin().db.collection(`chamamentos/${chamamentoId}/propostas/${propostaId}/experiencias`).doc().id

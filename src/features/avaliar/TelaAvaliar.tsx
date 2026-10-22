@@ -33,6 +33,7 @@ import { AbaD2 } from './AbaD2'
 import { AbaResultado } from './AbaResultado'
 import { motivoSemAvaliacao, motivoSemSessao, useDadosAvaliacao, type DadosProposta } from './dados'
 import { vizinhas } from './pauta'
+import { replicacaoDisponivel, rotuloDoLote } from './replicacao'
 import { IndicadorSalvamento, ProvedorSalvamento, useFila } from './salvamento'
 import { CODIGOS_D1, chaveAdmissao, eliminatorias, resumirD1, valoresD1 } from './valores'
 
@@ -275,6 +276,16 @@ function Conteudo() {
                 dataLimite={chamamento.dataLimitePropostas}
                 motivoSomenteLeitura={motivoSemAvaliacao(comAdmissao, 'experiências')}
                 acaoExcluir={(e) => exclusao.botao({ rota: '/api/experiencia', ids: { chamamentoId: ch, propostaId: p, id: e.id }, nome: `experiência ${e.descricao}` })}
+                replicacao={{
+                  ...replicacaoDisponivel({
+                    proposta,
+                    propostas: dados.propostasDaOsc,
+                    lotes: chamamento.lotes,
+                    experiencias: dados.experiencias.length,
+                    sessao,
+                  }),
+                  rotuloLoteOrigem: rotuloDoLote(proposta.loteCodigo, chamamento.lotes),
+                }}
               />
             ),
           },

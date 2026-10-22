@@ -86,6 +86,14 @@ Eliminatórias: D1 < 67,2 → inapta; nível 0 em 1.1 ou 1.2 → desclassificada
   PUT /api/avaliacao mescla nível (null desmarca), justificativa e páginas; a admissibilidade grava motivo e páginas
   em branco; os mínimos são conferidos ao concluir. Salvar não move o telão: o interruptor "Projetar" (cabeçalho da
   avaliação) leva o foco ao subcritério tocado e à aba (admissão, D1, D2 = d2, Resultado = resumo).
+- Replicar para outro lote (D2, 22/10/2026): na aba D2, "Replicar para outro lote" copia as experiências da proposta
+  para a proposta da MESMA OSC em OUTRO lote do mesmo chamamento (nos dois sentidos), por /api/experiencia (GET
+  ?replicar=true = prévia sem gravar; POST { acao: 'replicar', ..., sessaoId, propostaDestinoId? }; api/_lib/replicacao.ts).
+  Copia só os campos cadastrais e os documentos (tipo, numeroSEI, comprovaExecucaoSatisfatoria) com aceito=false e sem
+  desconsiderações, ids novos e o sessaoId do destino; exige sessão aberta com o lote de destino em pauta e destino
+  admitido. Não duplica: equivalência determinística (src/domain/replicacaoD2.ts: campos normalizados + documentos da
+  origem contidos no destino); nada a copiar = nada gravado. Uma transação com o recálculo da D2 do destino
+  (concluida=false só no destino); a origem não é alterada.
 - Limpeza da base (Simplificação 4/4, 17/10/2026): api/admin/limpar-base.ts, só o admin (tela Administração →
   Limpar base, /admin/limpar-base). GET ?simular=true: prévia por coleção, ambiente DEV/PRODUÇÃO (pelo projectId,
   api/_lib/ambiente.ts) e situação da matriz. POST { acao: 'limpar', confirmacao: 'APAGAR TUDO', projectId,

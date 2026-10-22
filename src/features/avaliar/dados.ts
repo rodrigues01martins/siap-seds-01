@@ -1,6 +1,6 @@
 // Dados da tela de avaliação (/avaliar/:propostaId?ch=), em tempo real: chamamento, proposta, OSC, sessão aberta,
-// avaliações da D1, experiências da D2, memória da D2 e a pauta (propostas dos lotes da sessão aberta), para
-// "Proposta anterior / próxima".
+// avaliações da D1, experiências da D2, memória da D2, a pauta (propostas dos lotes da sessão aberta), para
+// "Proposta anterior / próxima", e as propostas da mesma OSC, para "Replicar para outro lote".
 
 import { collection, query, where } from 'firebase/firestore'
 import type { ResultadoD2 } from '../../domain/d2'
@@ -21,6 +21,8 @@ export interface DadosAvaliacao extends DadosProposta {
   resultadoD2: ResultadoD2 | null
   /** Ids das propostas da pauta da sessão aberta, na ordem da sessão. */
   pauta: string[]
+  /** Propostas do chamamento da mesma OSC (inclusive esta), para "Replicar para outro lote" na D2. */
+  propostasDaOsc: ComId<Proposta>[]
 }
 
 /** Chamamento, proposta, OSC e a sessão aberta do chamamento, em tempo real. */
@@ -63,6 +65,7 @@ export function useDadosAvaliacao(ch: string, p: string): Leitura<DadosAvaliacao
       experiencias: [...experiencias.dados].sort((a, b) => a.inicio.localeCompare(b.inicio) || a.id.localeCompare(b.id)),
       resultadoD2: resultadoD2.dados,
       pauta: base.dados.sessaoAberta ? ordenarPauta(propostas.dados, base.dados.sessaoAberta.lotes ?? [], nomes) : [],
+      propostasDaOsc: propostas.dados.filter((outra) => outra.oscCnpj === base.dados!.proposta.oscCnpj),
     },
   }
 }

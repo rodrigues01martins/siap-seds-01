@@ -122,3 +122,43 @@ export function paraExperiencia(id: string, d: Record<string, unknown>): Experie
     desconsideracoes: (d.desconsideracoes ?? []) as Experiencia['desconsideracoes'],
   }
 }
+
+/** Replicar para outro lote (D2): POST /api/experiencia { acao: 'replicar', … }. Destino omitido = a proposta da
+ *  mesma OSC no outro lote do chamamento. */
+export const esquemaReplicarExperiencias = z.strictObject({
+  acao: z.literal('replicar'),
+  ...alvo,
+  propostaDestinoId: idDocumento.optional(),
+})
+
+/** Prévia da replicação: GET /api/experiencia?replicar=true&chamamentoId&propostaId[&propostaDestinoId]. */
+export const esquemaPreviaReplicacao = z.strictObject({
+  replicar: z.literal('true'),
+  chamamentoId: idDocumento,
+  propostaId: idDocumento,
+  propostaDestinoId: idDocumento.optional(),
+})
+
+export interface PreviaReplicacao {
+  osc: { cnpj: string; razaoSocial: string | null }
+  origem: { propostaId: string; lote: string }
+  destino: { propostaId: string; lote: string }
+  /** Experiências cadastradas na origem. */
+  experiencias: number
+  /** Documentos comprobatórios dessas experiências. */
+  documentos: number
+  /** Serão copiadas (sem equivalente no destino). */
+  copiar: number
+  /** Já têm equivalente no destino: não são copiadas de novo. */
+  equivalentes: number
+  /** Experiências que já estão no destino: preservadas, sem alteração. */
+  existentesNoDestino: number
+}
+
+export interface ResultadoReplicacao {
+  propostaDestinoId: string
+  copiadas: number
+  equivalentes: number
+  existentesNoDestino: number
+  totais: unknown
+}

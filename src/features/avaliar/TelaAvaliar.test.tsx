@@ -323,3 +323,23 @@ describe('/avaliar — Resultado', () => {
     expect(simulado.chamarApi).toHaveBeenCalledWith('/api/concluir', { metodo: 'POST', corpo: { chamamentoId: 'ch1', propostaId: 'p1', acao: 'desfazer' } })
   })
 })
+
+describe('/avaliar — aba D2: replicar para outro lote', () => {
+  const EXP = { id: 'e1', descricao: 'Gestão do CASE', categorias: ['A'], modalidade: 'internacao', inicio: '2019-01-01', fim: null, documentos: [] }
+
+  it('mesma OSC no outro lote, em pauta: oferece "Replicar para outro lote"', () => {
+    simulado.documentos['chamamentos/ch1'] = { ...simulado.documentos['chamamentos/ch1']!, lotes: [{ codigo: 'L1', descricao: 'Lote 1' }, { codigo: 'L2', descricao: 'Lote 2' }] }
+    simulado.colecoes['chamamentos/ch1/propostas']!.push({ id: 'p9', loteCodigo: 'L2', oscCnpj: '11222333000181' })
+    simulado.colecoes[`${BASE}/experiencias`] = [EXP]
+    simulado.consultas['sessoes-abertas-ch1'] = [{ ...SESSAO, lotes: ['L1', 'L2'] }]
+    montar('/avaliar/p1?ch=ch1&aba=d2')
+    expect(screen.getByRole('button', { name: 'Replicar para outro lote' })).toBeEnabled()
+  })
+
+  it('sem proposta da OSC em outro lote: explica e não oferece o comando', () => {
+    simulado.colecoes[`${BASE}/experiencias`] = [EXP]
+    montar('/avaliar/p1?ch=ch1&aba=d2')
+    expect(screen.queryByRole('button', { name: 'Replicar para outro lote' })).not.toBeInTheDocument()
+    expect(screen.getByText('Não há proposta desta OSC em outro lote deste chamamento.')).toBeInTheDocument()
+  })
+})
