@@ -194,6 +194,35 @@ describe('replicar para outro lote — cópia (POST { acao: "replicar" })', () =
   })
 })
 
+describe('replicar para outro lote — Lote I avaliado em sessão já encerrada, Lote II em avaliação na sessão nova', () => {
+  const S_LOTE1 = 's-lote1'
+  const S_LOTE2 = 's-lote2'
+
+  beforeEach(async () => {
+    await db().doc(`chamamentos/${CH}/sessoes/${SESSAO}`).delete()
+    await db().doc(`chamamentos/${CH}/sessoes/${S_LOTE1}`).set({ data: '2026-11-03', lotes: ['L1'], status: 'encerrada', presentes: PRESENTES, foco: null })
+    await db().doc(`chamamentos/${CH}/sessoes/${S_LOTE2}`).set({ data: '2026-11-10', lotes: ['L2'], status: 'aberta', presentes: PRESENTES, foco: null })
+    await db().doc(caminho(P1)).set({ concluida: true, totais: { d2: 9 } }, { merge: true })
+  })
+
+  it('a proposta do Lote II traz as experiências do Lote I (origem fora da pauta, sessão dela encerrada)', async () => {
+    const antes = await fotografia(P1)
+    expect(await previa({ propostaDestinoId: P2 })).toMatchObject({ status: 200, corpo: { experiencias: 2, copiar: 2, destino: { propostaId: P2 } } })
+    const r = await replicar({ propostaDestinoId: P2, sessaoId: S_LOTE2 })
+    expect(r).toMatchObject({ status: 200, corpo: { propostaDestinoId: P2, copiadas: 2 } })
+    const copias = Object.values(await experiencias(P2))
+    expect(copias).toHaveLength(2)
+    expect(copias.every((e) => e.sessaoId === S_LOTE2)).toBe(true)
+    expect(await fotografia(P1)).toEqual(antes)
+  })
+
+  it('com o sessaoId da sessão encerrada do Lote I → 409, sem gravar', async () => {
+    const r = await replicar({ propostaDestinoId: P2, sessaoId: S_LOTE1 })
+    expect(r.status).toBe(409)
+    expect(await experiencias(P2)).toEqual({})
+  })
+})
+
 describe('replicar para outro lote — sem duplicar e sem mexer no que já existe no destino', () => {
   it('replicar de novo não duplica: tudo já equivalente, nada é gravado e a conclusão do destino fica', async () => {
     expect((await replicar()).corpo).toMatchObject({ copiadas: 2 })
