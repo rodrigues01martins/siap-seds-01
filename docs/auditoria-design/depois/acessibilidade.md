@@ -18,7 +18,7 @@ Zoom 200% = viewport CSS de 640×450 (1280×900 ampliado). Tabelas podem rolar d
 | ata | sim | 21/21 | 0 | 0 px | 0 |
 | admissibilidade | sim | 36/36 | 0 | 0 px | 0 |
 | d1 | sim | 169/169 | 0 | 0 px | 0 |
-| d2 | sim | 38/38 | 0 | 0 px | 0 |
+| d2 | sim | 39/39 | 0 | 0 px | 0 |
 | resultado | sim | 25/25 | 0 | 0 px | 0 |
 | classificacao | sim | 25/25 | 0 | 0 px | 0 |
 | oscs | sim | 23/23 | 0 | 0 px | 0 |

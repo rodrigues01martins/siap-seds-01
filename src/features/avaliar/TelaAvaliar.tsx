@@ -284,7 +284,7 @@ function Conteudo() {
                     experiencias: dados.experiencias.length,
                     sessao,
                   }),
-                  rotuloLoteOrigem: rotuloDoLote(proposta.loteCodigo, chamamento.lotes),
+                  rotuloLoteAtual: rotuloDoLote(proposta.loteCodigo, chamamento.lotes),
                 }}
               />
             ),
