@@ -26,7 +26,7 @@ export async function recalcular(
   transacao: Transaction,
   chamamentoId: string,
   propostaId: string,
-  mudanca?: Mudanca,
+  mudanca?: Mudanca | Mudanca[],
 ): Promise<{ operacoes: Operacao[]; totais: TotaisProposta }> {
   const { db } = obterAdmin()
   const caminho = `chamamentos/${chamamentoId}/propostas/${propostaId}`
@@ -46,15 +46,17 @@ export async function recalcular(
   const niveis: NiveisD1 = Object.fromEntries(avaliacoes.docs.map((d) => [d.id, d.get('nivel') as number | null]))
   const porId = new Map(experiencias.docs.map((d) => [d.id, paraExperiencia(d.id, d.data())]))
 
-  if (!mudanca) {
-    // Só recalcula com o que está gravado (ex.: depois da exclusão de uma sessão).
-  } else if (mudanca.colecao === 'avaliacoes') {
-    if (mudanca.dados) niveis[mudanca.id] = mudanca.dados.nivel as number | null
-    else delete niveis[mudanca.id]
-  } else if (mudanca.dados) {
-    porId.set(mudanca.id, paraExperiencia(mudanca.id, mudanca.dados))
-  } else {
-    porId.delete(mudanca.id)
+  // Sem mudança: só recalcula com o que está gravado (ex.: depois da exclusão de uma sessão). Várias mudanças:
+  // ex.: as experiências copiadas de uma vez pela replicação para o outro lote.
+  for (const m of mudanca === undefined ? [] : Array.isArray(mudanca) ? mudanca : [mudanca]) {
+    if (m.colecao === 'avaliacoes') {
+      if (m.dados) niveis[m.id] = m.dados.nivel as number | null
+      else delete niveis[m.id]
+    } else if (m.dados) {
+      porId.set(m.id, paraExperiencia(m.id, m.dados))
+    } else {
+      porId.delete(m.id)
+    }
   }
 
   // Ordem estável (início, id): a memória de cálculo lista as experiências nessa ordem.

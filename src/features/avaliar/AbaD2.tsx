@@ -3,14 +3,16 @@
 // linha do tempo das experiências A/B. Salvamento automático da linha inteira: caixas e listas na hora, textos com
 // debounce; linha incompleta (ex.: sem início) fica guardada, com o que falta, até poder ser gravada. Linha nova é
 // criada (POST) quando fica completa e, daí em diante, editada (PATCH). Desconsiderar por critério (3.8.5) e a
-// lixeira da experiência (exclusão livre, com prévia) por linha.
+// lixeira da experiência (exclusão livre, com prévia) por linha. "Replicar para outro lote" copia as experiências
+// para a proposta da mesma OSC no outro lote (DialogoReplicar; a lista atualiza sozinha pelo onSnapshot).
 
-import { Ban, ChevronDown, ChevronRight, Plus, Trash2 } from 'lucide-react'
+import { Ban, ChevronDown, ChevronRight, Copy, Plus, Trash2 } from 'lucide-react'
 import { useRef, useState, type InputHTMLAttributes, type ReactNode } from 'react'
 import { Alert } from '../../components/ui/Alert'
 import { Button } from '../../components/ui/Button'
 import { cx } from '../../components/ui/cx'
 import { Badge } from '../../components/ui/StatusBadge'
+import { useToast } from '../../components/ui/Toast'
 import { formatarNumero } from '../../domain/formatacao'
 import { MATRIZ_2026 } from '../../domain/matriz'
 import { MODALIDADES, ROTULO_MODALIDADE } from '../../esquemas/experiencia'
@@ -18,8 +20,10 @@ import { chamarApi } from '../../lib/api'
 import type { ExperienciaGravada } from '../../lib/tipos'
 import { GraficoLinhaDoTempo } from '../experiencias/GraficoLinhaDoTempo'
 import { DialogoDesconsiderar } from './DialogoDesconsiderar'
+import { DialogoReplicar } from './DialogoReplicar'
 import { LINHA_VAZIA, paraLinha, validarLinha, type LinhaExperiencia } from './linhaExperiencia'
 import { ATRASO_TEXTO, useCampo, useFila } from './salvamento'
+import type { Replicacao } from './replicacao'
 import { chaveExperiencia } from './valores'
 
 const CATEGORIAS = MATRIZ_2026.dimensao2.criterios['C2.1'].categorias
@@ -313,10 +317,14 @@ interface Props {
   dataLimite?: string
   motivoSomenteLeitura: string | null
   acaoExcluir: (experiencia: ExperienciaGravada) => ReactNode
+  /** Replicar para outro lote: destinos possíveis e, se indisponível, o motivo. */
+  replicacao?: Replicacao & { rotuloLoteOrigem: string }
 }
 
-export function AbaD2({ ch, p, sessaoId, experiencias, d2, dataLimite, motivoSomenteLeitura, acaoExcluir }: Props) {
+export function AbaD2({ ch, p, sessaoId, experiencias, d2, dataLimite, motivoSomenteLeitura, acaoExcluir, replicacao }: Props) {
   const [novas, setNovas] = useState<{ chave: string; id: string | null }[]>([])
+  const [replicando, setReplicando] = useState(false)
+  const { mostrar } = useToast()
   const contador = useRef(0)
   const criadas = new Set(novas.map((n) => n.id).filter(Boolean))
   const somenteLeitura = motivoSomenteLeitura !== null
@@ -347,10 +355,28 @@ export function AbaD2({ ch, p, sessaoId, experiencias, d2, dataLimite, motivoSom
               experiência(s). Edite direto na linha: grava sozinho.
             </p>
           </div>
-          {!somenteLeitura && (
-            <Button variante="secondary" icone={Plus} onClick={adicionar}>
-              Adicionar experiência
-            </Button>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {replicacao && replicacao.destinos.length > 0 && (
+              <Button
+                variante="secondary"
+                icone={Copy}
+                desabilitado={replicacao.motivo !== null}
+                aria-describedby={replicacao.motivo ? 'motivo-replicacao' : undefined}
+                onClick={() => setReplicando(true)}
+              >
+                Replicar para outro lote
+              </Button>
+            )}
+            {!somenteLeitura && (
+              <Button variante="secondary" icone={Plus} onClick={adicionar}>
+                Adicionar experiência
+              </Button>
+            )}
+          </div>
+          {replicacao?.motivo && (
+            <p id="motivo-replicacao" className="w-full text-body-sm text-text-secondary">
+              {replicacao.motivo}
+            </p>
           )}
         </div>
         <div className="relative overflow-x-auto p-(--sds-card-padding)">
@@ -391,6 +417,25 @@ export function AbaD2({ ch, p, sessaoId, experiencias, d2, dataLimite, motivoSom
           </table>
         </div>
       </section>
+
+      {replicando && replicacao && (
+        <DialogoReplicar
+          ch={ch}
+          p={p}
+          sessaoId={sessaoId}
+          destinos={replicacao.destinos}
+          rotuloLoteOrigem={replicacao.rotuloLoteOrigem}
+          onFechar={() => setReplicando(false)}
+          onReplicado={(resultado, destino) => {
+            setReplicando(false)
+            mostrar({
+              tom: 'success',
+              titulo: 'Experiências replicadas',
+              mensagem: `${resultado.copiadas} experiência(s) copiada(s) para o lote ${destino.rotuloLote}.`,
+            })
+          }}
+        />
+      )}
 
       <section aria-label="Linha do tempo" className="rounded-card border border-card-border bg-card-bg p-(--sds-card-padding) shadow-card">
         <h3 className="text-heading-4 text-text-primary">Linha do tempo (categorias A e B)</h3>
