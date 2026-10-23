@@ -86,8 +86,11 @@ Eliminatórias: D1 < 67,2 → inapta; nível 0 em 1.1 ou 1.2 → desclassificada
   PUT /api/avaliacao mescla nível (null desmarca), justificativa e páginas; a admissibilidade grava motivo e páginas
   em branco; os mínimos são conferidos ao concluir. Salvar não move o telão: o interruptor "Projetar" (cabeçalho da
   avaliação) leva o foco ao subcritério tocado e à aba (admissão, D1, D2 = d2, Resultado = resumo).
-- Replicar para outro lote (D2, 22/10/2026): na aba D2, "Replicar para outro lote" copia as experiências da proposta
-  para a proposta da MESMA OSC em OUTRO lote do mesmo chamamento (nos dois sentidos), por /api/experiencia (GET
+- Replicar para outro lote (D2, 22/10/2026): na aba D2, cópia de experiências entre a proposta e a da MESMA OSC em
+  OUTRO lote do mesmo chamamento, nos dois sentidos: "Trazer experiências do outro lote" (para esta proposta; caso
+  típico: Lote I avaliado em sessão já encerrada e Lote II na sessão aberta) e "Replicar para outro lote" (desta
+  proposta, se tiver experiências, para a outra). Quem recebe precisa estar na pauta da sessão aberta e admitido; a
+  origem pode estar fora da pauta ou com a sessão encerrada (só é lida). Por /api/experiencia (GET
   ?replicar=true = prévia sem gravar; POST { acao: 'replicar', ..., sessaoId, propostaDestinoId? }; api/_lib/replicacao.ts).
   Copia só os campos cadastrais e os documentos (tipo, numeroSEI, comprovaExecucaoSatisfatoria) com aceito=false e sem
   desconsiderações, ids novos e o sessaoId do destino; exige sessão aberta com o lote de destino em pauta e destino

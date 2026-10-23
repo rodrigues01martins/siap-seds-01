@@ -6,7 +6,7 @@
 // lixeira da experiência (exclusão livre, com prévia) por linha. "Replicar para outro lote" copia as experiências
 // para a proposta da mesma OSC no outro lote (DialogoReplicar; a lista atualiza sozinha pelo onSnapshot).
 
-import { Ban, ChevronDown, ChevronRight, Copy, Plus, Trash2 } from 'lucide-react'
+import { Ban, ChevronDown, ChevronRight, Copy, Download, Plus, Trash2 } from 'lucide-react'
 import { useRef, useState, type InputHTMLAttributes, type ReactNode } from 'react'
 import { Alert } from '../../components/ui/Alert'
 import { Button } from '../../components/ui/Button'
@@ -20,7 +20,7 @@ import { chamarApi } from '../../lib/api'
 import type { ExperienciaGravada } from '../../lib/tipos'
 import { GraficoLinhaDoTempo } from '../experiencias/GraficoLinhaDoTempo'
 import { DialogoDesconsiderar } from './DialogoDesconsiderar'
-import { DialogoReplicar } from './DialogoReplicar'
+import { DialogoReplicar, type Sentido } from './DialogoReplicar'
 import { LINHA_VAZIA, paraLinha, validarLinha, type LinhaExperiencia } from './linhaExperiencia'
 import { ATRASO_TEXTO, useCampo, useFila } from './salvamento'
 import type { Replicacao } from './replicacao'
@@ -317,13 +317,13 @@ interface Props {
   dataLimite?: string
   motivoSomenteLeitura: string | null
   acaoExcluir: (experiencia: ExperienciaGravada) => ReactNode
-  /** Replicar para outro lote: destinos possíveis e, se indisponível, o motivo. */
-  replicacao?: Replicacao & { rotuloLoteOrigem: string }
+  /** Cópia entre lotes ("Replicar para outro lote" e "Trazer experiências do outro lote"). */
+  replicacao?: Replicacao & { rotuloLoteAtual: string }
 }
 
 export function AbaD2({ ch, p, sessaoId, experiencias, d2, dataLimite, motivoSomenteLeitura, acaoExcluir, replicacao }: Props) {
   const [novas, setNovas] = useState<{ chave: string; id: string | null }[]>([])
-  const [replicando, setReplicando] = useState(false)
+  const [replicando, setReplicando] = useState<Sentido | null>(null)
   const { mostrar } = useToast()
   const contador = useRef(0)
   const criadas = new Set(novas.map((n) => n.id).filter(Boolean))
@@ -356,13 +356,26 @@ export function AbaD2({ ch, p, sessaoId, experiencias, d2, dataLimite, motivoSom
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
-            {replicacao && replicacao.destinos.length > 0 && (
+            {replicacao?.trazer && (
+              <Button
+                variante="secondary"
+                icone={Download}
+                desabilitado={replicacao.trazer.motivo !== null}
+                aria-describedby={replicacao.trazer.motivo ? 'motivo-trazer' : undefined}
+                onClick={() => setReplicando('trazer')}
+              >
+                Trazer experiências do outro lote
+              </Button>
+            )}
+            {replicacao?.enviar && (
               <Button
                 variante="secondary"
                 icone={Copy}
-                desabilitado={replicacao.motivo !== null}
-                aria-describedby={replicacao.motivo ? 'motivo-replicacao' : undefined}
-                onClick={() => setReplicando(true)}
+                desabilitado={replicacao.enviar.motivo !== null}
+                aria-describedby={
+                  !replicacao.enviar.motivo ? undefined : replicacao.enviar.motivo === replicacao.trazer?.motivo ? 'motivo-trazer' : 'motivo-replicacao'
+                }
+                onClick={() => setReplicando('enviar')}
               >
                 Replicar para outro lote
               </Button>
@@ -373,9 +386,15 @@ export function AbaD2({ ch, p, sessaoId, experiencias, d2, dataLimite, motivoSom
               </Button>
             )}
           </div>
-          {replicacao?.motivo && (
+          {replicacao?.aviso && <p className="w-full text-body-sm text-text-secondary">{replicacao.aviso}</p>}
+          {replicacao?.trazer?.motivo && (
+            <p id="motivo-trazer" className="w-full text-body-sm text-text-secondary">
+              {replicacao.trazer.motivo}
+            </p>
+          )}
+          {replicacao?.enviar?.motivo && replicacao.enviar.motivo !== replicacao.trazer?.motivo && (
             <p id="motivo-replicacao" className="w-full text-body-sm text-text-secondary">
-              {replicacao.motivo}
+              {replicacao.enviar.motivo}
             </p>
           )}
         </div>
@@ -420,18 +439,22 @@ export function AbaD2({ ch, p, sessaoId, experiencias, d2, dataLimite, motivoSom
 
       {replicando && replicacao && (
         <DialogoReplicar
+          sentido={replicando}
           ch={ch}
           p={p}
           sessaoId={sessaoId}
-          destinos={replicacao.destinos}
-          rotuloLoteOrigem={replicacao.rotuloLoteOrigem}
-          onFechar={() => setReplicando(false)}
-          onReplicado={(resultado, destino) => {
-            setReplicando(false)
+          outras={replicacao.outras}
+          rotuloLoteAtual={replicacao.rotuloLoteAtual}
+          onFechar={() => setReplicando(null)}
+          onReplicado={(resultado, outra) => {
+            setReplicando(null)
             mostrar({
               tom: 'success',
-              titulo: 'Experiências replicadas',
-              mensagem: `${resultado.copiadas} experiência(s) copiada(s) para o lote ${destino.rotuloLote}.`,
+              titulo: 'Experiências copiadas',
+              mensagem:
+                replicando === 'enviar'
+                  ? `${resultado.copiadas} experiência(s) copiada(s) para o lote ${outra.rotuloLote}.`
+                  : `${resultado.copiadas} experiência(s) copiada(s) do lote ${outra.rotuloLote} para esta proposta.`,
             })
           }}
         />
